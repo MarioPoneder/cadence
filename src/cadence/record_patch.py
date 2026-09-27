@@ -123,7 +123,7 @@ def _input_norms(inputs: np.ndarray) -> np.ndarray:
         norms = magnitude * np.linalg.norm(scaled, axis=1)
     if not np.isfinite(norms).all():
         raise ValueError("input norms must be representable and finite")
-    return norms
+    return np.asarray(norms)
 
 
 class RecordPatchNet:
