@@ -278,6 +278,40 @@ class Records:
         code = np.asarray(code, dtype=float)
         return {name: self._code_for(code, name) @ table for name, table in self.tables.items()}
 
+    def _write_inputs(
+        self,
+        code: np.ndarray,
+        targets: Mapping[str, np.ndarray],
+        known: Mapping[str, np.ndarray] | None = None,
+    ) -> dict[str, tuple[np.ndarray, np.ndarray, np.ndarray | None]]:
+        """Validate every supplied field before any table or averaging count changes.
+
+        A consequence-only code may deliberately leave its unused valued part NaN;
+        only codes selected by the supplied target fields must be finite.
+        """
+        inputs = {}
+        for name, width in self.fields.items():
+            if name not in targets:
+                continue
+            target = np.asarray(targets[name], dtype=float)
+            expected = (width,) if code.ndim == 2 else (code.shape[1], width)
+            if target.shape != expected or not np.isfinite(target).all():
+                raise ValueError(f"the target of {name!r} must be finite with shape {expected}")
+            selected = self._code_for(code, name)
+            if not np.isfinite(selected).all():
+                raise ValueError(f"the code used to write {name!r} must be finite")
+            if self.averaging and name not in self.valued and (selected < 0).any():
+                raise ValueError("averaging writes require nonnegative code mass")
+            mask = None
+            if known is not None and name in known:
+                mask = np.asarray(known[name])
+                if mask.shape != expected or mask.dtype != np.bool_:
+                    raise ValueError(
+                        f"known mask for {name!r} must be boolean with shape {expected}"
+                    )
+            inputs[name] = (selected, target, mask)
+        return inputs
+
     def write(
         self,
         code: np.ndarray,
@@ -288,30 +322,34 @@ class Records:
 
         Each named field's records move toward its target by the delta rule, through the
         active cells only. ``known`` masks the entries of a target that were observed.
+        Invalid inputs or nonfinite updates leave all tables and counts unchanged.
         Returns the number of fields written."""
         code = np.asarray(code, dtype=float)
         if code.shape != (2, self.cells):
             raise ValueError(f"write takes one code of shape (2, {self.cells})")
-        written = 0
-        for name, width in self.fields.items():
-            if name not in targets:
-                continue
-            target = np.asarray(targets[name], dtype=float)
-            if target.shape != (width,) or not np.isfinite(target).all():
-                raise ValueError(f"the target of {name!r} must be a finite vector of width {width}")
-            c = self._code_for(code, name)
+        inputs = self._write_inputs(code, targets, known)
+        count = self.count.copy() if self.averaging else self.count
+        updates = {}
+        for name, (c, target, mask) in inputs.items():
             active = np.flatnonzero(c)  # the write touches the records of the active cells only
             error = target - c[active] @ self.tables[name][active]
-            if known is not None and name in known:
-                error = error * np.asarray(known[name], dtype=bool)
+            if mask is not None:
+                error = np.where(mask, error, 0.0)
             rate = self.valued_rate if name in self.valued else self.rate
             if self.averaging and name not in self.valued:
-                self.count[active] += c[active]
-                steps = np.clip(1.0 / self.count[active], rate, 1.0)
+                count[active] += c[active]
+                steps = np.clip(1.0 / count[active], rate, 1.0)
             else:
                 steps = np.full(len(active), rate)
-            self.tables[name][active] += steps[:, None] * np.outer(c[active], error)
-            written += 1
+            with np.errstate(over="ignore", invalid="ignore"):
+                updated = self.tables[name][active] + steps[:, None] * np.outer(c[active], error)
+            if not np.isfinite(updated).all() or not np.isfinite(count[active]).all():
+                raise ValueError("record write would produce nonfinite state")
+            updates[name] = (active, updated)
+        for name, (active, updated) in updates.items():
+            self.tables[name][active] = updated
+        self.count = count
+        written = len(updates)
         self.writes += written
         return written
 
@@ -324,21 +362,17 @@ class Records:
         cell as far as one of them would, so a batch does not overshoot. Writers that
         disagree leave the cell at their average, which later presentations refine.
         ``codes`` has shape ``(2, batch, cells)``; each target ``(batch, width)``.
+        Invalid inputs or nonfinite updates leave all tables and counts unchanged.
         Returns the number of (reading, field) writes."""
         codes = np.asarray(codes, dtype=float)
         if codes.ndim != 3 or codes.shape[0] != 2 or codes.shape[2] != self.cells:
             raise ValueError(f"write_batch takes codes of shape (2, batch, {self.cells})")
-        batch = codes.shape[1]
-        written = 0
-        for name, width in self.fields.items():
-            if name not in targets:
-                continue
-            target = np.asarray(targets[name], dtype=float)
-            if target.shape != (batch, width) or not np.isfinite(target).all():
-                raise ValueError(
-                    f"the targets of {name!r} must be a finite ({batch}, {width}) array"
-                )
-            c = self._code_for(codes, name)
+        batch = int(codes.shape[1])
+        inputs = self._write_inputs(codes, targets)
+        count = self.count.copy() if self.averaging else self.count
+        updates = {}
+        for name, (c, target, _) in inputs.items():
+            width = self.fields[name]
             rows, cells = np.nonzero(c)
             values = c[rows, cells]
             table = self.tables[name]
@@ -347,16 +381,24 @@ class Records:
             error = target - read
             touched, local = np.unique(cells, return_inverse=True)
             moves = np.zeros((len(touched), width))
-            np.add.at(moves, local, values[:, None] * error[rows])
+            with np.errstate(over="ignore", invalid="ignore"):
+                np.add.at(moves, local, values[:, None] * error[rows])
             writers = np.bincount(local, minlength=len(touched)).astype(float)
             rate = self.valued_rate if name in self.valued else self.rate
             if self.averaging and name not in self.valued:
-                np.add.at(self.count, cells, values)
-                steps = np.clip(1.0 / self.count[touched], rate, 1.0)
+                np.add.at(count, cells, values)
+                steps = np.clip(1.0 / count[touched], rate, 1.0)
             else:
                 steps = np.full(len(touched), rate)
-            table[touched] += (steps / writers)[:, None] * moves
-            written += batch
+            with np.errstate(over="ignore", invalid="ignore"):
+                updated = table[touched] + (steps / writers)[:, None] * moves
+            if not np.isfinite(updated).all() or not np.isfinite(count[touched]).all():
+                raise ValueError("record write would produce nonfinite state")
+            updates[name] = (touched, updated)
+        for name, (touched, updated) in updates.items():
+            self.tables[name][touched] = updated
+        self.count = count
+        written = batch * len(updates)
         self.writes += written
         return written
 

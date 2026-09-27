@@ -40,9 +40,29 @@ step against the NumPy adjoint (linear and categorical) and a write with its rea
 brain and stream (an imagined reading and an observation with its write) and writes a
 receipt beside itself. On an Apple M4 laptop's graphics processor a patch of 32 channels
 with a store of 256 cells ran 8,192 streams at 498,000 moments per second and 16,384 at
-423,000, against 1,276 for the same patch on one processor core (390 times); the two paths
-agree on the reading to 2e-16. The tables cost `instances * streams * cells * outputs`
-values; keep stores small and brains many.
+423,000, against 1,276 for the same patch on one processor core (390 times). That ratio
+compares one device and implementation with a sequential reference at one patch shape; it
+is not an advantage over another model family, and it does not transfer to other shapes or
+to a whole training run. The two paths agree on the reading to 2e-16 in float64 on the cpu,
+which does not bound the error of the timed graphics-processor path. Each row times 40
+steps with no repeated-run estimate. Batching brains and streams into one tensor program
+needs their parameters to be independent along the population axis; a shared global loss
+across examples of one model batches as well, so batching is a layout, not a property of
+local learning. The tables cost `instances * streams * cells * outputs` values; keep stores
+small and brains many.
+
+`observe` stages every change and commits none on a bad moment: the inputs must be finite
+and the targets finite on the unmasked moments (a masked-out moment carries no lesson, so its
+target is ignored and may be NaN); the moved statistics, the rows the write would leave and
+the parameters and Adam moments the slow step would leave are checked before any of them
+lands, and a moment that would leave a nonfinite table, statistic, parameter or moment
+raises `ValueError` with nothing changed. A write whose rows could overflow is summed on a
+copy of those rows first. The common case pays one pass over the rows the write read, one
+over the residual, a few small kernels and one device sync: on an M4, one observe of 64
+brains in 2,048 streams (a patch of 64 inputs, 64 channels, 16 outputs, 256 cells) took
+147 ms against 134 before the checks on the graphics processor and 338 against 318 on one
+core; at 8 brains in 1,024 streams the graphics processor pays 23 percent, the launch cost
+of the small kernels.
 
 ## The kernel at the width of a game
 

@@ -454,8 +454,14 @@ class Brain:
                 scale = np.asarray(efficacy, float)
                 if scale.shape != (self.connectome.synapses,) or not np.isfinite(scale).all():
                     raise ValueError("efficacy must have one finite entry per synapse")
+                with np.errstate(over="ignore", invalid="ignore"):
+                    weights = self._gain_pre * scale
+                if not np.isfinite(weights).all():
+                    raise ValueError(
+                        "effective synaptic weights must be finite; reduce gain or efficacy"
+                    )
                 new._efficacy = scale.copy()
-                new._weights_host = None
+                new._weights_host = weights
                 new._flat = None
                 new._csr = None
             if bias is not None:

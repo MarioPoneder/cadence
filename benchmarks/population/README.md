@@ -29,6 +29,10 @@ The receipt of 2026-09-25 on an Apple M4 laptop (torch 2.14, the graphics proces
 
 The reference, one brain in one stream on one core, ran 1,276 moments per second at the
 same work (18,783 with 64 streams through one shared store); the best population row is
-390 times the reference. The parity of the reading is 2e-16 and of the slow step 3e-17.
-The dip at 16,384 streams is the store tables (139 MB) on that device. Wall-clock numbers
-depend on the machine; the receipt records the load average at the end of the run.
+390 times the reference. This is a device/implementation throughput ratio at one patch
+shape, not a matched-task advantage over another model family. CPU float64 parity errors
+are below 2.23e-16 for the reading and 2.78e-17 for the slow step; these checks do not bound
+the error of the timed GPU path. The 16,384-stream configuration has 139 MB of store state,
+but the timing alone does not identify the cause of its lower throughput. Each row times
+40 steps with no repeated-run uncertainty estimate. Wall-clock numbers depend on the
+machine; the receipt records the substantial background load at the end of this run.

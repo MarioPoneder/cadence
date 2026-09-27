@@ -130,6 +130,23 @@ The [centered estimator](https://arxiv.org/abs/2006.03824) cancels the leading n
 bias on a sufficiently smooth branch; a finite nudge crossing a kink or a different
 attractor need not have that accuracy.
 
+At a finite nudge the contrast is an estimate of the derivative, with two error terms. On a
+branch whose third derivative is bounded, the centered bias is of order `beta^2`. A phase
+solved only to a sup-norm error `eps` adds at most `A * (eps_plus + eps_minus) / beta`, with
+`A` a bound on the activities, because each endpoint product moves by at most `2 A eps` and
+the contrast divides by `2 beta`; a smaller nudge therefore needs a tighter solve. The
+free-phase contraction certificate does not cover the nudged phases by itself: a nudged
+phase is a contraction when `L * (rho_W + beta * K_C) < 1`, with `K_C` the Lipschitz constant
+of the nudge, which is `1 / (2 T)` for a normalized softmax slot under `T` times
+cross-entropy. The default learning activation has a kink at zero, so the smooth-branch
+argument excludes equilibria at or across it; `leak=1` with `slope=1` gives the smooth
+`tanh(v/2)`. The rule is measured directly in
+[benchmarks/local_equilibrium](../benchmarks/local_equilibrium/README.md) and its longer
+follow-up: on a nonlinear agreement judgment the public centered update matches an
+implicit-gradient learner on the same network, after a first 800-update run that missed its
+robustness criterion; both arms rescale the free/free rows to a row-mass cap after each
+update, a global projection that keeps the contraction budget and is not a local operation.
+
 `Learner.contrast` returns a statistic, and `Learner.update` keeps the library's
 step convention. When `c[e] = gain * count[e] * exp(log_gain[pre[e]])`
 is not one, conversion to minus the gradient with respect to a tied `efficacy`

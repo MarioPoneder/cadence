@@ -110,15 +110,17 @@ def contrast_asymmetry(free: TemporalPhase, plus: TemporalPhase, minus: Temporal
 
     The ratio divides the norm of ``plus + minus - 2 * free`` by the norm of
     ``plus - minus`` over the hidden paths. A centered contrast has a ratio
-    proportional to beta, and its error against the free-loss derivative grows
-    with the square of the ratio. A ratio near one means one detuned phase
-    converged on another branch of the energy, and its contrast is not a
-    derivative of anything. Zero spread reports zero.
+    proportional to beta on a sufficiently smooth branch when its first-order
+    response is nonzero. A large ratio can signal nonlinear response or a
+    branch change; a small ratio does not certify gradient accuracy or branch
+    identity. This is a diagnostic, not an error bound. Coincident phases report
+    zero only when they also coincide with the free path; otherwise infinity.
     """
     spread = float(np.linalg.norm(plus.hidden - minus.hidden))
+    midpoint_error = float(np.linalg.norm(plus.hidden + minus.hidden - 2.0 * free.hidden))
     if spread == 0.0:
-        return 0.0
-    return float(np.linalg.norm(plus.hidden + minus.hidden - 2.0 * free.hidden) / spread)
+        return 0.0 if midpoint_error == 0.0 else float("inf")
+    return midpoint_error / spread
 
 
 class TemporalPatchNet:

@@ -12,7 +12,8 @@ state (the potentials of a group of neurons, or one context vector), reads its i
 through ports, and repairs its state until it agrees with what its ports hold and
 with its weights. The answer is the settled state. Learning perturbs that state
 toward an outcome and moves the weights on the difference between the perturbed and
-the free state, locally, so there is no backward pass over a computation graph.
+the free state, locally, so there is no backward pass through time or through the settle;
+the record patch's slow step is the adjoint of its own one-moment loss.
 Beside the slow weights a patch can hold a record store: a fixed sparse code of the
 reading addresses a table that takes an outcome in one write and reads it back at
 the same reading, so a fact is kept without a gradient. A night of sleep moves what
@@ -42,12 +43,19 @@ genomes across lives.
 This is the question a machine-learning reader asks first, and the answer differs by
 brain.
 
-- **The settling brain and the temporal patch use no backward pass.** The free
-  settle is the answer. A second settle with the outputs nudged by `beta` toward the
+- **The settling brain and the temporal patch use no backward pass through time.** The
+  free settle is the answer. A second settle with the outputs nudged by `beta` toward the
   target (and, centered, a third nudged away) gives every synapse the product of its
   own two neurons in each phase; the difference over `2 beta` is the update. On a
   smooth stable equilibrium with symmetric effective weights that contrast tends to
-  the loss gradient as `beta` tends to zero ([learning](learning.md#5-why-the-contrast-is-a-gradient)).
+  the loss gradient as `beta` tends to zero ([learning](learning.md#5-why-the-contrast-is-a-gradient));
+  at a finite `beta` it is an estimate whose error has a `beta^2` term and a phase-solve
+  term that grows as `1/beta`, and the default activation's kink at zero is outside the
+  smooth-branch argument. The rule is measured directly in
+  [benchmarks/local_equilibrium](../benchmarks/local_equilibrium/README.md): on a
+  nonlinear agreement judgment the public contrast learner matches an implicit-gradient
+  learner on the same network, with a global row-mass projection after each update as
+  the convergence controller.
   The temporal patch does the same on a whole path: it solves the path's energy plus
   and minus `beta` times the loss by damped Newton steps and takes the contrast of the
   parameter derivatives ([temporal learning](temporal.md#energy-and-update)).

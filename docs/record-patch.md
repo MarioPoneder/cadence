@@ -359,14 +359,22 @@ form) combinations and a tenth of the other pairs were held out. With 65,536 cel
 320-column output code and write rate one, the store alone produced a sentence inside the
 grammar for 0.815 of the held-out combinations and 0.885 of the other held-out messages, and
 preferred the grammatical member of every minimal pair (a/an, is/are, deal/deals, both/all); a
-second pass gave 0.85 and 0.915. The writes took about a minute. A new message shares most of
-its features with taught ones, so its reading touches their records, and the read averages
-them: the record principle doing agreement and word order without a gradient. A two-layer patch
-whose slow weights learned the same pairs by fifty epochs of cross-entropy reached 1.00 on the
-same held-out sets, and so did a GRU and a transformer of the same width; at a twelfth of the
-pairs and equal updates the patch had the lowest held-out loss of the three at every width
-(0.32 against 0.34 and 0.36 nats per word at width 64). The grammar is finite and every learner
-reaches its ceiling with enough data; what the store shows is what one pass of writes buys.
+second pass gave 0.85 and 0.915. The write pass took 88 seconds after a calibration pass over
+the inputs that set the context's centering and scale, and the scores are greedy decoding:
+sampling the first three words at temperature 0.8 gives 0.03 and 0.05. The store held
+65,536 cells of 320 float32 coefficients, 80 MiB, so the comparison is not capacity-matched.
+A new message shares most of its features with taught ones, so its reading touches their
+records, and the read averages them: the record principle doing agreement and word order
+without a gradient. A two-layer patch whose slow weights learned the same pairs by fifty
+epochs of cross-entropy reached 1.00 on the same held-out sets, and so did a GRU and a
+transformer of the same width; those three slow learners were trained by backpropagation
+through sentence time and layers, with unequal parameter counts (9.68M, 3.90M and 4.70M) and
+one model seed each, so their run says nothing about the local contrast rule. At one eighth of
+the pairs and equal updates the patch had the lowest held-out loss of the three at every width
+(0.32 against 0.34 and 0.36 nats per word at width 64, with 2.4M parameters against 0.83M and
+0.88M). The grammar is finite and every learner reaches its ceiling with enough data; what the
+store shows is what one pass of writes buys, and the held-out messages are new combinations of
+taught features, not new vocabulary.
 
 One knob at a time from that base (65,536 cells, 32 active, a 320-wide output code, write
 rate 1, one pass), on 200 never-taught combinations: 64 active cells lift the valid share

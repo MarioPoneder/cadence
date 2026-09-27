@@ -103,7 +103,13 @@ class TemporalMemory:
             remainder = vectors - old @ (old.T @ vectors)
             remainder -= old @ (old.T @ remainder)
             u, singular, _ = np.linalg.svd(remainder, full_matrices=False)
-            threshold = self.relative_tolerance * float(np.linalg.norm(vectors))
+            # Squaring a finite 1e200 vector overflows and would make the
+            # threshold infinite, silently discarding its protected direction.
+            magnitude = float(np.max(np.abs(vectors), initial=0.0))
+            threshold = (
+                self.relative_tolerance * magnitude * float(np.linalg.norm(vectors / magnitude))
+                if magnitude else 0.0
+            )
             rank = min(len(vectors) - old.shape[1], int(np.count_nonzero(singular > threshold)))
             new = u[:, :rank]
             if rank:

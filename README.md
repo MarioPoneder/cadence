@@ -46,7 +46,7 @@ neurons with their synapses, or one context vector with a record store beside it
 The answer is the state the brain settles into under its inputs. Learning settles
 once more with the outputs nudged toward the outcome and moves every synapse on the
 product of its own two ends in the two settled states, so nothing is propagated
-backward. The record store is a fixed sparse code of the reading addressing a table
+backward through time. The record store is a fixed sparse code of the reading addressing a table
 that takes an outcome in one write and reads it back at the same reading, and a
 night of sleep moves what the store holds into the slow weights.
 [Cadence for machine-learning people](https://github.com/muellerberndt/cadence/blob/main/docs/orientation.md)

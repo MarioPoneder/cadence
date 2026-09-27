@@ -24,6 +24,49 @@ The population kernel at the width of a game: what the poker neuroevolution lane
   reading of which a few ports matter (two reward ports among 830) counts them by their
   weight; the batched poker body normalizes per block, every block a slot reads counting once.
 
+What the adversarial audit of the Neural Computation submission (2026-09-26) sent back:
+four runtime defects, their regressions, a direct measurement of the local rule, and the
+corrected reading of three benchmarks.
+
+- `Records.write` and `write_batch` validate every supplied field, its selected code and its
+  known-output mask before any table or averaging count changes, and commit all touched rows
+  together; an invalid later target, a nonfinite selected code or an update that would
+  overflow raises `ValueError` and leaves the store as it was. Known masks must be boolean
+  with the target's exact shape; a consequence-only code may still leave its unused valued
+  part NaN.
+- `Brain.with_parameters(efficacy=...)` and the `efficacy` setter compute the effective
+  weights at once and reject a nonfinite product of finite efficacy and contact factors,
+  where the optimized cpu path had deferred the product and could install infinity.
+- `TemporalMemory.protect` computes its rank threshold from a scaled norm, so a finite input
+  of 1e200 keeps its protected direction instead of overflowing to rank zero.
+- `contrast_asymmetry` returns infinity when the two detuned paths coincide away from the
+  free path, where it returned zero; its docstring says what the ratio is, a diagnostic and
+  not an error bound.
+- `benchmarks/local_equilibrium` and `benchmarks/local_equilibrium_longer`: the public
+  centered contrast rule against an implicit-gradient learner on the same network, frozen
+  copies and an affine control, on a nonlinear agreement judgment with supplied roles, with
+  a global row-mass projection after each update as the convergence controller. The 800-update
+  run misses its predeclared criterion; the separately specified 8,000-update follow-up
+  reaches complete held-out accuracy in all five fresh seeds for both learned arms. A
+  NumPy-only verifier reconstructs the final checkpoints and rejects five tamperings.
+- `PopulationPatch.observe` gets the same contract: the inputs must be finite, the targets
+  finite on the unmasked moments (a masked-out moment's target is ignored and may be NaN),
+  and the write and the slow step are staged and checked together, so a moment that would
+  leave a nonfinite table, statistic, parameter or Adam moment raises `ValueError` with
+  nothing changed; a write whose rows could overflow is summed on a copy of those rows
+  before it lands. Returned residuals are zero on masked-out moments. `stream_of` and a
+  `weight` given on the cpu land on the patch's device (the loss had read the weight where
+  it was given).
+- Twelve regression cases in `tests/test_submission_audit.py` and twenty-one in
+  `tests/test_population_audit.py`.
+- The docs read their numbers as the receipts allow: the 390-fold population figure is a
+  device and implementation ratio at one patch shape; the grammar's low-data comparison is
+  at one eighth of the pairs with unequal parameter counts and one seed, and its slow
+  learners were trained through sentence time; the record store's one-pass result is greedy
+  validity after a calibration pass; the contrast at a finite nudge is an estimate with a
+  `beta^2` bias term and a `1/beta` phase-solve term, and the nudged phases need their own
+  contraction bound.
+
 ## 0.16.0 (2026-09-25)
 
 What learning a discrimination on the fruit fly's measured wiring sent back: the operating
