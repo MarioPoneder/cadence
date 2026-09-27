@@ -16,9 +16,9 @@ The settling brain: [Connectome](#connectome-cadenceconnectome), [Neuron model](
 [Records](#records-cadencerecords), [Regions](#regions-cadenceregions), [Generic brain](#generic-brain-cadencegeneric),
 [Genome](#genome-cadencegenome), [Learning](#learning-cadencelearning), [The agent and the valence](#the-agent-and-the-valence-cadenceplasticity),
 [Certificate](#certificate-cadencecertificate).
-Instruments: [the quickstart demos](#the-quickstart-demos-cadencedemo), [Timing](#timing-cadencetiming),
+Instruments: [the quickstart demos](#the-quickstart-demos), [Timing](#timing-cadencetiming),
 [the reference](#neuron-by-neuron-reference-cadencereference), [Protocols](#protocols-cadenceprotocol),
-[Checkpoints](#checkpoints-cadencecheckpoint), [Atlas](#atlas-cadenceatlas), [Receipts](#receipts-cadencereceipts),
+[Checkpoints](#checkpoints-cadencecheckpoint), [Atlas](#atlas), [Receipts](#receipts-cadencereceipts),
 [recording](#record-every-settling-step). Kept compositions: [PatchNet](#patchnet-cadencepatch)
 and [task compositions](#optional-task-compositions).
 
@@ -80,15 +80,10 @@ was halved to center the detuned paths; `method` names the search direction.
 Work and failure
 fields are described in the [planning guide](planning.md).
 
-## The quickstart demos (`cadence.demo`)
+## The quickstart demos
 
-`StreamDemo(day_passes=8, night_passes=240)`, `DecideDemo(steps=80)` and
-`BodyDemo(batches=256, decisions=12)` run the three quickstart brains with their seeds and
-report as they go: `run()` returns the result; `snapshot(since)` the phase, curves, stats
-and the frames of activity and heat since a frame index; `weights_json(what)` the synapses'
-absolute weights or their last change; `connectome()` and `atlas_json()` the brain for the
-viewer. `serve(demo, port, open_browser)` puts a demo behind a local page and `main` is the
-`cadence-demo` command. See [the quickstarts in your browser](demos.md).
+The three quickstart brains behind a local page are
+[cadence-examples/quickstart](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart).
 
 ## RecordPatchNet (`cadence.record_patch`)
 
@@ -607,7 +602,7 @@ and a complete runnable example.
     `tables` and `writes` are the learned state. The configuration is readable as `inputs`, `fields`,
     `cells`, `active`, `rate`, `valued` (a frozenset), `valued_rate`, `habituation`, `bias`,
     `pathways`, `pathway_rate` and `seed` (reduced to 32 bits).
-- `Mulberry32(seed)`: the 32-bit generator `mulberry` of `brain_scan.js`, so a page draws
+- `Mulberry32(seed)`: the 32-bit generator `mulberry` of the examples' viewer `brain_scan.js`, so a page draws
   the same numbers from the same seed; `state` holds the 32-bit state, the seed reduced to
   32 bits at construction.
   - `random() -> float`: one uniform draw in `[0, 1)`.
@@ -943,37 +938,11 @@ See [write a cortex](cortex.md) for regions, projections, ports and learning hea
   incoming effective weight of an excluded input), `adaptation` and `tolerance`; property
   `compatible` (both measures within `tolerance` and no adaptation); `to_dict()`.
 
-## Atlas (`cadence.atlas`)
+## Atlas
 
-- `build_atlas(connectome, weights=None, *, regions=None, shapes=None, positions=None, roles=None, seed=0, iterations=24) -> Atlas`:
-  one layout of a whole connectome. `weights` are effective synaptic weights in connectome
-  order (`brain.weights`); without them the contact counts stand in. `regions` partitions
-  the neurons by name, by default the connectome's populations, coarsest first, each neuron
-  in one region and the rest in `other`. `shapes` declares sheets `(rows, cols[, channels])`
-  per region name and places them on a grid; `positions` supplies `(count, 2)` coordinates
-  per region name, fitted into the region's place, or under `"*"` one `(n, 2)` frame for
-  every neuron, scaled into the square; `roles` overrides the role a region's name
-  suggests; `iterations` counts the neighbour-averaging passes that place the remaining
-  neurons by their synapses. Deterministic under `seed`.
-- `atlas_of(brain, **options) -> Atlas`: `build_atlas(brain.connectome, brain.weights, **options)`.
-- `Atlas`: `n`, `positions` (`(n, 2)`, both axes in `[-1, 1]`), `region_index`, `regions`
-  (layout records of `cadence.atlas.Region` with name, role, colour, centre, extent and
-  size, distinct from the `cadence.regions.Region` of a genome), `pre`, `post`, `weight`,
-  `seed` and `extras`; property `synapses`. `region_of(neuron)`; `summary()` (neurons,
-  synapses, and each region's name, role and size); `to_dict()` and `to_json()` (the
-  `cadence.atlas/v1` payload with base64 arrays); `subsample_edges(limit, seed=None)` (at
-  most `limit` synapses, drawn with probability proportional to absolute weight);
-  `frames(activation, potential=None)` (recorded `(steps, n)` settling steps quantised to
-  eight bits per neuron and step); `frames_from_record(record, row=0)` (the frames of one
-  batch row of a `SettlementRecord`);
-  `page(*, frames=None, brain=None, title="Cadence brain scan", note=..., inputs=None, limit=2000) -> str`
-  (a self-contained HTML page; `note` is the text under the title, `inputs` the neurons the
-  live page's `Detune` drives, and `limit` the largest live brain, whose dense weight matrix
-  the page embeds; a live brain with adaptation raises `ValueError`).
-- `brain_scan_script() -> str`: the source of the shipped renderer `brain_scan.js`.
-- `cadence.atlas.role_of(name, roles=None)`: the role a region name declares, by an explicit
-  map or by its wording; `cadence.atlas.PALETTE` maps each role to its colour. See
-  [the brain viewer](pages.md).
+The whole-brain viewer, the atlas that lays a connectome out and the self-contained replay page
+live in the examples repository, [cadence-examples/viewer](https://github.com/muellerberndt/cadence-examples/tree/main/viewer);
+the library ships the brains alone, and `record_settlements` supplies the settlings a page replays.
 
 ## Receipts (`cadence.receipts`)
 

@@ -23,7 +23,6 @@ is retained as a legacy composition. See ``docs/contracts.md``.
 from __future__ import annotations
 
 from . import regions
-from .atlas import Atlas, atlas_of, brain_scan_script, build_atlas
 from .belief import BeliefObservation, BeliefPatch, BeliefPath, BeliefReadback
 from .brain import Brain, BrainState, Equilibrium, Nudge, available_backends
 from .certificate import (
@@ -133,10 +132,6 @@ __all__ = [
     "TemporalReadback",
     "PatchNet",
     "PatchObservation",
-    "Atlas",
-    "atlas_of",
-    "build_atlas",
-    "brain_scan_script",
     "Certificate",
     "EPStructure",
     "certificate",

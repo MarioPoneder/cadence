@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- The whole-brain viewer (`brain_scan.js`, the replay page), the atlas (`cadence.atlas`:
+  `Atlas`, `atlas_of`, `build_atlas`, `role_of`, `PALETTE`, `brain_scan_script`) and the
+  three quickstart demos (`cadence.demo`, the `cadence-demo` command, `docs/demos.md`)
+  moved to the examples repository, as `cadence-examples/viewer` and
+  `cadence-examples/quickstart`. The library ships the brains alone; a page takes the
+  viewer from the examples. Importers of `cadence.atlas` change one import line.
+
 - Add `PatchNet.recursive(inputs, layers, outputs)` to build a base and chosen
   observer widths in one reciprocal graph. Every observer reads and feeds back
   into the earlier populations; output neurons participate in the same solve.

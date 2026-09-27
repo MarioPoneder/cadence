@@ -6,8 +6,7 @@ A **record patch** adds a store that takes an observation in one write and a nig
 which the slow weights learn from the store's own dreams. Every brain below is one of
 these, or a few of them joined by ports. Each snippet runs on NumPy alone, and each runs
 behind a local page as well, with the whole brain animated and the learning plotted as it
-happens: `cadence-demo stream`, `cadence-demo decide`, `cadence-demo body`, described in
-[the quickstarts in your browser](demos.md).
+[the quickstarts in your browser](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart).
 
 ```bash
 python -m pip install cadence-net
@@ -46,7 +45,6 @@ assert np.array_equal(alone.imagine(heard, state=np.zeros((3, 12))).output.argma
 print(night)
 ```
 
-In the browser: `cadence-demo stream`. `observe` writes the residual of the slow readout into
 the records of each reading; `sleep` dreams every cue once, teaches the fixed dreams by
 `observe(write=False)`, and rewrites the store at dawn. Categorical ports (`groups`), batched writes, a store narrower
 than its port and a two-patch stack are in [the record patch guide](record-patch.md).
@@ -83,7 +81,6 @@ for _ in range(80):
 assert learner.accuracy(drive, labels) == 1.0
 ```
 
-In the browser: `cadence-demo decide`. The free settle is the brain's own answer; `predict`
 reads the most active motor neuron.
 Regions, ports, records beside a policy head and evolution of the genome are in
 [compose a brain](brain.md), [write a cortex](cortex.md) and [evolve a brain](evolution.md).
@@ -107,7 +104,6 @@ private = net.imagine(np.zeros((1, 4, 2)))
 assert private.converged
 ```
 
-In the browser: `cadence-demo body` runs the complete loop, with a body that acts, a plan that
 is replayed without its goal before acceptance, and actual readback repairing the next
 proposal; the same loop as text is [learn, act and observe](interaction.md), and protection
 of chosen responses is [response protection](temporal-memory.md).

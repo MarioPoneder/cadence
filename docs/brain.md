@@ -211,21 +211,7 @@ generic = cd.GenericBrain.load("generic.npz")
 
 ## The brain in a browser page
 
-`cd.atlas_of(brain)` lays the whole connectome out by its effective weights, and
-`atlas.page(...)` returns a self-contained HTML page with the shipped renderer and
-recorded settling frames, a live brain that settles in the browser, or both. The page draws
-the neurons and synapses of the connectome; the records cortex has no neurons there.
-[The brain viewer](pages.md) describes the renderer.
+The whole-brain viewer, the atlas that lays a connectome out and the self-contained replay page
+live in the examples repository, [cadence-examples/viewer](https://github.com/muellerberndt/cadence-examples/tree/main/viewer);
+the library ships the brains alone, and `record_settlements` supplies the settlings a page replays.
 
-```python
-from pathlib import Path
-
-atlas = cd.atlas_of(policy.brain)
-print(atlas.summary())
-recorded = []
-with cd.record_settlements(recorded.append, label="corridor"):
-    policy.free(drives[:1])
-frames = atlas.frames_from_record(recorded[0])
-html = atlas.page(frames=frames, brain=policy.brain, title="Corridor brain")
-Path("corridor.html").write_text(html, encoding="utf-8")
-```

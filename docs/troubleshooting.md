@@ -14,10 +14,6 @@ for the settling brain's transport, `[accel]` adds torch and `[apple]` adds MLX 
 settling brain on a device; the temporal and record patches are NumPy, and the belief
 patch's slow half has a torch twin ([backends](backends.md)).
 
-**`cadence-demo` opens nothing.** It serves a local page and opens the browser; pass
-`--no-browser` and open the printed address, or `--port` if the default is taken. A run
-trains the brain first and takes seconds to a minute ([the quickstarts in your browser](demos.md)).
-
 **Which brain do I want?** The table at the end of the [quickstarts](quickstart.md#which-one);
 [build your own brain](build.md) walks each one from your data.
 

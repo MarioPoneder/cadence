@@ -29,8 +29,6 @@ apple = ["mlx>=0.20"]
 fast = ["numba>=0.60", "scipy>=1.10"]
 dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.5", "mypy>=1.10", "torch>=2.2", "numba>=0.60", "scipy>=1.10"]
 
-[project.scripts]
-cadence-demo = "cadence.demo:main"
 
 [project.urls]
 Homepage = "https://github.com/muellerberndt/cadence"

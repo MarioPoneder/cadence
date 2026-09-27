@@ -188,8 +188,8 @@ unit variance.
 - Several senses: `JointRecordPatches` settles several patches as one equilibrium through
   declared ports ([several patches joined by ports](record-patch.md#several-patches-joined-by-ports)).
 - A belief carried under action, with imagination: [the belief patch](belief.md).
-- A brain in a page: the shipped [viewer](pages.md) draws any connectome; `cadence-demo stream`
-  shows how a record patch is drawn as one.
+- A brain in a page: the examples' [viewer](pages.md) draws any connectome; the quickstart
+  demos there show how a record patch is drawn as one.
 
 ## A settling brain on a table of features
 
@@ -292,12 +292,6 @@ learner.save("decision_brain.npz")
 again = cd.Learner.load("decision_brain.npz")
 assert again.accuracy(drive(x_test), y_test) == learner.accuracy(drive(x_test), y_test)
 
-atlas = cd.atlas_of(learner.brain)
-recorded = []
-with cd.record_settlements(recorded.append, label="held-out"):
-    learner.free(drive(x_test[:1]))
-html = atlas.page(frames=atlas.frames_from_record(recorded[0]), brain=learner.brain, title="A decision brain")
-Path("decision_brain.html").write_text(html, encoding="utf-8")
 ```
 
 Open the page: every neuron and synapse, the settling animated, and a live brain that
