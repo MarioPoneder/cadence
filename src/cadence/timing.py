@@ -11,6 +11,7 @@ a mean, because a controller in a body cares about the slow tail.
 
 from __future__ import annotations
 
+import importlib
 import os
 import platform
 import sys
@@ -57,8 +58,10 @@ def environment() -> dict[str, Any]:
     }
     for name in ("numpy", "numba", "torch"):
         try:
-            out[name] = __import__(name).__version__
-        except Exception:  # noqa: BLE001
+            out[name] = importlib.import_module(name).__version__
+        # Absent (ImportError), unversioned (AttributeError), or present with a broken
+        # shared library (OSError, as a torch wheel without its CUDA libraries raises).
+        except (ImportError, AttributeError, OSError):
             out[name] = None
     return out
 

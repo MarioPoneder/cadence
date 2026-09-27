@@ -35,6 +35,7 @@ rebuilt by one command and is not.
 
 ## 2. The connectome and its populations
 
+<!-- not-run: reads the fly dataset built in section 1 -->
 ```python
 from cadence import Brain, Connectome, NeuronModel
 
@@ -90,6 +91,7 @@ threshold: with the local neurons' bias at -6 they stayed a third active and the
 
 The remedy is a gain per cell class, selected the way the global gain was:
 
+<!-- not-run: reads the fly dataset built in section 1 -->
 ```python
 def make(attenuation):                       # the candidate: -log gain of the local neurons
     log_gain = np.zeros(C.n); log_gain[C.populations["ln"]] = -attenuation
@@ -137,6 +139,7 @@ The rule is the same actor-critic as on any brain ([learning from reward](reward
 traps it met on a real wiring are listed there with their readings. Before the first decision,
 run the check that reads them all at once:
 
+<!-- not-run: reads the fly dataset built in section 1 -->
 ```python
 report = preflight(brain, outputs, plastic, drives)   # drives: the situations it will decide in
 assert report["warnings"] == []                       # each warning names the block that repairs it

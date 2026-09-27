@@ -35,13 +35,18 @@ jobs:
                        "docs/temporal-memory.md", "docs/architecture.md",
                        "docs/planning.md", "docs/interaction.md", "docs/partitioned.md",
                        "docs/record-patch.md", "docs/build.md", "docs/belief.md",
-                       "docs/steering.md", "docs/recursive-settlement.md"):
+                       "docs/steering.md", "docs/recursive-settlement.md",
+                       "docs/api.md", "docs/learning.md",
+                       "docs/protocols.md", "docs/receipts.md"):
               page = Path(name).read_text(encoding="utf-8")
-              code = "\n\n".join(re.findall(r"```python\n(.*?)```", page, re.S))
+              blocks = re.findall(r"(<!-- not-run[^\n]*-->\n)?```python\n(.*?)```", page, re.S)
+              code = "\n\n".join(block for marker, block in blocks if not marker)
               if name.endswith("quickstart.md"):
                   code += "\nassert night['updates'] > 200 and learner.updates == 80\n"
               with tempfile.TemporaryDirectory() as directory:
-                  subprocess.run([sys.executable, "-c", code], cwd=directory, check=True)
+                  script = Path(directory) / "documentation_example.py"
+                  script.write_text(code, encoding="utf-8")
+                  subprocess.run([sys.executable, str(script)], cwd=directory, check=True)
           PY
       - name: Check the Lean audit verifier
         run: python -m unittest discover -s lean -p test_check.py

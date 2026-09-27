@@ -14,7 +14,8 @@ the same synaptic input, stimulus, bias, and nudge the reference reads.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
 
@@ -33,6 +34,14 @@ if TYPE_CHECKING:
 
 __all__ = ["available", "fused_residual", "fused_settle"]
 
+_Kernel = TypeVar("_Kernel", bound=Callable[..., Any])
+
+
+def _compiled(kernel: _Kernel) -> _Kernel:
+    """``numba.njit(cache=True)``, keeping the kernel's annotated signature for the checker."""
+    assert njit is not None
+    return cast(_Kernel, njit(cache=True)(kernel))
+
 
 def available() -> bool:
     return njit is not None
@@ -40,8 +49,15 @@ def available() -> bool:
 
 if njit is not None:
 
-    @njit(cache=True)
-    def _activation(v, slope, threshold, rest, leak, out):
+    @_compiled
+    def _activation(
+        v: np.ndarray,
+        slope: float,
+        threshold: float,
+        rest: float,
+        leak: float,
+        out: np.ndarray,
+    ) -> None:
         n = v.shape[0]
         scale_up = 1.0 / (1.0 - rest)
         scale_down = leak / rest if rest > 0.0 else 0.0
@@ -54,52 +70,58 @@ if njit is not None:
             else:
                 out[i] = r * scale_down
 
-    @njit(cache=True)
-    def _act_scalar(x, slope, threshold, rest, leak):
-        r = 1.0 / (1.0 + np.exp(-slope * (x - threshold))) - rest
+    @_compiled
+    def _act_scalar(
+        x: float,
+        slope: float,
+        threshold: float,
+        rest: float,
+        leak: float,
+    ) -> float:
+        r: float = 1.0 / (1.0 + np.exp(-slope * (x - threshold))) - rest
         if r > 0.0:
             return r * (1.0 / (1.0 - rest))
         if leak == 0.0:
             return 0.0
         return r * (leak / rest)
 
-    @njit(cache=True)
+    @_compiled
     def _kernel(
-        v,
-        a,
-        s,
-        standing,
-        flat,
-        starts,
-        pair_pre,
-        pair_post,
-        offset,
-        has_synaptic_input,
-        freezable,
-        keep,
-        masked,
-        dt,
-        slope,
-        threshold,
-        rest,
-        leak,
-        has_adapt,
-        adapt_strength,
-        adapt_tau,
-        has_nudge,
-        target,
-        nmask,
-        gid,
-        ngroups,
-        beta,
-        softmax_t,
-        weight,
-        anchor,
-        anchor_gain,
-        steps,
-        tolerance,
-        use_tolerance,
-    ):
+        v: np.ndarray,
+        a: np.ndarray,
+        s: np.ndarray,
+        standing: np.ndarray,
+        flat: np.ndarray,
+        starts: np.ndarray,
+        pair_pre: np.ndarray,
+        pair_post: np.ndarray,
+        offset: np.ndarray,
+        has_synaptic_input: np.ndarray,
+        freezable: np.ndarray,
+        keep: np.ndarray,
+        masked: bool,
+        dt: float,
+        slope: float,
+        threshold: float,
+        rest: float,
+        leak: float,
+        has_adapt: bool,
+        adapt_strength: float,
+        adapt_tau: float,
+        has_nudge: bool,
+        target: np.ndarray,
+        nmask: np.ndarray,
+        gid: np.ndarray,
+        ngroups: int,
+        beta: float,
+        softmax_t: float,
+        weight: np.ndarray,
+        anchor: np.ndarray,
+        anchor_gain: np.ndarray,
+        steps: int,
+        tolerance: float,
+        use_tolerance: bool,
+    ) -> tuple[int, np.ndarray]:
         batch, n = v.shape
         group = np.flatnonzero(nmask > 0.0)
         position = np.full(n, -1, dtype=np.int64)  # an output neuron's place in the softmax group
@@ -351,34 +373,34 @@ def fused_settle(
 
 if njit is not None:
 
-    @njit(cache=True)
+    @_compiled
     def _residual_kernel(
-        v,
-        a,
-        s,
-        standing,
-        flat,
-        starts,
-        pair_pre,
-        pair_post,
-        offset,
-        keep,
-        masked,
-        dt,
-        has_adapt,
-        adapt_strength,
-        has_nudge,
-        target,
-        nmask,
-        gid,
-        ngroups,
-        beta,
-        softmax_t,
-        weight,
-        anchor,
-        anchor_gain,
-        out,
-    ):
+        v: np.ndarray,
+        a: np.ndarray,
+        s: np.ndarray,
+        standing: np.ndarray,
+        flat: np.ndarray,
+        starts: np.ndarray,
+        pair_pre: np.ndarray,
+        pair_post: np.ndarray,
+        offset: np.ndarray,
+        keep: np.ndarray,
+        masked: bool,
+        dt: float,
+        has_adapt: bool,
+        adapt_strength: float,
+        has_nudge: bool,
+        target: np.ndarray,
+        nmask: np.ndarray,
+        gid: np.ndarray,
+        ngroups: int,
+        beta: float,
+        softmax_t: float,
+        weight: np.ndarray,
+        anchor: np.ndarray,
+        anchor_gain: np.ndarray,
+        out: np.ndarray,
+    ) -> None:
         """The fixed-point equation error of every row at the published activations ``s``:
         one block transport, then the same terms the settle kernel adds, without a step."""
         batch, n = v.shape
@@ -508,10 +530,20 @@ def fused_residual(
 
 if njit is not None:
 
-    @njit(cache=True)
+    @_compiled
     def _trace_step(
-        trace, trace_bias, decay, s_plus, s_minus, pre, post, span, delta, step_scale, step_bias
-    ):
+        trace: np.ndarray,
+        trace_bias: np.ndarray,
+        decay: float,
+        s_plus: np.ndarray,
+        s_minus: np.ndarray,
+        pre: np.ndarray,
+        post: np.ndarray,
+        span: float,
+        delta: np.ndarray,
+        step_scale: np.ndarray,
+        step_bias: np.ndarray,
+    ) -> None:
         """One pass per row: contrast from the two phases, trace decay and accumulation, the
         dopamine-weighted sum into the step. ``trace`` is (batch, edges) and ``trace_bias``
         (batch, n)."""
@@ -570,8 +602,16 @@ def trace_step(
 
 if njit is not None:
 
-    @njit(cache=True)
-    def _contrast_mean(s_plus, s_minus, pre, post, span, out_edges, out_neurons):
+    @_compiled
+    def _contrast_mean(
+        s_plus: np.ndarray,
+        s_minus: np.ndarray,
+        pre: np.ndarray,
+        post: np.ndarray,
+        span: float,
+        out_edges: np.ndarray,
+        out_neurons: np.ndarray,
+    ) -> None:
         """Batch-mean contrast per synapse and per neuron, one pass, no (batch, edges) temporary."""
         batch, n = s_plus.shape
         edges = pre.shape[0]

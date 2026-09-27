@@ -7,40 +7,75 @@ from urllib.parse import unquote
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+# A block right after this marker is illustrative (it reads data the page cannot build) and is
+# not run; every other ``python`` block on a page is.
+NOT_RUN = "<!-- not-run"
+BLOCK = re.compile(r"(<!-- not-run[^\n]*-->\n)?```python\n(.*?)```", re.S)
+# pages whose blocks need an optional dependency
+REQUIRES = {"docs/backends.md": "torch", "docs/population.md": "torch"}
 
 
-@pytest.mark.parametrize(
-    "page",
-    [
-        "docs/patchnet.md",
-        "docs/temporal.md",
-        "docs/architecture.md",
-        "docs/temporal-memory.md",
-        "docs/quickstart.md",
-        "docs/concepts.md",
-        "docs/memory.md",
-        "docs/continuous.md",
-        "docs/tasks.md",
-        "docs/reward.md",
-        "docs/certificate.md",
-        "docs/cortex.md",
-        "docs/brain.md",
-        "docs/evolution.md",
-        "docs/build.md",
-        "docs/belief.md",
-        "docs/steering.md",
-        "docs/recursive-settlement.md",
-    ],
-)
+def snippets(page: str) -> list[str]:
+    return [code for marker, code in BLOCK.findall((ROOT / page).read_text()) if not marker]
+
+
+PAGES = [
+    "docs/patchnet.md",
+    "docs/temporal.md",
+    "docs/architecture.md",
+    "docs/temporal-memory.md",
+    "docs/quickstart.md",
+    "docs/concepts.md",
+    "docs/memory.md",
+    "docs/continuous.md",
+    "docs/tasks.md",
+    "docs/reward.md",
+    "docs/certificate.md",
+    "docs/cortex.md",
+    "docs/brain.md",
+    "docs/evolution.md",
+    "docs/build.md",
+    "docs/belief.md",
+    "docs/steering.md",
+    "docs/recursive-settlement.md",
+    "docs/api.md",
+    "docs/backends.md",
+    "docs/interaction.md",
+    "docs/learning.md",
+    "docs/partitioned.md",
+    "docs/planning.md",
+    "docs/population.md",
+    "docs/protocols.md",
+    "docs/receipts.md",
+    "docs/record-patch.md",
+]
+
+
+@pytest.mark.parametrize("page", PAGES)
 def test_introductory_python_snippets(page, tmp_path, monkeypatch):
+    if page in REQUIRES:
+        pytest.importorskip(REQUIRES[page])
     monkeypatch.chdir(tmp_path)
-    namespace = {"__name__": "documentation_example"}
-    for index, code in enumerate(
-        re.findall(r"```python\n(.*?)```", (ROOT / page).read_text(), re.S)
-    ):
+    blocks = snippets(page)
+    assert blocks, f"{page} has no runnable python block; drop it from PAGES"
+    # a reader runs the page as a script of their own; ``__file__`` names it
+    script = tmp_path / "documentation_example.py"
+    script.write_text("\n\n".join(blocks))
+    namespace = {"__name__": "documentation_example", "__file__": str(script)}
+    for index, code in enumerate(blocks):
         exec(compile(code, f"{page}:python-block-{index + 1}", "exec"), namespace)
     if page == "docs/quickstart.md":
         assert namespace["night"]["updates"] > 200 and namespace["learner"].updates == 80
+
+
+def test_every_python_block_is_run_or_marked_illustrative():
+    """A new page with python blocks must join PAGES, or mark each block ``<!-- not-run -->``."""
+    unrun = [
+        page.relative_to(ROOT).as_posix()
+        for page in sorted((ROOT / "docs").rglob("*.md"))
+        if snippets(page.relative_to(ROOT).as_posix()) and page.relative_to(ROOT).as_posix() not in PAGES
+    ]
+    assert not unrun, f"python blocks never executed: {unrun}"
 
 
 def test_local_documentation_links_resolve():

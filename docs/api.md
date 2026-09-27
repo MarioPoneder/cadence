@@ -1006,6 +1006,10 @@ for every actual iteration. Differences of successive potentials are the signed
 local repairs. Even a zero-step call has its initial row.
 
 ```python
+import numpy as np
+import cadence as cd
+
+brain = cd.Brain(cd.layered(4, 16, 2, seed=0), cd.learning_neuron_model())
 records = []
 with cd.record_settlements(records.append, label="observe and act"):
     result = brain.settle(stimulus={0: 1.0}, steps=32)

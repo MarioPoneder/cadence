@@ -131,7 +131,8 @@ neuron_model = cd.learning_neuron_model()
 cd.Brain(connectome, neuron_model, backend="torch")                          # cuda, else mps, else cpu
 cd.Brain(connectome, neuron_model, backend="torch", device="cpu")             # force
 cd.Brain(connectome, neuron_model, backend="torch", precision="float32")      # speed on a consumer GPU
-cd.Brain(connectome, neuron_model, backend="mlx")                             # Apple silicon through MLX
+if "mlx" in cd.available_backends():
+    cd.Brain(connectome, neuron_model, backend="mlx")                         # Apple silicon through MLX
 ```
 
 A learner built on a device brain learns there; `Learner.load(path, backend="cpu")`
