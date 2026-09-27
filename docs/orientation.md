@@ -36,7 +36,12 @@ There are four kinds of brains.
 Compositions: `RecordPatchStack` puts two record patches in depth, `JointRecordPatches`
 settles several as one equilibrium through declared ports, `StructuredPort` reads a grid
 through a tied local kernel (a convolution at the port) and `evolve` mutates and selects
-genomes across lives.
+genomes across lives. [A brain that reads itself](steering.md) composes two belief patches
+into a cortex whose senses a steering patch weighs (`Steered`, the nearest familiar model an
+attention gate, with the difference that the gain acts inside the repair and is learned within
+the life from the cortex's own loss through a seam) and a life whose governor, a settling
+brain of a dozen neurons, decides from the brain's own surprise when to imagine and when to
+learn (`Life`; the nearest familiar model a hand-written scheduler, which is its control).
 
 ## Where the learning signal comes from
 

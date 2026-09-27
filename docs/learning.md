@@ -248,3 +248,19 @@ Each centered update runs three settling phases. Measure all phase steps and wal
 epochs do not by themselves mean greater sample efficiency or lower compute. When the
 task is to learn what follows a reading, a [records cortex](memory.md#records) reads with
 one product and writes with one delta-rule step per outcome, without settling phases.
+
+### The admitted step, and a life lived online
+
+The patches of the [belief](belief.md) family learn by a step that is admitted, not taken: the
+chunk is replayed from its boundary under the proposed parameters and the largest halving that
+lowers the loss by the Armijo margin is taken, starting from twice the last admitted step and at
+most `rate`. Every lane that learned by the plain step diverged or learned nothing, so the
+admission is the default and the plain step is the control (`backtrack=False`). Two regimes
+follow from the rung demos. By day, batches of whole streams from a fresh boundary at a high
+cap (the night nursery: eight streams of 64 moments at a cap of 4, 120 epochs, the best
+checkpoint kept by held-out error; short days of 24 to 40 epochs leave a steering patch's
+weighing on the wrong sense). By night, one stream lived online in chunks of eight moments at a
+cap of 0.1, the boundary carried, the cortex asleep while the steering patch learns
+(`Steered.run(learn_cortex=False)`) or gated by a governor (`Life`); the day's cap on the
+night's chunks wrecks tracking, and a steering patch's rate scale above one pins a sense.
+[How to build a rung demo](howto-rung.md) has the numbers.

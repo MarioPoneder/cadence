@@ -80,6 +80,20 @@ the weights without any teacher outside the patch: the store's own equilibrium c
 are the night's targets. The chart shows the two accuracies, with the records and with the
 slow weights alone, crossing over the night.
 
+## The rung demos
+
+Beyond the three quickstarts, every step of the program is accepted by a demo of the same
+shape: the whole brain in the viewer, the world with the person in it (the mouse as the
+laser dot, the hand that drags the voice, the click that makes the baby cry), the instrument
+strip, and a three-way switch (the step on; off, the brain below it; the hand-designed
+control) so the acceptance is visible on the page. The dozing cat is rung 1 (a governor that
+reads the brain's surprise and decides when to wake) and the fifth canonical example; the
+ventriloquist is rung 2 (a steering patch weighs the eye and the ear); the lighthouse keeper
+is rung 3 (a beam the brain sweeps under a cost); the night nursery is rung 4 (a clock that is
+forgotten and a cry that keeps the ear). What they wrote around the library is the library's
+[composition layer](steering.md), and [how to build a rung demo](howto-rung.md) is the order
+of work for the next one.
+
 ## What the page draws
 
 - **The whole brain.** Neurons as points coloured by region, synapses as lines. Brightness is

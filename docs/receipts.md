@@ -81,6 +81,17 @@ Source and arithmetic checks are optional and must be supplied by the caller:
 - an explicit boundary block: what the experiment supplies rather than derives, and what it does
   not claim.
 
+## The cost and the orienting fields
+
+Every rung demo's receipt carries the same accounting so that arms compare: per arm,
+`macs_per_moment` (from `BeliefPatch.macs_per_moment` or `Steered.macs_per_moment`),
+`moments_per_decision`, and the `cost` counters (`moments`, `macs`, `replays`) over the
+life, from which a moments-per-decision and a multiply-accumulates-per-decision follow; a
+life adds the governor's steps as moments and the decisions by mode (`Life.compute`). A
+rung that reads a gain's response to events carries `orienting`'s output per kind (the
+count, the capture of the first and last events, the curve, the latency shares, the mean
+return) and the `dishabituation` pair, so that two demos' captures mean the same thing.
+
 ## Editing invalidates, on purpose
 
 Every file named in the source manifest is bound to the receipt. If such a file
