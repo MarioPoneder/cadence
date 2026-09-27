@@ -136,7 +136,8 @@ The three arms of a rung are three constructions of the same class: `Steered(cor
 weighing)` with the step on, `Steered(cortex)` or a steering patch deaf to the rung's channel
 with the step off, and `Steered(cortex, weighing=Rule(...))` as the control. Two ablations act
 on a trained brain at test time: `brain.ablation = "cut"` freezes the gains at one while the
-steering patch still runs and is counted; `brain.deaf = mask` zeroes readback channels. Every
+steering patch still runs and is counted, a callable ablation maps the gains (the
+ventriloquist's shuffle, `lambda g: g[:, ::-1]`); `brain.deaf = mask` zeroes readback channels. Every
 arm reads one accounting: `macs_per_moment()` (the cortex's moment with the probes when read,
 the steering patch's moment, a rule's declared operations), `moments_per_decision()`, and
 `cost`, the two patches' counters summed with the joint admission's replays.

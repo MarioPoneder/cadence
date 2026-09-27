@@ -253,8 +253,9 @@ See [a brain that reads itself](steering.md).
   `halvings`, `replays`, `reason`, `last`, `last_steering`.
 - `boundary() -> Boundary | None`: where the life is (`cortex`, `steering`, `output`, `residual`,
   `weighing`, `moments`); `run(state=boundary)` starts there. `reset()` forgets it.
-- `ablation` (`None` or `"cut"`, the gains at one with the steering patch still run), `deaf`
-  (a mask over the readback channels zeroed at run time).
+- `ablation` (`None`, `"cut"` for gains of one, or a callable over the gains `(batch, blocks)`,
+  the steering patch still run and counted), `deaf` (a mask over the readback channels zeroed
+  at run time).
 - `step_size`, `reset_step()`, `moments_per_decision()`, `macs_per_moment()`, `cost`,
   `reset_cost()`, `parameter_count()`, `parameters()`, `set_parameters()`, `snapshot()`,
   `restore(snapshot, *, rule=None, extra=None)`, `save()`, `load()`. The cortex's implied

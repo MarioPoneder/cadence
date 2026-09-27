@@ -184,6 +184,14 @@ def test_the_ablations_cut_the_gains_and_deafen_channels():
     assert cut.steering_output is not None  # the steering patch still runs and is counted
     taught = brain.run(o, a, y, rate=8.0, state=brain._fresh(3))
     assert not taught.steering_updated and taught.reason in ("updated", "no_decreasing_parameter_step")
+    brain.ablation = lambda g: g[:, ::-1]  # the ventriloquist's shuffle
+    shuffled = brain.run(o, a, state=brain._fresh(3))
+    brain.ablation = None
+    on = brain.run(o, a, state=brain._fresh(3))
+    np.testing.assert_allclose(shuffled.gains[:, 0], on.gains[:, 0, ::-1])  # the first moment reads the same readback
+    with pytest.raises(ValueError, match="same shape"):
+        brain.ablation = lambda g: g[:, :1]
+        brain.run(o, a, state=brain._fresh(3))
     brain.ablation = None
     deaf = np.ones(9, dtype=bool)
     deaf[5:] = False

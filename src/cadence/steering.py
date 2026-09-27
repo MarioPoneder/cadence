@@ -325,7 +325,7 @@ class Steered:
             raise ValueError(
                 f"the steering patch's port must read the {self.channels} readback channels"
             )
-        self.ablation: str | None = None
+        self.ablation: str | Callable[[np.ndarray], np.ndarray] | None = None
         self.deaf: np.ndarray | None = None
         self._live: Boundary | None = None
         self._step_size: float | None = None
@@ -479,9 +479,22 @@ class Steered:
                 raise ValueError("the rule must return (batch, blocks) gains")
         else:
             g = np.ones((n, self.cortex.block_count))
+        g = self._ablate(np.asarray(g, dtype=float))
+        return g, z_s, y_s, wstate, path_s
+
+    def _ablate(self, g: np.ndarray) -> np.ndarray:
+        """The test-time ablation of the gains: ``"cut"`` sets them to one, a callable maps them
+        (the ventriloquist's shuffle, ``g[:, ::-1]``); the steering patch still runs and counts."""
+        if self.ablation is None:
+            return g
         if self.ablation == "cut":
-            g = np.ones((n, self.cortex.block_count))
-        return np.asarray(g, dtype=float), z_s, y_s, wstate, path_s
+            return np.ones_like(g)
+        if callable(self.ablation):
+            out = np.asarray(self.ablation(g), dtype=float)
+            if out.shape != g.shape:
+                raise ValueError("an ablation must return gains of the same shape")
+            return out
+        raise ValueError("ablation is None, 'cut' or a callable over the gains")
 
     def _forward(
         self, o: np.ndarray, a: np.ndarray, start: Boundary
@@ -514,7 +527,7 @@ class Steered:
             g, state = self.weighing.gains(ys[:, k], state)
             gains.append(g)
         out = np.stack(gains, axis=1)
-        return np.ones_like(out) if self.ablation == "cut" else out
+        return self._ablate(out) if self.ablation is not None else out
 
     def _objective(
         self,
@@ -529,7 +542,7 @@ class Steered:
         the recorded readbacks, taken as given, the cortex under the gains it then returns."""
         n, t = o.shape[:2]
         price = 0.0
-        if self.steering is not None and self.ablation != "cut":
+        if self.steering is not None and self.ablation is None:
             assert self.weighing is not None
             ys = self.steering.assimilate(
                 r, np.zeros((n, t, self.steering.actions)), state=start.steering, keep_live=True
@@ -596,14 +609,14 @@ class Steered:
         slow = y - np.stack(col["read"], axis=1)
         loss = self.cortex._loss(slow, target)
         price = 0.0
-        if self.steering is not None and self.ablation != "cut" and ys is not None:
+        if self.steering is not None and self.ablation is None and ys is not None:
             assert self.weighing is not None
             price = self.weighing.price(ys, [start.weighing] + col["wstate"][:-1])
         result.update(loss=loss, price=price)
         if rate == 0 or loss is None:
             return SteeredPath(**result)
-        # the cortex under a rule or fixed gains learns by its own admitted step
-        if self.steering is None or self.ablation == "cut":
+        # the cortex under a rule, fixed gains or an ablation learns by its own admitted step
+        if self.steering is None or self.ablation is not None:
             if not learn_cortex:
                 return SteeredPath(**result)
             taught = self.cortex.observe(
