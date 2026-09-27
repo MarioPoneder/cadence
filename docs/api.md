@@ -235,11 +235,16 @@ See the [belief patch guide](belief.md).
 See [a brain that reads itself](steering.md).
 
 - `Steered(cortex, steering=None, weighing=None, *, reads_output=False, evidence=(), extra=None,
-  extra_channels=0, rate_scale=1.0)`: a `BeliefPatch` cortex whose gains a steering `BeliefPatch`
-  sets through a weighing, or a `Rule`, or nothing (gains of one). The readback per moment, in
-  order: the residual-alone probe per block, the surprise per block, the previous residual, the
-  previous outputs (`reads_output`), the encoded evidence of the blocks in `evidence`, the
-  channels `extra(readback, previous_output, previous_residual)` returns. The steering patch's
+  extra_channels=0, rate_scale=1.0, lagged=False, relative=False, reads_age=False, age_core=0.5)`:
+  a `BeliefPatch` cortex whose gains a steering `BeliefPatch` sets through a weighing, or a
+  `Rule`, or nothing (gains of one). The readback per moment, in order: the residual-alone probe
+  per block, the surprise per block, the previous residual, the previous outputs
+  (`reads_output`), the age of each block (`reads_age`: revolutions since its gain last reached
+  `age_core`), the encoded evidence of the blocks in `evidence`, the channels
+  `extra(readback, previous_output, previous_residual)` returns. `lagged=True` fills the probe,
+  surprise and evidence channels from the previous moment's path, masked where that moment's
+  gains were zero (what a window heard, under a sensing cost); `relative=True` rolls every
+  per-block group so that index zero is the block under a `Gaze`'s centre. The steering patch's
   port reads exactly `channels` inputs; its mask says which it hears. `readback_names`,
   `layout`, `channels`, `probes_on`.
 - `run(observations, actions, target=None, *, rate=0.0, state=None, keep_live=False,
@@ -252,7 +257,8 @@ See [a brain that reads itself](steering.md).
   `steering_output`, `loss`, `price`, `objective`, `updated`, `steering_updated`, `step`,
   `halvings`, `replays`, `reason`, `last`, `last_steering`.
 - `boundary() -> Boundary | None`: where the life is (`cortex`, `steering`, `output`, `residual`,
-  `weighing`, `moments`); `run(state=boundary)` starts there. `reset()` forgets it.
+  `weighing`, `moments`, `heard`: what the previous moment heard and the ages); `run(state=boundary)`
+  starts there. `reset()` forgets it.
 - `ablation` (`None`, `"cut"` for gains of one, or a callable over the gains `(batch, blocks)`,
   the steering patch still run and counted), `deaf` (a mask over the readback channels zeroed
   at run time).

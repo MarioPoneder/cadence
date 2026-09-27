@@ -228,6 +228,10 @@ class Boundary:
     residual: np.ndarray
     weighing: Any
     moments: int
+    heard: dict[str, np.ndarray] | None = None
+    """What the previous moment heard, for a lagged readback and the age of each block: the
+    probes and surprises masked by the gains that were up, the gained evidence, the gains and
+    the age ``(batch, blocks)`` in revolutions of the ring."""
 
 
 @dataclass(frozen=True)
@@ -265,7 +269,12 @@ class Steered:
     moment (readback, previous output, previous residual) to further channels ``(batch, k)``
     with ``extra_channels`` of them. The steering patch's port must read exactly the
     readback's channels; its mask says which it hears. ``rate_scale`` scales the steering
-    patch's step against the cortex's."""
+    patch's step against the cortex's. Under a sensing cost a steering patch may only read
+    what was heard: ``lagged=True`` fills the probe, surprise and evidence channels from the
+    previous moment's path, masked where that moment's gains were zero (nothing at a fresh
+    boundary), ``reads_age=True`` adds the age of each block, the revolutions since its gain
+    last reached ``age_core``, and ``relative=True`` rolls every per-block group so that index
+    zero is the block under the gaze's centre (a ``Gaze`` weighing)."""
 
     def __init__(
         self,
@@ -278,6 +287,10 @@ class Steered:
         extra: Callable[..., np.ndarray] | None = None,
         extra_channels: int = 0,
         rate_scale: float = 1.0,
+        lagged: bool = False,
+        relative: bool = False,
+        reads_age: bool = False,
+        age_core: float = 0.5,
     ) -> None:
         self.cortex = cortex
         self.steering = steering
@@ -312,11 +325,18 @@ class Steered:
         if not np.isfinite(rate_scale) or rate_scale <= 0:
             raise ValueError("rate_scale must be finite and positive")
         self.rate_scale = float(rate_scale)
+        self.lagged, self.relative, self.reads_age = bool(lagged), bool(relative), bool(reads_age)
+        if self.relative and not isinstance(self.weighing, Gaze):
+            raise ValueError("a relative readback rolls the blocks to a gaze's centre; it needs a Gaze weighing")
+        if not np.isfinite(age_core) or age_core < 0:
+            raise ValueError("age_core must be finite and nonnegative")
+        self.age_core = float(age_core)
         self.layout: list[tuple[str, int]] = (
             [(f"probe:{b}", 1) for b in range(cortex.block_count)]
             + [(f"surprise:{b}", 1) for b in range(cortex.block_count)]
             + [("residual", 1)]
             + ([(f"output:{i}", 1) for i in range(cortex.outputs)] if self.reads_output else [])
+            + ([(f"age:{b}", 1) for b in range(cortex.block_count)] if self.reads_age else [])
             + [(f"evidence:{b}", cortex.port.blocks[b].outputs) for b in self.evidence]
             + ([(f"extra:{i}", 1) for i in range(self.extra_channels)] if self.extra else [])
         )
@@ -411,7 +431,27 @@ class Steered:
             np.zeros(n),
             None if self.weighing is None else self.weighing.begin(n),
             0,
+            self._nothing_heard(n),
         )
+
+    def _nothing_heard(self, n: int) -> dict[str, np.ndarray]:
+        b = self.cortex.block_count
+        return {
+            "probe": np.zeros((n, b)),
+            "surprise": np.zeros((n, b)),
+            "evidence": np.zeros((n, sum(self.cortex.port.blocks[i].outputs for i in self.evidence))),
+            "gains": np.zeros((n, b)),
+            "age": np.zeros((n, b)),
+        }
+
+    def _roll(self, x: np.ndarray, centre: Any) -> np.ndarray:
+        """Per-block channels rolled so that index zero is the block under the gaze's centre."""
+        if not self.relative or x.shape[1] != self.cortex.block_count:
+            return x
+        b = self.cortex.block_count
+        k = np.rint(np.asarray(centre, dtype=float) / (2.0 * np.pi / b)).astype(int) % b
+        idx = (k[:, None] + np.arange(b)[None, :]) % b
+        return np.asarray(x[np.arange(len(x))[:, None], idx])
 
     def boundary(self) -> Boundary | None:
         """Where the life is, to be kept before a window and replayed from after it."""
@@ -440,18 +480,30 @@ class Steered:
         z_c: np.ndarray,
         prev_output: np.ndarray | None,
         prev_residual: np.ndarray,
+        heard: dict[str, np.ndarray],
+        centre: Any,
     ) -> np.ndarray:
         n = len(o_k)
-        rb = self.cortex.readback(o_k, a_k, state=z_c, probe=self.probes_on)
-        parts = [
-            rb.residual_alone,
-            np.zeros((n, self.cortex.block_count)) if rb.surprise is None else rb.surprise,
-            prev_residual[:, None],
-        ]
+        if self.lagged:
+            rb = None
+            probe, surprise = heard["probe"], heard["surprise"]
+        else:
+            rb = self.cortex.readback(o_k, a_k, state=z_c, probe=self.probes_on)
+            probe = rb.residual_alone
+            surprise = np.zeros((n, self.cortex.block_count)) if rb.surprise is None else rb.surprise
+        parts = [self._roll(probe, centre), self._roll(surprise, centre), prev_residual[:, None]]
         if self.reads_output:
-            parts.append(np.zeros((n, self.cortex.outputs)) if prev_output is None else prev_output)
-        for b in self.evidence:
-            parts.append(rb.evidence[:, self.cortex._block_slices[b]])
+            out = np.zeros((n, self.cortex.outputs)) if prev_output is None else prev_output
+            parts.append(self._roll(out, centre))
+        if self.reads_age:
+            parts.append(self._roll(heard["age"], centre))
+        if self.evidence:
+            if self.lagged:
+                parts.append(heard["evidence"])
+            else:
+                assert rb is not None
+                for b in self.evidence:
+                    parts.append(rb.evidence[:, self.cortex._block_slices[b]])
         if self.extra is not None:
             more = np.asarray(self.extra(rb, prev_output, prev_residual), dtype=float)
             if more.shape != (n, self.extra_channels):
@@ -504,20 +556,31 @@ class Steered:
         prev_output = None if start.output is None else start.output.copy()
         prev_residual = start.residual.copy()
         wstate = start.weighing
+        heard = {k: v.copy() for k, v in (start.heard or self._nothing_heard(n)).items()}
+        remember = self.lagged or self.reads_age
         col: dict[str, list[Any]] = {k: [] for k in ("y", "g", "r", "res", "ys", "read", "wstate")}
         path = path_s = None
         for k in range(t):
-            r = self._readback(o[:, k], a[:, k], z_c, prev_output, prev_residual)
+            r = self._readback(o[:, k], a[:, k], z_c, prev_output, prev_residual, heard, wstate)
             g, z_s, y_s, wstate, path_s = self._weigh_one(r, z_s, wstate)
             path = self.cortex.assimilate(
-                o[:, k][:, None], a[:, k][:, None], gains=g[:, None], state=z_c, keep_live=True
+                o[:, k][:, None], a[:, k][:, None], gains=g[:, None], state=z_c, keep_live=True, probe=self.lagged and self.probes_on
             )
             z_c = path.final_state
             prev_output, prev_residual = path.output[:, 0], path.residual[:, 0]
+            if remember:
+                up = (g > 0.0).astype(float)
+                heard = {
+                    "probe": (path.residual_alone[:, 0] if path.residual_alone is not None else np.zeros_like(g)) * up,
+                    "surprise": (path.surprise[:, 0] if path.surprise is not None else np.zeros_like(g)) * up,
+                    "evidence": np.concatenate([path.evidence[:, 0, self.cortex._block_slices[b]] for b in self.evidence], axis=-1) if self.evidence else heard["evidence"],
+                    "gains": g.copy(),
+                    "age": np.where(g >= self.age_core, 0.0, heard["age"] + 1.0 / self.cortex.block_count),
+                }
             for key, value in (("y", path.output[:, 0]), ("g", g), ("r", r), ("res", prev_residual), ("ys", y_s), ("read", path.read[:, 0]), ("wstate", wstate)):
                 col[key].append(value)
         col["last"], col["last_s"] = path, path_s
-        end = Boundary(z_c, z_s, prev_output, prev_residual, wstate, start.moments + t)
+        end = Boundary(z_c, z_s, prev_output, prev_residual, wstate, start.moments + t, heard)
         return col, end
 
     def _weigh_chunk(self, ys: np.ndarray, wstate: Any) -> np.ndarray:
@@ -690,6 +753,10 @@ class Steered:
             "evidence": list(self.evidence),
             "extra_channels": self.extra_channels,
             "rate_scale": self.rate_scale,
+            "lagged": self.lagged,
+            "relative": self.relative,
+            "reads_age": self.reads_age,
+            "age_core": self.age_core,
         }
         out["meta"] = np.array(json.dumps(meta, sort_keys=True))
         out["step_size"] = np.empty(0) if self._step_size is None else np.array([self._step_size])
@@ -732,6 +799,10 @@ class Steered:
                 extra=extra if meta["extra_channels"] else None,
                 extra_channels=int(meta["extra_channels"]),
                 rate_scale=float(meta["rate_scale"]),
+                lagged=bool(meta.get("lagged", False)),
+                relative=bool(meta.get("relative", False)),
+                reads_age=bool(meta.get("reads_age", False)),
+                age_core=float(meta.get("age_core", 0.5)),
             )
             kept = np.asarray(snapshot["step_size"], dtype=float).reshape(-1)
             result._step_size = None if kept.size == 0 else float(kept[0])

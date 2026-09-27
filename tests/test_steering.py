@@ -256,3 +256,36 @@ def test_custody_keeps_both_patches_the_weighing_and_the_step():
     assert back.rule is not None and back.rule.macs == 3 and back.steering is None
     gaze = Steered(_cortex(17), None)
     assert Steered.restore(gaze.snapshot()).weighing is None
+
+
+def test_a_lagged_relative_readback_carries_what_the_window_heard():
+    rng = np.random.default_rng(18)
+    b = 8
+    cortex = BeliefPatch(StructuredPort(b, [DenseBlock(i, 1, 1) for i in range(b)]), actions=1, belief=6, outputs=b, cells=16, active=2, record_width=4, seed=5)
+    cortex.set_implied_reading(lambda y: y, units=np.full(b, 0.05))
+    steering = _steering(4 * b + 1, seed=6, outputs=1)  # probes, surprises, residual, outputs, ages
+    gaze = Gaze(b, sigma=0.5, cut=1.5, lamp=0.3, span=0.3, start=0.0)
+    brain = Steered(cortex, steering, gaze, reads_output=True, lagged=True, relative=True, reads_age=True, age_core=0.5)
+    assert brain.channels == 4 * b + 1 and brain.readback_names[2 * b + 1 : 2 * b + 1 + b] == [f"output:{i}" for i in range(b)]
+    o, a = rng.random((2, 3, b)), np.zeros((2, 3, 1))
+    path = brain.run(o, a, state=brain._fresh(2))
+    first = path.readback[:, 0]
+    assert np.all(first[:, : 2 * b] == 0.0) and np.all(first[:, 2 * b] == 0.0) and np.all(first[:, -b:] == 0.0)  # nothing heard yet
+    # the second moment reads the first moment's surprise where the window was up, rolled to the centre it had
+    centre0 = brain.boundary().weighing  # after three moments; recompute the first centre from the outputs
+    turns = gaze.turn(path.steering_output)
+    centre_after_first = ((0.0 + turns[:, 0]) + np.pi) % (2 * np.pi) - np.pi
+    gains0 = path.gains[:, 0]
+    replay = cortex.assimilate(o[:, :1], a[:, :1], gains=gains0[:, None], state=np.zeros((2, 6)), keep_live=True)
+    heard = replay.surprise[:, 0] * (gains0 > 0)
+    k = np.rint(centre_after_first / (2 * np.pi / b)).astype(int) % b
+    idx = (k[:, None] + np.arange(b)[None, :]) % b
+    np.testing.assert_allclose(path.readback[:, 1, b : 2 * b], heard[np.arange(2)[:, None], idx], atol=1e-12)
+    # the age counts revolutions since a block's gain last reached the core, rolled the same way
+    age1 = np.where(gains0 >= 0.5, 0.0, 1.0 / b)
+    np.testing.assert_allclose(path.readback[:, 1, -b:], age1[np.arange(2)[:, None], idx], atol=1e-12)
+    assert brain.boundary().heard is not None and brain.boundary().heard["age"].shape == (2, b)
+    twin = Steered.restore(brain.snapshot())
+    assert twin.lagged and twin.relative and twin.reads_age and twin.age_core == 0.5
+    with pytest.raises(ValueError, match="Gaze"):
+        Steered(_cortex(18), _steering(9, seed=7), Softmax(2), evidence=[1], relative=True)
