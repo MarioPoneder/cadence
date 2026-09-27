@@ -619,13 +619,19 @@ class BeliefPatch:
         return self._path(record, None)
 
     def readback(
-        self, observations: np.ndarray, actions: np.ndarray, *, state: np.ndarray | None = None
+        self,
+        observations: np.ndarray,
+        actions: np.ndarray,
+        *,
+        state: np.ndarray | None = None,
+        probe: bool = True,
     ) -> BeliefReadback:
         """One moment's readback before its repair, from the live belief or ``state``: the
         expectation under ``actions`` ``(batch, actions)``, the residual-alone probe of each
-        block of ``observations`` ``(batch, inputs)`` and, with an implied reading declared,
-        each block's surprise. What a steering patch reads before it sets the moment's gains.
-        Nothing changes."""
+        block of ``observations`` ``(batch, inputs)`` (``probe=False`` skips it and its cost;
+        the field is then zeros), with an implied reading declared each block's surprise, and
+        the encoded evidence before any gain. What a steering patch reads before it sets the
+        moment's gains. Nothing changes."""
         o = np.asarray(observations, dtype=float)
         a = np.asarray(actions, dtype=float)
         if o.ndim != 2 or o.shape[1] != self.inputs or not np.isfinite(o).all():
@@ -637,7 +643,8 @@ class BeliefPatch:
         e_raw, _ = self._encode(o)
         rows = np.ones(len(o), dtype=bool)
         surprise = None if self._implied is None else self._surprise(o, z, rows)
-        return BeliefReadback(ex["p"], self._probe(e_raw, ex["p"]), surprise, e_raw)
+        probes = self._probe(e_raw, ex["p"]) if probe else np.zeros((len(o), self.block_count))
+        return BeliefReadback(ex["p"], probes, surprise, e_raw)
 
     def observe(
         self,
