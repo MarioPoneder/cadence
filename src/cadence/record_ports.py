@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -61,11 +62,11 @@ class Port:
         for key in ("source", "target", "start", "width"):
             object.__setattr__(self, key, _integer(key, getattr(self, key), 1 if key == "width" else 0))
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, int]:
         return dict(source=self.source, target=self.target, start=self.start, width=self.width)
 
     @classmethod
-    def from_dict(cls, value):
+    def from_dict(cls, value: dict[str, int]) -> Port:
         return cls(value["source"], value["target"], value["start"], value["width"])
 
 
@@ -86,15 +87,17 @@ class Settled:
     settle: np.ndarray
 
     @property
-    def loss(self):
+    def loss(self) -> float | None:
         losses = [path.loss for path in self.paths]
-        value = None if any(v is None for v in losses) else float(sum(losses))
+        known = [v for v in losses if v is not None]
+        value = float(sum(known)) if len(known) == len(losses) else None
         return value if value is not None and np.isfinite(value) else None
 
     @property
-    def slow_loss(self):
+    def slow_loss(self) -> float | None:
         losses = [path.slow_loss for path in self.paths]
-        value = None if any(v is None for v in losses) else float(sum(losses))
+        known = [v for v in losses if v is not None]
+        value = float(sum(known)) if len(known) == len(losses) else None
         return value if value is not None and np.isfinite(value) else None
 
 
@@ -148,20 +151,20 @@ class JointRecordPatches:
                 raise ValueError(f"cortex {i} reads {net.inputs} inputs; own {self.own[i]} plus ports {widths[i]} expected")
 
     # ------------------------------------------------------------------ parameters
-    def parameters(self):
+    def parameters(self) -> list[dict[str, np.ndarray]]:
         return [net.parameters() for net in self.cortices]
 
-    def parameter_count(self):
+    def parameter_count(self) -> int:
         return int(sum(v.size for p in self.parameters() for v in p.values()))
 
-    def record_entries(self):
+    def record_entries(self) -> int:
         return int(sum(net.records.parameters() for net in self.cortices))
 
     @property
-    def state(self):
+    def state(self) -> list[np.ndarray | None]:
         return [net.state for net in self.cortices]
 
-    def reset(self):
+    def reset(self) -> None:
         for net in self.cortices:
             net.reset()
 
@@ -317,14 +320,14 @@ class JointRecordPatches:
                 teach.append(net._teaching(full, targets[i])[1])
         return paths, teach
 
-    def imagine(self, xs, *, states=None):
+    def imagine(self, xs: list[np.ndarray], *, states: list[np.ndarray | None] | None = None) -> Settled:
         paths, _ = self._check(xs)
         if states is not None and len(states) != len(self.cortices):
             raise ValueError("one boundary state per cortex")
         boundaries = [net._boundary(len(paths[0]), None if states is None else states[i]) for i, net in enumerate(self.cortices)]
         return self._settle(paths, boundaries)
 
-    def advance(self, xs):
+    def advance(self, xs: list[np.ndarray]) -> Settled:
         paths, _ = self._check(xs)
         boundaries = [net._boundary(len(paths[0]), None) for net in self.cortices]
         F = self._settle(paths, boundaries)
@@ -332,7 +335,7 @@ class JointRecordPatches:
             net._carry(path)
         return F
 
-    def observe(self, xs, targets, *, rate=1.0, backtrack=False, write=True):
+    def observe(self, xs: list[np.ndarray], targets: list[np.ndarray], *, rate: float = 1.0, backtrack: bool = False, write: bool = True) -> JointObservation:
         """Run the finite joint scan and its adjoint, optionally writing observed records.
 
         Invalid inputs or exceptions during record writes leave every cortex unchanged.
@@ -400,17 +403,17 @@ class JointRecordPatches:
         return JointObservation(False, "no_decreasing_parameter_step", F, deltas, initial, initial, 0.0, replays, writes)
 
     # ------------------------------------------------------------------ custody
-    def snapshot(self):
+    def snapshot(self) -> dict[str, np.ndarray]:
         meta = dict(format=FORMAT, own=self.own, ports=[p.to_dict() for p in self.ports], rounds=self.rounds,
                     damping=self.damping, cross_adjoint=self.cross_adjoint, cut=self.cut, cortices=len(self.cortices))
-        out = {"meta": np.array(json.dumps(meta, sort_keys=True, allow_nan=False))}
+        out: dict[str, np.ndarray] = {"meta": np.array(json.dumps(meta, sort_keys=True, allow_nan=False))}
         for i, net in enumerate(self.cortices):
             for k, v in net.snapshot().items():
                 out[f"cortex{i}_{k}"] = v
         return out
 
     @classmethod
-    def restore(cls, snapshot):
+    def restore(cls, snapshot: dict[str, np.ndarray]) -> JointRecordPatches:
         try:
             meta = json.loads(str(snapshot["meta"]))
             if not isinstance(meta, dict) or meta.get("format") != FORMAT:
@@ -429,21 +432,21 @@ class JointRecordPatches:
         except (KeyError, TypeError, IndexError, OverflowError) as error:
             raise ValueError("invalid record-ports checkpoint") from error
 
-    def clone(self):
+    def clone(self) -> JointRecordPatches:
         return JointRecordPatches.restore(self.snapshot())
 
-    def save(self, path):
+    def save(self, path: str | Path) -> Path:
         from .checkpoint import _write
 
         return _write(self.snapshot(), path)
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path: str | Path) -> JointRecordPatches:
         with np.load(path, allow_pickle=False) as arrays:
             return cls.restore({k: arrays[k] for k in arrays.files})
 
 
-def build(hidden, own_inputs, outputs, ports, *, seed, rounds=1, damping=1.0, cross_adjoint=True, groups=None, **records):
+def build(hidden: list[int], own_inputs: list[int], outputs: list[int], ports: list[Port | dict[str, int]], *, seed: int, rounds: int = 1, damping: float = 1.0, cross_adjoint: bool = True, groups: list[list[list[int]]] | None = None, **records: object) -> JointRecordPatches:
     """Record patches of the given widths joined by the ports; ``groups[i]`` are cortex i's categorical groups."""
     ports = [p if isinstance(p, Port) else Port.from_dict(p) for p in ports]
     widths = [sum(p.width for p in ports if p.target == i) for i in range(len(hidden))]

@@ -163,6 +163,12 @@ A small activation change is not a fixed-point certificate: saturation or tiny `
 can make it small while the potential is far from rest. Check the neuron equations:
 
 ```python
+import numpy as np
+import cadence as cd
+
+connectome = cd.layered(4, 16, 2, seed=0)
+learner = cd.Learner(cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"])
+drive = np.random.default_rng(0).random((8, connectome.n))
 free = learner.free(drive)
 remaining = learner.brain.residual(drive, free)  # one diagnostic value per batch row
 ```
