@@ -75,6 +75,14 @@ to preserve information available elsewhere in the graph.
 
 All-to-all reciprocal access does not by itself establish a meaningful
 cognitive hierarchy. Layer labels describe construction, not intelligence.
+In this factory, each hidden population connects to every other hidden
+population and to the input and output ports. Permuting the hidden population
+widths therefore gives the same unweighted graph up to neuron relabelling.
+Equal-width populations have interchangeable structural roles; learned weights
+can distinguish them. Reusing a random seed does not preserve the same weights
+under that relabelling, because construction changes the order of random draws.
+Increasing the number of populations also changes connectivity, so a layer-count
+comparison must control for contacts as well as width and parameter count.
 Test whether another observing level adds useful capability against widening,
 cut-feedback and frozen-readback controls at matched resources.
 
