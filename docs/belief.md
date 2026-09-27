@@ -32,9 +32,13 @@ step is the transition alone, with the store read at the expectation and nothing
   `BeliefPath.step` is the last move per belief unit and `residual` its size; a familiar
   moment ends near zero.
 - **The store** holds the residual of the slow readout at the code of the final reading,
-  coded to `record_width` signs, written once per observed moment. Its read enters the
-  repair and patches the readout. No gradient reaches the store; that is the record
-  patch's rule and it stays.
+  coded to `record_width` signs, written once per observed moment with `write=True`. Its
+  read enters the repair and patches the readout. No gradient reaches the store; that is
+  the record patch's rule and it stays. In every rung demo so far (the cat, the ventriloquist,
+  the lighthouse keeper, the night nursery) the store paid nothing and was left unwritten, so
+  `observe` leaves it unwritten unless asked; the trade-off is the record patch's, a store
+  that holds what the slow model does not know against reads that habituate to stale
+  residuals.
 - **Imagination** (`imagine(actions)`) leaves parameters, records, state and counters
   unchanged and consumes no observation. A continuation conditioned on recorded future
   inputs is a different measurement; this method cannot make one.
@@ -53,7 +57,7 @@ targets = rng.normal(size=(2, 8, 6))                    # (N, T, outputs)
 brain.reset()
 seen = brain.assimilate(observations, actions)          # the belief follows the evidence
 ahead = brain.imagine(actions[:, :4])                   # (N, H, actions): private, from the live belief
-learned = brain.observe(observations, actions, targets, rate=1.0)   # one backward scan through every iteration; the store takes the residuals
+learned = brain.observe(observations, actions, targets, rate=1.0, write=True)   # one backward scan through every iteration; the store takes the residuals
 assert learned.updated and learned.writes == 16
 ```
 

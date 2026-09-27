@@ -13,11 +13,6 @@ shared synapses and fading per-stream residuals. New generic brains with `episod
 use this consolidation rule. The `FastSynapses` API below retains its original independent
 stream behavior and immediate residual-write rule.
 
-For retrieval from observed content, [competitive content memory](content_memory.md) learns
-bounded prototypes and selects one by cue similarity. For retention of past supervised
-tasks in a single output head, [explicit replay](replay.md) stores a declared reservoir of
-past feature/label pairs. Both add counted memory and neither learns a general address policy.
-
 ## One correction
 
 For a unit key `k`, value `v`, and matrix `M`:
@@ -66,7 +61,7 @@ sparse code touches few records: at rate one, a write reproduces the outcome at 
 exactly, and later writes change it only through shared cells. A dense code touches many:
 each outcome is averaged into all of them, and later outcomes overwrite it. A learner whose
 every parameter takes part in every prediction moves every prediction with each update,
-which [rehearsal](replay.md) counters with decorrelated real observations. Records learn
+which a rehearsal of decorrelated real observations counters. Records learn
 from one stream in its own order, as the [records tests](../tests/test_records.py) do with
 a correlated walk.
 

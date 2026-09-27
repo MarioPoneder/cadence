@@ -20,7 +20,6 @@ compositions. Their optional mechanisms are not required by the temporal core.
 from __future__ import annotations
 
 from . import regions
-from .actor import ActorPlan, ActorReadback, BodyModel, EquilibriumActor, ObservationRecord
 from .atlas import Atlas, atlas_of, brain_scan_script, build_atlas
 from .belief import BeliefObservation, BeliefPatch, BeliefPath, BeliefReadback
 from .brain import Brain, BrainState, Equilibrium, Nudge, available_backends
@@ -34,7 +33,6 @@ from .certificate import (
 )
 from .checkpoint import load, save
 from .connectome import Connectome
-from .content_memory import ContentMemory
 from .generic import GenericBrain
 from .genome import Genome, Projection, develop, evolve, genes
 from .life import (
@@ -86,7 +84,6 @@ from .recording import SettlementRecord, record_settlements
 from .records import Mulberry32, Records
 from .reference import conformance
 from .regions import Region
-from .replay import ReservoirReplay
 from .steering import Boundary, Gaze, Rule, Softmax, Steered, SteeredPath
 from .stream import Afterglow, Echo, FastSynapses, PatternSeparator, Trace, stateful
 from .temporal import TemporalObservation, TemporalPatchNet, TemporalPhase, TemporalReadback
@@ -117,11 +114,6 @@ __all__ = [
     "DenseBlock",
     "MapBlock",
     "StructuredPort",
-    "ActorPlan",
-    "ActorReadback",
-    "BodyModel",
-    "EquilibriumActor",
-    "ObservationRecord",
     "ConstraintReport",
     "TemporalMemory",
     "TemporalPlan",
@@ -138,8 +130,6 @@ __all__ = [
     "TemporalReadback",
     "PatchNet",
     "PatchObservation",
-    "ContentMemory",
-    "ReservoirReplay",
     "Atlas",
     "atlas_of",
     "build_atlas",

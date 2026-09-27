@@ -49,6 +49,14 @@ maps at the port, [two patches in depth](record-patch.md#two-patches-in-depth) a
 iteration, the store inside the repair, imagination that consumes no observation,
 and the imagination loss that trains the transition.
 
+### A brain that reads itself
+
+[The steered cortex, the governor and the life](steering.md): a steering patch of the same
+rule sets the cortex's gains from the cortex's readback, a governor settles on the brain's own
+signals and names its mode, and the life runs both, with the three-way switch and one
+accounting; [how to build a rung demo](howto-rung.md) is the order of work from the world to
+the receipt.
+
 ### The settling brain, from regions
 
 [Compose a brain](brain.md) (genome, development, settling checks, one experience
@@ -104,11 +112,10 @@ hypotheses, the theorems and the evidence.
 ## Kept for existing experiments
 
 These compositions have their own state and learning contracts and are kept for the
-experiments that used them: [PatchNet](patchnet.md), [EquilibriumActor](actor.md)
-(a fixed linear-model example of factual inference and joint future-state/action
-repair), the `GenericBrain` loop in [continuous interaction](continuous.md) and
-[experience](experience.md), [task recipes](tasks.md), [rehearsal](replay.md),
-[content memory](content_memory.md) and [sequence readback](sequence.md).
+experiments that used them: [PatchNet](patchnet.md), the `GenericBrain` loop in
+[continuous interaction](continuous.md) and [experience](experience.md), and
+[task recipes](tasks.md). `GenericBrain` is kept for its one remaining application;
+new lives are written on [the life](steering.md#a-life-with-a-governor).
 
 Worked applications with their receipts and checks live in the
 [examples repository](https://github.com/muellerberndt/cadence-examples): the worm,

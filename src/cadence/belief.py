@@ -654,7 +654,7 @@ class BeliefPatch:
         *,
         observed: np.ndarray | None = None,
         rate: float = 1.0,
-        write: bool = True,
+        write: bool = False,
         state: np.ndarray | None = None,
         gains: np.ndarray | None = None,
         loss_weight: np.ndarray | None = None,
@@ -663,9 +663,11 @@ class BeliefPatch:
         probe: bool = False,
         keep_live: bool = False,
     ) -> BeliefObservation:
-        """Learn one chunk of witnessed moments and write their outcomes into the store. ``state``
-        starts the chunk from a given boundary instead of the live belief; the final belief under
-        the chunk becomes the live state unless ``keep_live=True``.
+        """Learn one chunk of witnessed moments and, with ``write=True``, write their outcomes
+        into the store (in every rung demo so far the store paid nothing and was left unwritten,
+        so the default is off). ``state`` starts the chunk from a given boundary instead of the
+        live belief; the final belief under the chunk becomes the live state unless
+        ``keep_live=True``.
 
         ``loss_weight`` weighs each moment's error, ``(time,)`` or ``(batch, time)``, normalized
         by its sum; a moment of weight zero is neither taught nor written. ``output_gradient``

@@ -29,6 +29,37 @@ and the nursery sent back. The belief patch first.
   block in the forward map, its transpose and the gradient, and carried by `to_dict`; which
   channels a patch reads is a gene without touching the weights.
 
+- `cadence.steering`: `Steered`, a cortex whose gains a steering patch of the same rule sets
+  from the cortex's readback of the moment (the probes, the surprises, the previous residual,
+  the previous outputs, the encoded evidence of named blocks, extra channels), through a
+  weighing: `Softmax` (gains that sum to the blocks), `Gaze` (a window over a ring of blocks
+  whose centre the steering output turns, under a price on the turn) or `Rule` (the
+  hand-written control). One joint step is admitted by a replay of the chunk from twice the
+  last admitted step; the cortex can sleep while the steering patch learns; a `Boundary`
+  carries the life between chunks; ablations, one accounting and custody. Three demos wrote it
+  before it was here (the ventriloquist, the lighthouse keeper, the night nursery).
+- `cadence.life`: `Life`, the loop in which a governor reads the brain's own signals (a
+  readback of seven channels) and names the mode, habit, imagine or learn; the executed
+  window replayed from its boundary with rollback; the baseline of the surprise; the cost by
+  mode. `PatchGovernor`, a settling brain whose every synapse is a gene, with the dozing cat's
+  wiring as the hand-set genome and its space for `genes`; `ThresholdGovernor`, `AlwaysAwake`
+  and `NeverWakes` as the controls. Over a belief patch or a steered cortex.
+- `cadence.instruments`: `orienting` (capture, latency, return, the habituation curve per
+  kind of event) and `dishabituation`, the night nursery's measures.
+- `BeliefPatch.observe` leaves the store unwritten unless `write=True`: in every rung demo the
+  store paid nothing and was left unwritten. `readback(probe=False)` skips the probes.
+- Guides: [a brain that reads itself](docs/steering.md) and [how to build a rung demo](docs/howto-rung.md);
+  the belief guide's sections on the admitted step, the online life and the cost; the API
+  reference for every new name; the index and the README's table of brains.
+- Removed: `EquilibriumActor` with `BodyModel`, `ActorPlan`, `ActorReadback` and
+  `ObservationRecord` (`cadence.actor`), `ReservoirReplay`, `ContentMemory` and the sequence
+  readback (`cadence.sequence`), with their guides. No file outside the library and its own
+  tests imported any of them (the usage inventory of 2026-09-27 over the demos, the examples,
+  the lanes and the benchmarks), the guides had called them kept for the experiments that used
+  them, and the manifesto had recorded that the actor's fixed linear-model hypotheses do not
+  transfer. Their evidence stays in the paper's receipts and in git history. `GenericBrain` is
+  kept for its one remaining application and is deprecated in favour of the life below.
+
 The population kernel at the width of a game: what the poker neuroevolution lane sent back.
 
 - `PopulationPatch` reads and writes its record tables through the active cells alone (a

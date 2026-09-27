@@ -118,9 +118,7 @@ of zero.
 Records and compressed boundaries also depend on the representation that gave
 them meaning. Changing a key encoder or a model can make existing memory
 inconsistent. A proposed learned address mechanism needs a rule for freezing,
-versioning or rebuilding its keys. The fixed-model compression in
-[EquilibriumActor](actor.md#minimal-fixed-model-memory) does not establish exact
-retention after arbitrary changes to the model.
+versioning or rebuilding its keys.
 
 ## What is available today
 
@@ -130,7 +128,6 @@ retention after arbitrary changes to the model.
 | `RecordPatchNet.detune` | Centered contrast for the linear-readout slow patch | Check both solves; categorical ports are refused and records remain outside the energy |
 | `RecordPatchStack` | Two contexts in depth with an adjoint through both | No joint `detune` solver; no inherited guarantee for a jointly free nonlinear energy |
 | `TemporalPatchNet` | Learned temporal relationships, private imagination and bounded continuous-port planning; every contrast is checked for symmetry and beta halves when a detuned path leaves the free path's branch | Model accuracy and executed outcomes need separate validation |
-| `EquilibriumActor` | Factual inference and private future/action repair | Fixed linear model and supplied task settings; no online model acquisition |
 
 A component's private `imagine` call does not by itself establish a learned
 simulator. The application defines what its inputs and outputs mean and which

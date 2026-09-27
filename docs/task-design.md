@@ -92,8 +92,7 @@ For an acting system, test this full sequence:
 `imagine` supplies isolated temporal predictions. The
 `TemporalPatchNet.plan` interface repairs bounded continuous input ports under that same
 learned model; the [interaction guide](interaction.md) demonstrates acquisition
-and execution in a small nonlinear body. `EquilibriumActor` separately supplies
-planning for its documented fixed linear body. A new instrument still needs
+and execution in a small nonlinear body. A new instrument still needs
 validated action/consequence acquisition and measured execution. A desired
 outcome supplied during settling is not evidence that an executable action
 can cause it; replay the chosen action through the actual body.

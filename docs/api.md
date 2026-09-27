@@ -9,6 +9,8 @@ The temporal patch: [TemporalPatchNet](#temporalpatchnet-cadencetemporal),
 [fixed connectivity](#experimental-fixed-connectivity-cadenceexperimental).
 The record and belief patches: [RecordPatchNet](#recordpatchnet-cadencerecord_patch),
 [Ports](#ports-cadenceports), [BeliefPatch](#beliefpatch-cadencebelief).
+A brain that reads itself: [Steered](#steered-cadencesteering), [Life](#life-cadencelife),
+[Instruments](#instruments-cadenceinstruments).
 The settling brain: [Connectome](#connectome-cadenceconnectome), [Neuron model](#neuron-model-cadenceneuron),
 [Brain](#brain-cadencebrain), [Blocks](#blocks-cadenceblocks), [Streams](#streams-cadencestream),
 [Records](#records-cadencerecords), [Regions](#regions-cadenceregions), [Generic brain](#generic-brain-cadencegeneric),
@@ -17,9 +19,8 @@ The settling brain: [Connectome](#connectome-cadenceconnectome), [Neuron model](
 Instruments: [the quickstart demos](#the-quickstart-demos-cadencedemo), [Timing](#timing-cadencetiming),
 [the reference](#neuron-by-neuron-reference-cadencereference), [Protocols](#protocols-cadenceprotocol),
 [Checkpoints](#checkpoints-cadencecheckpoint), [Atlas](#atlas-cadenceatlas), [Receipts](#receipts-cadencereceipts),
-[recording](#record-every-settling-step). Kept compositions: [EquilibriumActor](#equilibriumactor-cadenceactor),
-[PatchNet](#patchnet-cadencepatch), [task compositions](#optional-task-compositions),
-[bounded memory and rehearsal](#bounded-memory-and-rehearsal).
+[recording](#record-every-settling-step). Kept compositions: [PatchNet](#patchnet-cadencepatch)
+and [task compositions](#optional-task-compositions).
 
 ## TemporalPatchNet (`cadence.temporal`)
 
@@ -180,9 +181,9 @@ See the [belief patch guide](belief.md).
   keep_live=False) -> BeliefPath`: advance the belief through observed moments; nothing
   learned or written. `imagine(actions, *, state=None, gains=None) -> BeliefPath`: the
   transition alone under declared actions, private. `observe(observations, actions,
-  target=None, *, observed=None, rate=1.0, write=True, state=None, gains=None,
+  target=None, *, observed=None, rate=1.0, write=False, state=None, gains=None,
   loss_weight=None, output_gradient=None, backtrack=None, probe=False, keep_live=False)
-  -> BeliefObservation`: one backward scan and the store's writes. `state` starts the
+  -> BeliefObservation`: one backward scan and, with `write=True`, the store's writes. `state` starts the
   moments from a given boundary instead of the live belief; the final belief becomes the
   live state unless `keep_live=True`. `observed` masks moments `(time,)` or rows
   `(batch, time)`; a row that observes nothing keeps its expectation. `gains` `(blocks,)`,
@@ -229,6 +230,70 @@ See the [belief patch guide](belief.md).
   gains=None, observed=None)`, `export()`, `load(params)`. A gains tensor that requires grad
   receives the gradient into the gains.
 
+## Steered (`cadence.steering`)
+
+See [a brain that reads itself](steering.md).
+
+- `Steered(cortex, steering=None, weighing=None, *, reads_output=False, evidence=(), extra=None,
+  extra_channels=0, rate_scale=1.0)`: a `BeliefPatch` cortex whose gains a steering `BeliefPatch`
+  sets through a weighing, or a `Rule`, or nothing (gains of one). The readback per moment, in
+  order: the residual-alone probe per block, the surprise per block, the previous residual, the
+  previous outputs (`reads_output`), the encoded evidence of the blocks in `evidence`, the
+  channels `extra(readback, previous_output, previous_residual)` returns. The steering patch's
+  port reads exactly `channels` inputs; its mask says which it hears. `readback_names`,
+  `layout`, `channels`, `probes_on`.
+- `run(observations, actions, target=None, *, rate=0.0, state=None, keep_live=False,
+  learn_cortex=True, backtrack=True) -> SteeredPath`: the moments of a chunk in order; with a
+  target and a rate, one joint step admitted by a replay of the chunk (the steering patch on the
+  recorded readbacks, taken as given, the cortex under the gains it returns), halved while the
+  objective does not fall by the Armijo margin, from twice the last admitted step, at most
+  `rate`; `learn_cortex=False` lets the cortex sleep; under a rule or fixed gains the cortex
+  learns by its own admitted step. `SteeredPath`: `output`, `gains`, `readback`, `residual`,
+  `steering_output`, `loss`, `price`, `objective`, `updated`, `steering_updated`, `step`,
+  `halvings`, `replays`, `reason`, `last`, `last_steering`.
+- `boundary() -> Boundary | None`: where the life is (`cortex`, `steering`, `output`, `residual`,
+  `weighing`, `moments`); `run(state=boundary)` starts there. `reset()` forgets it.
+- `ablation` (`None` or `"cut"`, the gains at one with the steering patch still run), `deaf`
+  (a mask over the readback channels zeroed at run time).
+- `step_size`, `reset_step()`, `moments_per_decision()`, `macs_per_moment()`, `cost`,
+  `reset_cost()`, `parameter_count()`, `parameters()`, `set_parameters()`, `snapshot()`,
+  `restore(snapshot, *, rule=None, extra=None)`, `save()`, `load()`. The cortex's implied
+  reading is declared again after a restore.
+- Weighings: `Softmax(blocks, *, span=1.0)` (gains summing to the blocks); `Gaze(blocks, *,
+  sigma, cut=2.5, lamp=0.2, span=0.5, price=0.0, start=0.0)` (a window whose centre the
+  steering output turns; `profile(centre)`, `turn(y)`; the centre is the weighing's state);
+  `Rule(fn, *, macs=0)` (the hand-written control). A weighing is `begin(n)`, `gains(y, state)
+  -> (gains, state)`, `pull(ys, gains, dgains, states) -> dy`, `price(ys, states)`, `to_dict()`.
+
+## Life (`cadence.life`)
+
+See [a life with a governor](steering.md#a-life-with-a-governor).
+
+- `Life(patch, governor, *, habit, propose, advance, cost, target, baseline=1.0, residual0=1.0,
+  config=None, refit=None, keep_records=True)`: the loop over a `BeliefPatch` or a `Steered`.
+  `habit(reading) -> action`; `propose(reading) -> (candidates, actions)`; `advance(reading,
+  output) -> reading`; `cost(readings, actions) -> (candidates,)`; `target(reading, next) ->
+  (outputs,)`. `LifeConfig`: `window`, `passes`, `learn_rate`, `rollback`, `validity`,
+  `min_window`, `min_cooldown`, `cooldown`, `keep`, `horizon`, `hold`, `baseline_rate`, `floor`,
+  `habituate`, `slow_rate`, `recent`, `write`.
+- `decide(reading) -> action` and `outcome(next_reading) -> Decision`, or `step(reading, world)
+  -> (next_reading, Decision)` with `world(action) -> next_reading`. `readback()` is the seven
+  channels (`READBACK`); `signals()` what a governor reads. `records`, `learns`, `totals`,
+  `compute()` (moments, macs, replays, the governor's steps as moments, per decision), `reset()`.
+- Governors: `PatchGovernor(genome=None, *, cortex=4, model=GOVERNOR_MODEL, budget=200, chunk=10,
+  tolerance=1e-3)` with `hand_set(cortex)` and `space(cortex)`; `ThresholdGovernor(genome)` with
+  `HAND_SET` and `SPACE`; `AlwaysAwake(genome)`; `NeverWakes()`. A governor is `settle(signals)
+  -> (mode, steps)`, `after(signals)`, `reset()`, `synapses`.
+
+## Instruments (`cadence.instruments`)
+
+- `orienting(gain, events, *, pre=4, post=12, quiet=None, bins=10) -> {"rows", "kinds", "pre",
+  "post"}`: per event the baseline, peak, capture, latency and return; per kind the count, the
+  capture of the first and last `bins` events, the curve, the mean capture, the latency shares
+  and the mean return.
+- `dishabituation(rows, *, consequential, kind, window=60, count=2) -> {"before", "after",
+  "events"}`.
+
 ## TemporalMemory (`cadence.temporal_memory`)
 
 - `TemporalMemory(*, relative_tolerance=1e-12)` creates explicit local response
@@ -261,25 +326,6 @@ pattern. The model's `masks` property returns copies and
 Restore with the subclass's `restore`/`load` to preserve mask enforcement.
 **`TemporalMemory.observe` rejects this subclass before mutation.** See the
 [experimental guide](partitioned.md) for checkpoint, planning and evidence scope.
-
-## EquilibriumActor (`cadence.actor`)
-
-`BodyModel` and `EquilibriumActor` provide fixed linear-body planning with a
-Gaussian compressed past. `admit(position, *, identifier, executed_action=None)`
-records an actual reading as an `ObservationRecord` (`identifier`, `position`);
-identifiers enforce ordering, not authenticity. `plan(*, horizon=None,
-goal=None)` privately proposes an action toward a supplied goal and returns
-`ActorPlan`: the boundary, covariance, states, actions, readings, seams, cost
-terms, residual, minimum pivot, message and coefficient bytes, block
-factorizations, goal, model binding and the observation it starts from.
-`readback()` returns `ActorReadback`: the last record, mean, covariance,
-residual, minimum pivot, model binding, admitted count, marginalizations and
-`numeric_persistent_bytes`.
-`numeric_persistent_bytes()` counts the retained array, scalar, identifier and
-hash payload, excluding Python objects and serialized archives; the guide states
-that accounting and its scope. Their state, covariance, checkpoint and
-fixed-model restrictions are distinct from `TemporalPatchNet`: see the complete
-[actor guide](actor.md).
 
 ## PatchNet (`cadence.patch`)
 
@@ -971,26 +1017,6 @@ Iteration traces are simulated neural activity.
 absolute `delta`. For a one-stream agent it is that transition's signed,
 centered and capped learning signal. It is a global modulation signal; spatial
 neurotransmitter diffusion is not part of this model.
-
-
-## Bounded memory and rehearsal
-
-- `ContentMemory(inputs, outputs, capacity, match=0.75, key_rate=0.1, value_rate=1.0)`:
-  `select(cue)` returns slots/scores; `recall(cue)` reads without mutation;
-  `observe(cue, value, write=None)` learns from observed values; `clear()` erases
-  the shared store. Novel cues allocate or evict a slot. See [content memory](content_memory.md).
-- `ReservoirReplay(capacity, inputs, seed=0)`: `sample(count)` returns owned prior
-  feature/label rows; `observe(features, labels)` admits actual observations into
-  a uniform bounded reservoir. Learning and checkpointing are caller-owned.
-  See [rehearsal](replay.md) for information and storage costs.
-- `cadence.sequence.SequenceCache(features, values, *, capacity=128, temperature=0.1,
-  center_rate=0.02)`: per-stream content readback; call `reset(batch)`, then
-  `read(features)` before `observe(features, observed_values)`.
-  `SequenceRead` exposes value, entropy, maximum weight and record count.
-- `cadence.sequence.BoundedTrace(width, *, decay=0.5, radius=1.0, center=True)`:
-  `reset(batch)`, `observe(value)` and non-mutating `read()`. Readback has at most
-  the declared L2 radius; this is no guarantee of better sequence prediction.
-  See [sequence readback](sequence.md).
 
 
 ## `cadence.population`

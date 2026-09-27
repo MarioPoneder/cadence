@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
     [
         "docs/patchnet.md",
         "docs/temporal.md",
-        "docs/actor.md",
         "docs/architecture.md",
         "docs/temporal-memory.md",
         "docs/quickstart.md",
@@ -29,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
         "docs/evolution.md",
         "docs/build.md",
         "docs/belief.md",
+        "docs/steering.md",
     ],
 )
 def test_introductory_python_snippets(page, tmp_path, monkeypatch):

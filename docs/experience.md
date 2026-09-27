@@ -58,9 +58,9 @@ A missing feature is not an observed zero: give the reading a missing flag for i
 witnessed and imagined readings alike. A UI tick is not another action outcome.
 A records cortex learns from one stream: a reading touches few records, and the outcome
 is written into those. A learner whose every parameter takes part in every prediction
-moves every prediction with each update; [rehearsal](replay.md) gives such a learner
-retained real observations, with its own scheduling and without advancing live episode
-state. Give a baseline the same replay policy as the candidate. Replaying obsolete
+moves every prediction with each update; a rehearsal of retained real observations
+gives such a learner what records give the patch, with its own scheduling and without
+advancing live episode state. Give a baseline the same replay policy as the candidate. Replaying obsolete
 evidence can undo a correction.
 See [continuous interaction](continuous.md) for exact feedback and reset semantics.
 
