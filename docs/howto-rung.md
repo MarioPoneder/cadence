@@ -110,6 +110,10 @@ the cry, which is the rung's answer.
 
 ## 8. The page
 
+The atlas and renderer come from the separate
+[examples viewer](https://github.com/muellerberndt/cadence-examples/tree/main/viewer),
+with its checkout available on the Python path; they are not installed by Cadence.
+
 The page is a Python server (the brains, the world, `/state`, `/atlas`, `/weights`, `/control`)
 and one HTML file: the world on the left with the person's controls in it, the whole brain in
 the viewer on the right (`build_atlas`, `brain_scan_script`), the instrument strip, four tiles,

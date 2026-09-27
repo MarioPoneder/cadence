@@ -18,7 +18,7 @@ see [recursive observation in one equilibrium](recursive-settlement.md).
    backprop, the shapes of every array, and a glossary.
 2. [Quickstarts: three kinds of brains](quickstart.md): a record patch that learns a
    stream and sleeps, a settling brain that decides, a temporal patch that plans; each
-   also runs [in your browser](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart) with the whole brain animated,
+   also runs [in your browser](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart) with the whole brain animated.
 3. [Build your own brain](build.md): your own data to a trained, evaluated and saved
    brain of each kind, with the sizes to start from and the checks to run.
 4. [Troubleshooting](troubleshooting.md): the first questions, each answered in a

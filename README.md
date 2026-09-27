@@ -65,6 +65,9 @@ the last change on the synapses, the learning plotted as it is measured, and a l
 of text for each phase:
 
 ```bash
+git clone https://github.com/muellerberndt/cadence-examples.git
+cd cadence-examples
+python -m quickstart.demo stream     # or: decide, body
 ```
 
 Nothing is hosted and there is no checkpoint; [the quickstarts in your browser](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart)
@@ -104,13 +107,36 @@ takes your own data to a trained, evaluated and saved brain of each kind, and
 [troubleshooting](https://github.com/muellerberndt/cadence/blob/main/docs/troubleshooting.md)
 answers the first questions.
 
+## Deep Recursive Settlement Networks
+
+**Deep Recursive Settlement Networks (DRSNs)** place observing patches and the
+patches they observe in one equilibrium. Each observer reads current activity
+and sends feedback while all populations, including the answer neurons, keep
+settling together. Adding a level adds participants to the same computation;
+it gives no level an unconditional final word.
+
+```python
+from cadence import PatchNet
+
+brain = PatchNet.recursive(inputs=8, layers=[32, 16, 8], outputs=2, seed=7)
+# One base population, two observer populations, one joint solver and learning rule.
+```
+
+Available in **0.18.0**, the builder lets you choose the number and size of these
+populations without introducing another runtime or solver. The
+[recursive settlement guide](docs/recursive-settlement.md) explains the wiring,
+whole-state residual checks, local learning and causal interventions.
+**Performance evaluations are ongoing:** numerical and causal tests establish
+the joint-settlement mechanism; a capability advantage from recursive depth
+and competitive training efficiency against transformers remain hypotheses.
+
 ## Which brain
 
 The public families share state and port concepts, with distinct solver and learning contracts:
 
 | You want | Start with | What it supplies |
 | --- | --- | --- |
-| recursive observers and their observed populations to settle together | [one joint PatchNet](docs/recursive-settlement.md) | Reciprocal current-state readback and feedback, with answer neurons in the same checked equilibrium. On main after 0.17.0, `PatchNet.recursive` selects the base and observer widths without introducing another solver. |
+| recursive observers and their observed populations to settle together | [one joint PatchNet](docs/recursive-settlement.md) | Reciprocal current-state readback and feedback, with answer neurons in the same checked equilibrium. `PatchNet.recursive` selects the base and observer widths without introducing another solver. |
 | to learn from a stream of events, keep single facts after one exposure, and generalise overnight | the record patch, [RecordPatchNet](https://github.com/muellerberndt/cadence/blob/main/docs/record-patch.md) | A gated linear context with a record store inside the patch: an observation is written once by day, and by night the slow weights learn from the store's own dreams (`sleep`), with nothing outside the patch consulted. Categorical ports, batched writes, a store narrower than its port and a two-patch stack. One pass of writes, with no gradient, gives a small grammar for 0.8 of its never-taught combinations; one night lifts the slow weights alone to 1.0. |
 | a decision or evaluation over a fixed set of inputs, an explicit wiring, a policy that learns from reward | the settling brain: a [brain of regions](https://github.com/muellerberndt/cadence/blob/main/docs/brain.md) (`Genome`, `develop`, `Brain`, `Learner`) | Local repair of a settled state under any wiring, including a measured connectome; learning by the contrast of a free and a nudged settle; [cortices](https://github.com/muellerberndt/cadence/blob/main/docs/cortex.md), a records cortex, [reward](https://github.com/muellerberndt/cadence/blob/main/docs/reward.md) through eligibility traces, [evolution](https://github.com/muellerberndt/cadence/blob/main/docs/evolution.md) of the genome, and a [certificate](https://github.com/muellerberndt/cadence/blob/main/docs/certificate.md) on the settling. |
 | continuous observations and actions, a learned dynamics model, private planning | the temporal patch, [TemporalPatchNet](https://github.com/muellerberndt/cadence/blob/main/docs/temporal.md) | Local repair of observed paths, persistent context, private imagination, [continuous planning](https://github.com/muellerberndt/cadence/blob/main/docs/planning.md) and [protected responses](https://github.com/muellerberndt/cadence/blob/main/docs/temporal-memory.md); learning by the contrast of a free and a nudged settle of the whole path. |
@@ -186,8 +212,9 @@ The [index](https://github.com/muellerberndt/cadence/blob/main/docs/index.md) is
   supplies in one life, from the self by contingency to words, and its breeder what
   pays for a brain across lives.
 
-The current implementation provides detached self-readback and private proposal
-revision. Learned steering patches, curiosity and reliable
+The graph implementation supports joint recursive settlement; other families
+provide detached self-readback, sequential steering or private proposal revision
+under their own contracts. A learned advantage from recursive depth, curiosity and reliable
 creativity are hypotheses with their tests on the ladder. [Creativity and self-reflection](https://github.com/muellerberndt/cadence/blob/main/docs/creativity.md)
 defines these goals and their behavioral tests.
 

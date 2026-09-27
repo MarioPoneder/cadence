@@ -58,12 +58,19 @@ pinned toolchain; see [lean/README.md](lean/README.md)).
 
 | Path | What lives there |
 | --- | --- |
-| `src/cadence/` | the library: `brain.py`, `learning.py`, `genome.py`, `regions.py` (the settling brain); `temporal.py`, `planning.py`, `temporal_memory.py`; `record_patch.py`, `records.py`, `record_stack.py`, `record_ports.py`, `ports.py`; `belief.py`, `belief_torch.py`; `steering.py`, `life.py`, `instruments.py` (composition); `demo.py` and the viewer `brain_scan.js` |
+| `src/cadence/` | the numerical library: `brain.py`, `learning.py`, `genome.py`, `regions.py` (the settling brain); `temporal.py`, `planning.py`, `temporal_memory.py`; `record_patch.py`, `records.py`, `record_stack.py`, `record_ports.py`, `ports.py`; `belief.py`, `belief_torch.py`; `steering.py`, `life.py`, `instruments.py` (composition) |
 | `tests/` | unit, numerical, integration and documentation contract tests |
 | `docs/` | the guides; `docs/index.md` is the map |
 | `lean/` | the Lean proofs and their audit |
 
 ## Examples
+
+The atlas, browser renderer and local quickstart pages live in
+[`cadence-examples/viewer`](https://github.com/muellerberndt/cadence-examples/tree/main/viewer)
+and [`quickstart`](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart).
+Their tests run in the examples repository against an installed library:
+`python -m pytest -q viewer quickstart`. The core package no longer supplies
+`cadence.atlas`, `cadence.demo` or the `cadence-demo` executable.
 
 Worked applications live in [cadence-examples](https://github.com/muellerberndt/cadence-examples),
 one directory each with a README, a static page that runs the brain in the browser, the

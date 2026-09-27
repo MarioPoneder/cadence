@@ -15,7 +15,7 @@ architecture.
 
 ## Choose the depth and widths
 
-On library `main` after 0.17.0, the `PatchNet.recursive` factory constructs that
+Since 0.18.0, the `PatchNet.recursive` factory constructs that
 wiring directly. The explicit construction below also runs on released 0.17.0.
 
 ```python
@@ -218,3 +218,18 @@ learning contract demonstrated here.
 A successful mechanism test establishes shared settlement and feedback. A
 learned task advantage, a benefit from depth and training efficiency versus
 transformers require their own results; they do not follow from the builder.
+
+## Attention as a testable function
+
+A deeper observer may learn which lower-level signals matter to the current
+task. That would be a functional form of attention if interventions show
+context-dependent influence on the answer. It is not imposed by the builder,
+and extra levels need not discover it. Compare a task with changing relevant
+cues and distractors against shallow, recurrent and attention controls; cut,
+shuffle and freeze observer feedback in separate tests. All current observer
+states must remain in the same equilibrium.
+
+Transformer attention and settlement are compatible: [deep equilibrium
+models](https://arxiv.org/abs/1909.01377) already apply fixed-point methods to
+attention architectures. Whether DRSNs learn more efficiently requires measured
+work to the same held-out target; it does not follow from this analogy.

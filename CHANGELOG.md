@@ -1,13 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.18.0 — 2026-09-27
 
 - The whole-brain viewer (`brain_scan.js`, the replay page), the atlas (`cadence.atlas`:
   `Atlas`, `atlas_of`, `build_atlas`, `role_of`, `PALETTE`, `brain_scan_script`) and the
   three quickstart demos (`cadence.demo`, the `cadence-demo` command, `docs/demos.md`)
   moved to the examples repository, as `cadence-examples/viewer` and
   `cadence-examples/quickstart`. The library ships the brains alone; a page takes the
-  viewer from the examples. Importers of `cadence.atlas` change one import line.
+  viewer from the examples. This is a breaking import/CLI change: clone the examples
+  repository, import `viewer.atlas` with that checkout on the Python path, and run
+  `python -m quickstart.demo stream` from its root (or `decide`, `body`).
+  See the [migration and viewer reference](docs/pages.md).
 
 - Add `PatchNet.recursive(inputs, layers, outputs)` to build a base and chosen
   observer widths in one reciprocal graph. Every observer reads and feeds back
@@ -15,6 +18,14 @@
   The factory reuses existing settlement and learning and supplies no privileged
   executive. Document initialization, full-state qualification and fair
   transformer comparisons in the recursive-settlement guide.
+
+- Name Deep Recursive Settlement Networks (DRSNs) in the README and document
+  reciprocal observer influence, initialization bounds and the shared learning
+  contract. Performance evaluations are ongoing; no learned depth advantage or
+  transformer-efficiency advantage is claimed.
+- Restore the relocated viewer reference and quickstart instructions; migrate
+  active consumers and viewer provenance to the examples source, with separate
+  tests in that repository. The core wheel no longer carries browser assets.
 
 ## 0.17.0 — 2026-09-27
 
