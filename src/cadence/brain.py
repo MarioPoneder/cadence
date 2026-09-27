@@ -48,7 +48,10 @@ from .connectome import Connectome, _neuron_indices
 from .neuron import NeuronModel
 from .recording import _Capture, _capture
 
-__all__ = ["Brain", "BrainState", "Equilibrium", "Nudge", "available_backends", "Backend"]
+__all__ = [
+    "Brain", "BrainState", "Equilibrium", "RefinementReport", "Nudge",
+    "available_backends", "Backend",
+]
 
 Backend = Literal["cpu", "torch", "mlx"]
 
@@ -249,21 +252,60 @@ class BrainState:
 
 
 @dataclass(frozen=True)
+class RefinementReport:
+    """Per-row diagnostics from optional CPU energy refinement.
+
+    ``local_residual`` is the equation error before refinement. ``steps`` counts
+    accepted Newton steps, separately from local sweeps; it does not count dense
+    curvature evaluations or line-search trials. ``min_curvature`` is the
+    smallest eigenvalue of the reduced activity-space energy Hessian at the
+    returned state. Combined with a small full residual, a positive value is a
+    numerical local-stability check, not a certified global minimum, uniqueness
+    theorem or gradient-branch guarantee between free and nudged phases.
+
+    ``status`` is ``local`` or ``refined`` on a qualified row; any other value
+    explains why refinement did not qualify it. Failed rows must not be acted on
+    merely because a finite state was returned.
+    """
+
+    local_residual: np.ndarray
+    steps: np.ndarray
+    min_curvature: np.ndarray
+    status: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Equilibrium:
     """A bounded solve and its measured equation error, one entry per batch row.
 
-    ``steps`` counts all steps in this call. ``state.steps`` is the last chunk's count.
+    ``steps`` counts local sweeps in this call. ``state.steps`` is the last chunk's count.
     Convergence here means a small residual, not uniqueness, stability or task quality.
+    Optional refinement diagnostics add a local-curvature admission check;
+    ``qualified`` combines it with the full residual without changing ``converged``.
     """
 
     state: BrainState
     residual: np.ndarray
     steps: int
     tolerance: float
+    refinement: RefinementReport | None = None
 
     @property
     def converged(self) -> np.ndarray:
         return np.asarray(self.residual <= self.tolerance)
+
+    @property
+    def qualified(self) -> np.ndarray:
+        """Rows meeting the chosen solver's checks (residual-only for local solves)."""
+        if self.refinement is None:
+            return self.converged
+        report = self.refinement
+        return np.asarray(
+            self.converged
+            & np.isfinite(report.min_curvature)
+            & (report.min_curvature > 0)
+            & np.isin(report.status, ("local", "refined"))
+        )
 
 
 def _lazy(name: str, key: str) -> property:

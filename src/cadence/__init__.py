@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from . import regions
 from .belief import BeliefObservation, BeliefPatch, BeliefPath, BeliefReadback
-from .brain import Brain, BrainState, Equilibrium, Nudge, available_backends
+from .brain import Brain, BrainState, Equilibrium, Nudge, RefinementReport, available_backends
 from .certificate import (
     Certificate,
     EPStructure,
@@ -171,6 +171,7 @@ __all__ = [
     "Brain",
     "BrainState",
     "Equilibrium",
+    "RefinementReport",
     "Connectome",
     "available_backends",
     "canonical_json",
@@ -193,4 +194,4 @@ __all__ = [
     "stateful",
 ]
 
-__version__ = "0.18.0"
+__version__ = "0.19.0"

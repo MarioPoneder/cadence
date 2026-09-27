@@ -370,13 +370,26 @@ and a complete runnable example.
   graph with declared input, hidden and output ports. Configure learning with
   `config=LearnerConfig(...)`, phase budgets with `steps` and `tolerance`, and
   optional temporal overlap with `context_strength` and `context_mask`.
+- Since 0.19.0, `solver="hybrid"` optionally follows the local budget with up to
+  `refinement_steps=64` accepted Newton steps per unresolved row. The default
+  `solver="local"` preserves the existing local-only contract. Hybrid requires
+  the CPU smooth `tanh(v/2)` rule, reciprocal effective weights, no adaptation,
+  and an independent input population with no output or context penalty there.
+  It eliminates those inputs exactly, retaining their feedback, and checks the
+  complete equations and positive reduced energy curvature for every row.
+  Unsupported configurations raise; there is no silent backend downgrade.
+  Dense curvature checks are global numerical work, not local neural repairs.
+  See the [training guide](recursive-training.md) for cost and stability limits.
 - `stimulus(inputs, *, amplitude=1.0)` converts a batch of continuous input
   values into full neural drives. `settle(drive)` updates live free activity;
   `read(phase)` reads the output ports of an `Equilibrium` or `BrainState`.
 - `observe(drive, target, *, observed=None, weight=None, source_id=None)` returns
   a `PatchObservation` with the free and nudged phases, `updated` and `reason`.
   Targets only enter the nudged phases. A required phase that misses the
-  residual tolerance prevents the learning commit. The observation mask is
+  residual tolerance prevents the learning commit. Hybrid phases must also
+  meet the curvature check; an otherwise converged but unqualified phase returns
+  `free_unqualified` or `nudge_unqualified`. Use `phase.qualified` before acting
+  and `observation.updated` to count committed learning. The observation mask is
   shared across batch rows; nonnegative teaching weights are per row.
 - `imagine(drives, *, state=None)` returns consecutive free equilibria on a
   private branch without modifying live activity, parameters or evidence IDs.
@@ -385,6 +398,8 @@ and a complete runnable example.
   expose detached state for inspection.
 - `save(path, *, compressed=True)` and `PatchNet.load(path, ...)` preserve
   continuation parameters, optimizer history, current activity and configuration.
+  Format `cadence-patch/3` includes the solver and refinement budget. Formats 1
+  and 2 remain readable with their original local-only solver policy.
   Checkpoint correctness does not establish retention during new learning.
 
 ## Connectome (`cadence.connectome`)
@@ -440,7 +455,16 @@ and a complete runnable example.
   states stay on their device and return one scalar per row. The returned
   `Equilibrium` has `state`, per-row `residual`, total `steps`, `tolerance`, and a boolean
   per-row `converged` property. `state.steps` is the last chunk's count. Convergence here
-  does not prove stability, uniqueness or task quality.
+  does not prove stability, uniqueness or task quality. `qualified` equals
+  `converged` for these local solves. Hybrid `PatchNet` solves additionally
+  require positive local energy curvature and a successful refinement status;
+  they do not change the meaning of `converged`.
+  Their optional `refinement: RefinementReport` records the original local
+  residual, accepted Newton `steps` per row, `min_curvature` and a per-row
+  `status` tuple (`local` or `refined` on success, a failure reason otherwise).
+  `Equilibrium.steps` always counts local sweeps, not Newton work; curvature
+  evaluations and line-search trials are additional work. These checks do not
+  establish global uniqueness or that free/nudged phases occupy the same branch.
 - `residual(drive, state, *, nudge=None, mask=None, on_device=True)`: per-row maximum remaining
   fixed-point equation discrepancy, including adaptation when enabled. One transport
   evaluation, no state change. Unread float64 Torch states use the resident kernel;

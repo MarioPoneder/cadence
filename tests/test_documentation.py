@@ -38,6 +38,7 @@ PAGES = [
     "docs/belief.md",
     "docs/steering.md",
     "docs/recursive-settlement.md",
+    "docs/recursive-training.md",
     "docs/api.md",
     "docs/backends.md",
     "docs/interaction.md",

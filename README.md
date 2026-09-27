@@ -122,10 +122,15 @@ brain = PatchNet.recursive(inputs=8, layers=[32, 16, 8], outputs=2, seed=7)
 # One base population, two observer populations, one joint solver and learning rule.
 ```
 
-Available in **0.18.0**, the builder lets you choose the number and size of these
-populations without introducing another runtime or solver. The
+The builder lets you choose the number and size of these populations in one
+graph. The
 [recursive settlement guide](docs/recursive-settlement.md) explains the wiring,
 whole-state residual checks, local learning and causal interventions.
+The [training guide](docs/recursive-training.md) walks through
+`recursive(1371, [24, 8], 6)`, observed action returns and saved continuation.
+Version **0.19.0** adds optional CPU energy refinement when a compatible brain
+exhausts its local settling budget, with full-equation and local-curvature
+checks before learning. Local settlement remains the default.
 **Performance evaluations are ongoing:** numerical and causal tests establish
 the joint-settlement mechanism; a capability advantage from recursive depth
 and competitive training efficiency against transformers remain hypotheses.

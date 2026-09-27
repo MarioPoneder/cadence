@@ -7,6 +7,11 @@ This rule changes the synapses of the settled regions. A [records cortex](memory
 learns consequences and reward with one read and one delta-rule write per outcome, without
 settling phases.
 
+For continuous action-return targets on a jointly settled recursive graph, use
+the [recursive-training guide](recursive-training.md). It uses `PatchNet.observe`
+to gate updates on full-equation checks, and optionally local energy curvature,
+rather than treating a fixed number of relaxation steps as a settled phase.
+
 ## 1. What learning changes
 
 A `Brain` carries three parameter arrays:

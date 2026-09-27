@@ -15,7 +15,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -44,7 +44,7 @@ class PatchObservation:
     """An external observation's measured phases, before the resulting weight update.
 
     ``reason`` distinguishes a committed update, a duplicate, absent evidence,
-    or an unconverged phase. Duplicate commits do not even advance fast activity.
+    or an unconverged/unqualified phase. Duplicate commits do not advance fast activity.
     The free state is always target-free and is the only phase carried forward.
     """
 
@@ -60,10 +60,11 @@ class PatchNet:
     """Stateful continuous learning over a reciprocal ``Brain`` and ``Learner``.
 
     All three phases use the same explicit step budget and full equation
-    residual. A weight update is committed only if every required phase
-    converges. A rejected attempt retains finite target-free activity but does not
-    change weights, optimizer history, or consumed source IDs. Batch rows are
-    persistent streams: call ``reset`` when their identities change.
+    residual. A weight update is committed only if every required phase meets
+    the selected solver's qualification checks. A rejected attempt retains finite
+    target-free activity without changing weights, optimizer history, or consumed
+    source IDs. Batch rows are persistent streams: call ``reset`` when their
+    identities change.
 
     ``observe`` is the external-evidence boundary. Targets, observation masks,
     gains and source IDs are supplied by the caller, not discovered internally.
@@ -79,6 +80,11 @@ class PatchNet:
     Strength zero preserves the original warm-start-only dynamics. Positive
     strength can slow forgetting but does not guarantee useful memory; large
     values may need a smaller integration step to settle.
+
+    ``solver="hybrid"`` optionally refines the local result using a global
+    energy solver on supported smooth CPU brains. It additionally checks local
+    energy curvature, without certifying uniqueness or a global energy minimum.
+    The default ``"local"`` path retains the original numerical rule.
     """
 
     def __init__(
@@ -92,11 +98,14 @@ class PatchNet:
         source_capacity: int = 256,
         context_strength: float = 0.0,
         context_mask: np.ndarray | None = None,
+        solver: Literal["local", "hybrid"] = "local",
+        refinement_steps: int = 64,
     ) -> None:
         for name, value, minimum in (
             ("steps", steps, 0),
             ("chunk", chunk, 1),
             ("source_capacity", source_capacity, 0),
+            ("refinement_steps", refinement_steps, 0),
         ):
             if (
                 isinstance(value, bool)
@@ -104,6 +113,8 @@ class PatchNet:
                 or value < minimum
             ):
                 raise ValueError(f"{name} must be an integer >= {minimum}")
+        if solver not in ("local", "hybrid"):
+            raise ValueError("solver must be 'local' or 'hybrid'")
         if not np.isfinite(tolerance) or tolerance < 0:
             raise ValueError("tolerance must be finite and nonnegative")
         if not np.isfinite(context_strength) or context_strength < 0:
@@ -111,6 +122,8 @@ class PatchNet:
         self.learner = learner
         self.steps, self.chunk, self.tolerance = int(steps), int(chunk), float(tolerance)
         self.source_capacity = int(source_capacity)
+        self.solver = solver
+        self.refinement_steps = int(refinement_steps)
         indices = (
             learner.brain.connectome.populations.get("input", ())
             if input_index is None
@@ -172,6 +185,14 @@ class PatchNet:
         assert learner.plastic_synapses is not None
         if not np.array_equal(learner.plastic_synapses, learner.plastic_synapses[reverse]):
             raise ValueError("reciprocal contacts must have equal plasticity masks")
+        if self.solver == "hybrid":
+            from ._refine import validate_hybrid
+
+            validate_hybrid(brain, self.input_index)
+            if np.intersect1d(self.input_index, self.learner.output_index).size:
+                raise ValueError("hybrid input and output indices must be disjoint")
+            if self.context_strength and self.context_mask[self.input_index].any():
+                raise ValueError("hybrid context cannot anchor eliminated input neurons")
 
     @classmethod
     def create(
@@ -351,13 +372,37 @@ class PatchNet:
     def _solve(
         self, drive: np.ndarray, state: BrainState | None, nudge: Nudge | None = None
     ) -> Equilibrium:
-        return self.brain.equilibrate(
+        if self.solver not in ("local", "hybrid"):
+            raise ValueError("solver must be 'local' or 'hybrid'")
+        if self.solver == "hybrid":
+            # Effective weights can change after construction or an update.
+            # Reject unsupported models before advancing any numerical state.
+            self._validate_structure()
+            if (
+                isinstance(self.refinement_steps, bool)
+                or not isinstance(self.refinement_steps, (int, np.integer))
+                or self.refinement_steps < 0
+            ):
+                raise ValueError("refinement_steps must be an integer >= 0")
+        local = self.brain.equilibrate(
             drive,
             budget=self.steps,
             chunk=self.chunk,
             tolerance=self.tolerance,
             state=state,
             nudge=nudge,
+        )
+        if self.solver == "local":
+            return local
+        from ._refine import refine_equilibrium
+
+        return refine_equilibrium(
+            self.brain,
+            drive,
+            local,
+            self.input_index,
+            nudge=nudge,
+            max_steps=self.refinement_steps,
         )
 
     def _anchor_nudge(self, prior: BrainState | None, nudge: Nudge | None = None) -> Nudge | None:
@@ -445,6 +490,8 @@ class PatchNet:
             return PatchObservation(free, reason="no_observations")
         if not np.all(free.converged):
             return PatchObservation(free, reason="free_unconverged")
+        if not np.all(free.qualified):
+            return PatchObservation(free, reason="free_unqualified")
         target_all = np.zeros_like(x)
         target_all[:, self.learner.output_index] = values
         mask = np.zeros(x.shape[1])
@@ -464,6 +511,8 @@ class PatchNet:
         )
         if not np.all(plus.converged) or (minus is not None and not np.all(minus.converged)):
             return PatchObservation(free, plus, minus, reason="nudge_unconverged")
+        if not np.all(plus.qualified) or (minus is not None and not np.all(minus.qualified)):
+            return PatchObservation(free, plus, minus, reason="nudge_unqualified")
         metrics = self.learner.update(
             free.state, plus.state, None if minus is None else minus.state
         )
@@ -500,7 +549,7 @@ class PatchNet:
 
         data = _learner_data(self.learner)
         meta = {
-            "format": "cadence-patch/2",
+            "format": "cadence-patch/3",
             "steps": self.steps,
             "chunk": self.chunk,
             "tolerance": self.tolerance,
@@ -510,6 +559,8 @@ class PatchNet:
             "state_steps": None if self._state is None else self._state.steps,
             "context_strength": self.context_strength,
             "context_mask": self.context_mask.tolist(),
+            "solver": self.solver,
+            "refinement_steps": self.refinement_steps,
         }
         if self._state is not None:
             for name in ("v", "activation", "adaptation", "activity_change"):
@@ -541,15 +592,21 @@ class PatchNet:
                 if not isinstance(meta, dict) or meta.get("format") not in (
                     "cadence-patch/1",
                     "cadence-patch/2",
+                    "cadence-patch/3",
                 ):
                     raise ValueError("unsupported PatchNet checkpoint")
                 learner = Learner.load(path, backend=backend, device=device, precision=precision)
-                if meta["format"] == "cadence-patch/2" and not all(
+                if meta["format"] in ("cadence-patch/2", "cadence-patch/3") and not all(
                     key in meta for key in ("context_strength", "context_mask")
                 ):
                     raise ValueError("missing saved temporal boundary configuration")
+                modern = meta["format"] == "cadence-patch/3"
+                if modern and not all(key in meta for key in ("solver", "refinement_steps")):
+                    raise ValueError("missing saved solver configuration")
                 result = cls(
                     learner,
+                    solver=meta["solver"] if modern else "local",
+                    refinement_steps=meta["refinement_steps"] if modern else 64,
                     context_strength=meta.get("context_strength", 0.0),
                     context_mask=np.asarray(meta["context_mask"])
                     if "context_mask" in meta

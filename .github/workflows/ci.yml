@@ -36,6 +36,7 @@ jobs:
                        "docs/planning.md", "docs/interaction.md", "docs/partitioned.md",
                        "docs/record-patch.md", "docs/build.md", "docs/belief.md",
                        "docs/steering.md", "docs/recursive-settlement.md",
+                       "docs/recursive-training.md",
                        "docs/api.md", "docs/learning.md",
                        "docs/protocols.md", "docs/receipts.md"):
               page = Path(name).read_text(encoding="utf-8")

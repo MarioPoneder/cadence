@@ -60,6 +60,20 @@ is above the limit, `Brain.residual` and `Brain.equilibrate` remain the checks: 
 the equations at the state they measure, and nothing about uniqueness or convergence.
 The certificate concerns the settled regions; records are read and written without settling.
 
+Recompute `certificate(net.brain)` after learning: it reports the current effective
+weights. The `recursive` builder's `coupling` bounds only the initialization.
+Clipping each efficacy separately does not preserve an incoming row-mass bound.
+A failed certificate means this sufficient contraction argument no longer applies;
+it does not demonstrate that no equilibrium exists. Even a certified contracting
+network may need more steps than a particular finite budget allows.
+
+For supported smooth reciprocal CPU graphs, `PatchNet(..., solver="hybrid")`
+adds optional energy refinement and a positive local-curvature check. This is a
+different, local qualification: it can accept a stable equilibrium when the global
+row-mass bound is unavailable, but does not restore a uniqueness theorem. Inspect
+`phase.qualified` and its `phase.refinement` diagnostics. The
+[recursive-training guide](recursive-training.md) covers that policy and its cost.
+
 ## Using it
 
 - Report `cert.to_dict()` in every receipt next to the residual.

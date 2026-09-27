@@ -14,6 +14,9 @@ Read the [numerical and learning contracts](contracts.md) to distinguish checked
 equilibrium phases, causal scans, finite repair and their learning rules.
 For a runnable observer and observed population in the same checked graph,
 see [recursive observation in one equilibrium](recursive-settlement.md).
+For a larger visual-control setup, see
+[training a recursive brain](recursive-training.md): inputs, observed targets,
+checked solver choices, independent minibatches and checkpoints.
 
 1. [Cadence for machine-learning people](orientation.md): the four brains against
    the models you know, where each learning signal comes from, a comparison with

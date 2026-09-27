@@ -6,17 +6,21 @@ settling round updates the combined state. No external steering callback or
 second completed solve supplies the observer's answer.
 
 **The observer becomes part of what settles.** Write the complete state as
-`x = (base, observer_1, ..., observer_D, outputs)` and solve
+`x = (inputs, base, observer_1, ..., observer_D, outputs)` and solve
 `x = F_theta(x; input)` for all of it. Each observer reads the evolving current
 state, feeds back into it, and is itself changed by that feedback. A previously
 settled base can initialize the larger system; it must remain free to change.
 An immutable copy of that base passed into a second network tests a different
 architecture.
 
+For a complete training recipe, including visual inputs, observed action-return
+targets, solver admission and checkpoints, see
+[Training a recursive controller](recursive-training.md).
+
 ## Choose the depth and widths
 
-Since 0.18.0, the `PatchNet.recursive` factory constructs that
-wiring directly. The explicit construction below also runs on released 0.17.0.
+The `PatchNet.recursive` factory constructs that wiring directly. The examples
+below use the current phase-qualification API.
 
 ```python
 import numpy as np
@@ -29,12 +33,12 @@ net = cd.PatchNet.recursive(
 )
 drive = net.stimulus([[0.2, 0.4, 0.1]])
 phase = net.settle(drive)
-assert np.all(phase.converged)
+assert np.all(phase.qualified)
 answer = net.read(phase)  # activity of output neurons inside this same graph
 
 lesson = net.observe(drive, [[0.3, 0.1]], source_id="example:recursive-1")
 assert lesson.updated, lesson.reason
-assert all(np.all(p.converged) for p in (lesson.free, lesson.plus, lesson.minus))
+assert all(np.all(p.qualified) for p in (lesson.free, lesson.plus, lesson.minus))
 ```
 
 `layers[0]` is the base hidden population. Every later entry adds an observer
@@ -62,6 +66,17 @@ bound, and nudges change the equations; qualification is still required for
 every phase. This is a convenient starting topology, not a claim that dense
 reciprocal wiring is the most scalable architecture. Its edge count grows with
 the sizes of the connected populations.
+
+`solver="local"` is the default. Its `phase.qualified` checks the complete
+equation residual, just as `phase.converged` does. On supported smooth,
+reciprocal CPU float64 models, `solver="hybrid", refinement_steps=64` additionally
+checks positive local energy curvature and can refine capped rows from their
+last local state. That refinement is global numerical work. It does not add an
+observer, change the equilibrium equations, prove uniqueness, or guarantee
+that free and nudged solutions lie on the same smooth branch. Use
+`phase.qualified` before reading an answer for action and `lesson.updated`
+before counting a learning step. The [training guide](recursive-training.md)
+explains the per-phase diagnostics and failure handling.
 
 ## What the deepest observer can do
 
@@ -226,6 +241,13 @@ learning contract demonstrated here.
 A successful mechanism test establishes shared settlement and feedback. A
 learned task advantage, a benefit from depth and training efficiency versus
 transformers require their own results; they do not follow from the builder.
+
+A bounded visual-control experiment did learn useful actions with
+`PatchNet.recursive(1371, [24, 8], 6)`: its six answer neurons were part of the
+same 1,409-neuron equilibrium. This supplies evidence of learned joint-state
+control in one task. It does not establish a benefit from the observer level;
+the [training guide](recursive-training.md) states the teaching setup, controls
+and limits of that result.
 
 ## Attention as a testable function
 

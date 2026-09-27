@@ -1,6 +1,26 @@
 # Changelog
 
-## Unreleased
+## 0.19.0 — 2026-09-28
+
+- Add opt-in `PatchNet(..., solver="hybrid", refinement_steps=64)` for CPU
+  reciprocal smooth-tanh graphs with an independent input population. Ordinary
+  local settlement runs first; unresolved rows may receive warm Newton energy
+  refinement. Exact input elimination preserves recurrent feedback, and every
+  row is checked against the full equations and positive reduced energy
+  curvature. Unsupported configurations raise. NumPy remains the only required
+  dependency; the default solver remains local.
+- Expose `Equilibrium.qualified` and optional `RefinementReport` diagnostics.
+  `converged` still means a small equation residual; local sweeps and accepted
+  Newton steps are reported separately. Hybrid learning rejects unqualified
+  phases without changing parameters, optimizer history or evidence IDs.
+  This is a local numerical check, not a guarantee of global uniqueness,
+  free/nudged branch continuity, useful depth or faster training.
+- Save solver policy in PatchNet checkpoint format 3. Formats 1 and 2 load with
+  their original local-only policy; incompatible hybrid backends do not silently
+  downgrade. Document the larger `recursive(1371, [24, 8], 6)` setup, observed
+  action-return targets, normalization, independent minibatch resets, capacity
+  controls and current-weight contraction checks. Execute the small training
+  and saved-continuation examples in the minimal-install documentation check.
 
 - Strict typing extends to `cadence.fused`: the mypy override is gone and a
   typed wrapper keeps each compiled kernel's signature visible to the checker.
