@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from cadence import RecordPatchNet
 from cadence.ports import DenseBlock, MapBlock, StructuredPort
@@ -161,3 +162,29 @@ def test_broadcast_channels_reach_every_position_and_keep_the_three_maps_consist
     a1, a2 = rng.normal(size=3), rng.normal(size=3)
     mixed = np.abs(y(s1, a1) - y(s1, a2) - y(s2, a1) + y(s2, a2)).max()
     assert mixed > 1e-6
+
+
+def test_a_mask_silences_inputs_in_every_map_and_travels_with_custody():
+    rng = np.random.default_rng(7)
+    blocks = [MapBlock(0, 1, 4, 4, 2, 3, 1), DenseBlock(16, 3, 4)]
+    mask = np.ones(19, dtype=bool)
+    mask[[2, 5, 17]] = False
+    heard = StructuredPort(19, blocks, broadcast=(16, 3), mask=mask)
+    plain = StructuredPort(19, blocks, broadcast=(16, 3))
+    weights = heard.initial(rng)
+    u = rng.random((3, 19))
+    v = rng.random((3, heard.outputs))
+    np.testing.assert_allclose(heard.apply(u, weights), plain.apply(u * mask, weights))
+    back = heard.transpose(v, weights)
+    assert np.all(back[:, ~mask] == 0.0)
+    np.testing.assert_allclose(back, plain.transpose(v, weights) * mask)
+    for g, h in zip(heard.gradient(v, u), plain.gradient(v, u * mask), strict=True):
+        np.testing.assert_allclose(g, h)
+    loud = u.copy()
+    loud[:, ~mask] += 5.0  # a masked input changes nothing
+    np.testing.assert_allclose(heard.apply(loud, weights), heard.apply(u, weights))
+    again = StructuredPort.from_dict(heard.to_dict())
+    assert again.mask is not None and np.array_equal(again.mask, mask)
+    assert StructuredPort.from_dict(plain.to_dict()).mask is None
+    with pytest.raises(ValueError, match="mask"):
+        StructuredPort(19, blocks, mask=np.ones(18, dtype=bool))

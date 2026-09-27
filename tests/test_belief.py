@@ -348,7 +348,9 @@ def test_backtracking_admits_a_rate_that_diverges_without_it():
     with np.errstate(over="ignore", invalid="ignore"):
         for _ in range(4):
             plain.reset()
-            losses.append(plain.observe(o, a, y, rate=rate, write=False).initial_loss)
+            losses.append(
+                plain.observe(o, a, y, rate=rate, write=False, backtrack=False).initial_loss
+            )
     assert losses[-1] is None or losses[-1] > 100 * losses[0]  # the plain step diverges
     previous = None
     accepted = []
@@ -364,7 +366,11 @@ def test_backtracking_admits_a_rate_that_diverges_without_it():
         accepted.append(result.accepted_rate)
     assert all(0 < r < rate for r in accepted)
     assert admitted.updates == 6
-    # the plain step reports its rate; no step reports none; the admission is not an optimizer
+    # the admission starts from twice the last admitted step: after the first chunk the start
+    # is below the rate, so the replays fall and every accepted step stays within the ceiling
+    assert all(later <= 2.0 * earlier + 1e-12 for earlier, later in zip(accepted, accepted[1:]))
+    assert admitted.step_size == accepted[-1]
+    # no step reports none
     admitted.reset()
     still = admitted.observe(o, a, y, rate=0.0, write=False, backtrack=True)
     assert not still.updated and still.reason == "no_step" and still.accepted_rate is None
@@ -522,3 +528,118 @@ def test_the_torch_twin_takes_gains_and_a_row_mask():
             twin(torch.as_tensor(o), torch.as_tensor(a), gains=torch.ones(3))
     finally:
         torch.set_default_dtype(torch.float32)
+
+
+# ---------------------------------------------------------------- the composition release
+def test_the_readback_carries_the_raw_evidence_and_encode_is_public():
+    rng = np.random.default_rng(41)
+    patch = _patch(seed=41)
+    o, a, _ = _data(rng, n=2, t=3, patch=patch)
+    params = patch.parameters()
+    raw = np.tanh(patch.port.apply(o[:, 0], patch._blocks()) + params["e_b"])
+    moment = patch.readback(o[:, 0], a[:, 0], state=np.zeros((2, patch.belief)))
+    np.testing.assert_allclose(moment.evidence, raw, atol=1e-12)
+    encoded = patch.encode(o)  # (batch, time, encoded)
+    np.testing.assert_allclose(
+        encoded, np.tanh(patch.port.apply(o, patch._blocks()) + params["e_b"]), atol=1e-12
+    )
+    gains = np.tile([1.5, 0.5], (2, 3, 1))
+    patch.reset()
+    path = patch.assimilate(o, a, gains=gains)  # the path's evidence is the raw evidence gained
+    np.testing.assert_allclose(path.evidence[:, 0], raw * gains[:, 0][:, patch._unit_block], atol=1e-12)
+    with pytest.raises(ValueError, match="observations"):
+        patch.encode(np.zeros((2, patch.inputs + 1)))
+
+
+def test_a_step_on_a_target_is_admitted_by_default_and_a_step_on_a_gradient_is_plain():
+    rng = np.random.default_rng(42)
+    patch = _patch(seed=42)
+    _readout(patch, rng)
+    o, a, y = _data(rng, n=2, t=4, patch=patch)
+    patch.reset()
+    taught = patch.observe(o, a, y, rate=100.0, write=False)
+    assert taught.updated and taught.replay_calls >= 1
+    assert taught.accepted_rate < 100.0 and taught.final_loss < taught.initial_loss
+    dy = rng.normal(size=(2, 4, patch.outputs))
+    patch.reset()
+    seam = patch.observe(o, a, output_gradient=dy, rate=0.5, write=False)  # plain, no replay
+    assert seam.updated and seam.accepted_rate == 0.5 and seam.replay_calls == 0
+    assert seam.final_loss is None and seam.writes == 0
+    with pytest.raises(ValueError, match="backtrack needs a target"):
+        patch.observe(o, a, output_gradient=dy, rate=0.5, backtrack=True)
+    patch.reset()
+    plain = patch.observe(o, a, y, rate=0.01, write=False, backtrack=False)
+    assert plain.updated and plain.accepted_rate == 0.01 and plain.replay_calls == 0
+    with pytest.raises(ValueError, match="backtrack"):
+        patch.observe(o, a, y, rate=1.0, backtrack="yes")
+
+
+def test_the_admitted_step_size_is_kept_across_chunks_and_snapshots():
+    rng = np.random.default_rng(43)
+    patch = _patch(seed=43)
+    _readout(patch, rng)
+    o, a, y = _data(rng, n=2, t=4, patch=patch)
+    assert patch.step_size is None
+    patch.reset()
+    first = patch.observe(o, a, y, rate=100.0, write=False)
+    assert first.updated and patch.step_size == first.accepted_rate
+    patch.reset()
+    second = patch.observe(o, a, y, rate=100.0, write=False)
+    assert second.updated and second.accepted_rate <= 2.0 * first.accepted_rate + 1e-12
+    restored = BeliefPatch.restore(patch.snapshot())
+    assert restored.step_size == patch.step_size
+    old = patch.snapshot()
+    del old["step_size"]  # a snapshot from before the step size travelled
+    assert BeliefPatch.restore(old).step_size is None
+    patch.reset()  # the live state goes, the step size stays
+    assert patch.step_size == second.accepted_rate
+    patch.reset_step()
+    assert patch.step_size is None
+    assert BeliefPatch.restore(patch.snapshot()).step_size is None
+
+
+def test_keep_live_leaves_the_live_state_alone():
+    rng = np.random.default_rng(44)
+    patch = _patch(seed=44)
+    o, a, y = _data(rng, n=2, t=4, patch=patch)
+    patch.reset()
+    patch.assimilate(o[:, :2], a[:, :2])
+    live = patch.state
+    boundary = np.zeros((2, patch.belief))
+    replay = patch.assimilate(o, a, state=boundary, keep_live=True)
+    assert np.array_equal(patch.state, live)
+    assert not np.array_equal(replay.final_state, live)
+    patch.observe(o, a, y, rate=0.0, write=False, state=boundary, keep_live=True)
+    assert np.array_equal(patch.state, live)
+    patch.assimilate(o, a)
+    assert not np.array_equal(patch.state, live)
+
+
+def test_the_cost_counters_count_every_moment_and_every_replay():
+    rng = np.random.default_rng(45)
+    patch = _patch(seed=45)
+    _readout(patch, rng)
+    o, a, y = _data(rng, n=2, t=4, patch=patch)
+    one = patch.macs_per_moment()
+    fi = patch.belief + patch.encoded + patch.belief + patch.record_width + 1
+    assert one > 0 and patch.macs_per_moment(probes=True) == one + patch.block_count * patch.belief * fi
+    patch.reset_cost()
+    patch.reset()
+    patch.assimilate(o, a)
+    assert patch.cost == {"moments": 8, "macs": 8 * one, "replays": 0}
+    patch.imagine(a[:, :3])
+    assert patch.cost["moments"] == 14 and patch.cost["macs"] == 14 * one
+    patch.reset_cost()
+    patch.reset()
+    patch.assimilate(o, a, probe=True)
+    assert patch.cost["macs"] == 8 * patch.macs_per_moment(probes=True)
+    patch.reset_cost()
+    patch.reset()
+    taught = patch.observe(o, a, y, rate=100.0, write=False)
+    assert taught.replay_calls >= 1
+    assert patch.cost["replays"] == taught.replay_calls
+    assert patch.cost["moments"] == 8 * (1 + taught.replay_calls)
+    patch.reset_cost()
+    patch.reset()
+    patch.observe(o, a, y, rate=0.01, write=False, backtrack=False)
+    assert patch.cost == {"moments": 8, "macs": 8 * one, "replays": 0}

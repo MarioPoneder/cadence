@@ -160,10 +160,12 @@ See the [record patch guide](record-patch.md).
 
 - `MapBlock(start, channels_in, height, width, channels_out, kernel, stride=1)`: a tied local
   kernel over a grid of the inputs; `DenseBlock(start, inputs, outputs)`: a matrix over a slice.
-- `StructuredPort(inputs, blocks, broadcast=None)`: `apply(u, weights)`, `transpose(v, weights)`,
-  `gradient(v, u)`, `initial(rng, scale)`, `weight_shape(block)`, `dense_matrix(weights)`,
-  `to_dict()`, `from_dict(d)`. `broadcast=(start, count)` tiles that slice into every map
-  block as constant channels.
+- `StructuredPort(inputs, blocks, broadcast=None, mask=None)`: `apply(u, weights)`,
+  `transpose(v, weights)`, `gradient(v, u)`, `initial(rng, scale)`, `weight_shape(block)`,
+  `dense_matrix(weights)`, `to_dict()`, `from_dict(d)`. `broadcast=(start, count)` tiles that
+  slice into every map block as constant channels. `mask` `(inputs,)` names which inputs the
+  port hears; a masked input is zero to every block in all three maps and the mask travels
+  with `to_dict`.
 - `RecordPatchNet(..., port=StructuredPort)` and `RecordPatchStack(..., lower_port=StructuredPort)`
   read their inputs through the port; `hidden` (or `lower`) equals the port's outputs.
 
@@ -174,27 +176,36 @@ See the [belief patch guide](belief.md).
 - `BeliefPatch(observation: StructuredPort, actions, belief, outputs, *, iterations=2, damping=0.5,
   cells=4096, active=32, record_rate=0.5, record_width=64, habituation=1e-5, record_bias=0.3,
   output_precision=None, seed=0)`. `block_count` is the number of the port's blocks.
-- `assimilate(observations, actions, observed=None, *, state=None, gains=None, probe=False)
-  -> BeliefPath`: advance the belief through observed moments; nothing learned or written.
-  `imagine(actions, *, state=None, gains=None) -> BeliefPath`: the transition alone under
-  declared actions, private. `observe(observations, actions, target=None, *, observed=None,
-  rate=1.0, write=True, state=None, gains=None, loss_weight=None, output_gradient=None,
-  backtrack=False, probe=False) -> BeliefObservation`: one backward scan and the store's
-  writes. `state` starts the moments from a given boundary instead of the live belief; the
-  final belief becomes the live state either way. `observed` masks moments `(time,)` or rows
+- `assimilate(observations, actions, observed=None, *, state=None, gains=None, probe=False,
+  keep_live=False) -> BeliefPath`: advance the belief through observed moments; nothing
+  learned or written. `imagine(actions, *, state=None, gains=None) -> BeliefPath`: the
+  transition alone under declared actions, private. `observe(observations, actions,
+  target=None, *, observed=None, rate=1.0, write=True, state=None, gains=None,
+  loss_weight=None, output_gradient=None, backtrack=None, probe=False, keep_live=False)
+  -> BeliefObservation`: one backward scan and the store's writes. `state` starts the
+  moments from a given boundary instead of the live belief; the final belief becomes the
+  live state unless `keep_live=True`. `observed` masks moments `(time,)` or rows
   `(batch, time)`; a row that observes nothing keeps its expectation. `gains` `(blocks,)`,
   `(batch, blocks)` or `(batch, time, blocks)` multiplies each block's encoded evidence before
   the repair map and the store read see it. `loss_weight` `(time,)` or `(batch, time)` weighs
   each moment's error, normalized by its sum; a moment of weight zero is neither taught nor
   written. `output_gradient` `(batch, time, outputs)` replaces `target`: the adjoint of an
-  external loss on the outputs; nothing is written and no loss is reported. `backtrack=True`
-  takes the largest halving of `rate` whose replay of the chunk from the same boundary, with
-  the store as it stands, lowers the loss by the Armijo margin (sixteen halvings at most); it
-  needs a target. `probe=True` computes the residual-alone probe per block.
+  external loss on the outputs; nothing is written and no loss is reported. A step on a
+  target is admitted (`backtrack` None or True): the largest halving of the start whose
+  replay of the chunk from the same boundary, with the store as it stands, lowers the loss
+  by the Armijo margin (sixteen halvings at most), the start being twice the last admitted
+  step and at most `rate`; `backtrack=False` is the plain step at `rate`, and a step on an
+  external gradient is plain. `probe=True` computes the residual-alone probe per block.
 - `readback(observations, actions, *, state=None) -> BeliefReadback`: one moment
   `(batch, inputs)`, `(batch, actions)` before its repair, from the live belief or `state`:
-  `expectation` `(batch, belief)`, `residual_alone` and `surprise` `(batch, blocks)`. Changes
-  nothing.
+  `expectation` `(batch, belief)`, `residual_alone` and `surprise` `(batch, blocks)`,
+  `evidence` `(batch, encoded)` before any gain. `encode(observations) -> (..., encoded)`:
+  the encoded evidence of any reading before any gain. Both change nothing.
+- `step_size`: the last admitted step, None before one; the next admission starts from
+  twice it. `reset_step()` drops it; `reset()` keeps it; it travels with the snapshot.
+- `macs_per_moment(*, probes=False) -> int`: the multiply-accumulates of one moment.
+  `cost`: `{"moments", "macs", "replays"}` counted since `reset_cost()`, every moment
+  assimilated, observed, imagined or replayed in an admission.
 - `set_implied_reading(implied, units=None)`: declares the map from the outputs
   `(batch, outputs)` to the reading each block should give `(batch, inputs)`, channels left
   `NaN` not compared, and the persistence error of each block's compared channels `(blocks,)`;
@@ -210,8 +221,9 @@ See the [belief patch guide](belief.md).
 - `BeliefObservation`: `updated`, `reason`, `path`, `delta`, `initial_loss`, `writes`,
   `final_loss` (the replayed loss under the admitted parameters), `accepted_rate` (the rate of
   the step taken, None without a step), `replay_calls`, `gain_gradient` `(batch, time, blocks)`.
-- `reset()`, `state`, `parameters()`, `set_parameters()`, `set_output_precision()`, `records`,
-  `snapshot()`, `restore()`, `save()`, `load()`.
+- `reset()` (the live state; the step size and the counters stay), `state`, `parameters()`,
+  `set_parameters()`, `set_output_precision()`, `records`, `snapshot()`, `restore()`,
+  `save()`, `load()`.
 - `cadence.belief_torch.TorchBelief(port, actions, belief, outputs, *, iterations, damping, record_width)`:
   the slow half on torch; `forward(observations | None, actions, state=None, reads=None,
   gains=None, observed=None)`, `export()`, `load(params)`. A gains tensor that requires grad

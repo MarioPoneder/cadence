@@ -114,12 +114,14 @@ class BeliefPath:
 @dataclass(frozen=True)
 class BeliefReadback:
     """One moment's readback before its repair: the expectation ``(batch, belief)``, the
-    residual-alone probe per block ``(batch, blocks)`` and the surprise per block
-    ``(batch, blocks)``, None without a declared implied reading. Nothing changes."""
+    residual-alone probe per block ``(batch, blocks)``, the surprise per block
+    ``(batch, blocks)``, None without a declared implied reading, and the encoded evidence
+    ``(batch, encoded)`` before any gain, what each block is reading. Nothing changes."""
 
     expectation: np.ndarray
     residual_alone: np.ndarray
     surprise: np.ndarray | None
+    evidence: np.ndarray | None = None
 
 
 @dataclass(frozen=True)
@@ -211,12 +213,50 @@ class BeliefPatch:
         self._state: np.ndarray | None = None
         self._implied: Callable[[np.ndarray], np.ndarray] | None = None
         self._units = np.ones(self.block_count)
+        self._step_size: float | None = None
         self.updates = 0
+        self.cost = {"moments": 0, "macs": 0, "replays": 0}
 
     # ------------------------------------------------------------------ parameters
     @property
     def state(self) -> np.ndarray | None:
         return None if self._state is None else self._state.copy()
+
+    @property
+    def step_size(self) -> float | None:
+        """The last admitted step; the next admission starts from twice it, at most ``rate``.
+        None before any admitted step or after ``reset_step``."""
+        return self._step_size
+
+    def reset_step(self) -> None:
+        self._step_size = None
+
+    # ------------------------------------------------------------------ accounting
+    def macs_per_moment(self, *, probes: bool = False) -> int:
+        """Multiply-accumulates of one moment: the port, the transition and its gate, the
+        store's reads and the repair map per iteration, the slow readout and the store's
+        decode; with ``probes`` one evaluation of the repair map per block for the
+        residual-alone probes. One accounting for every arm of a comparison."""
+        port = sum(int(np.prod(self.port.weight_shape(b))) for b in self.port.blocks)
+        za = self.belief + self.actions
+        transition = 2 * self.belief * za
+        reading = self.encoded + self.belief
+        read = reading * self.records.cells + self.records.active * self.record_width
+        fi = self.belief + self.encoded + self.belief + self.record_width + 1
+        repair = self.iterations * (read + self.belief * fi) + read
+        readout = self.outputs * self.belief + self.record_width * self.outputs
+        probing = self.block_count * self.belief * fi if probes else 0
+        return int(port + transition + repair + readout + probing)
+
+    def reset_cost(self) -> None:
+        """Zero the counters: ``cost["moments"]`` counts every moment the patch computed
+        (assimilated, observed, imagined, and replayed in an admission), ``cost["macs"]``
+        their multiply-accumulates, ``cost["replays"]`` the admission's replays."""
+        self.cost = {"moments": 0, "macs": 0, "replays": 0}
+
+    def _count(self, n: int, t: int, *, probes: bool = False) -> None:
+        self.cost["moments"] += int(n * t)
+        self.cost["macs"] += int(n * t) * self.macs_per_moment(probes=probes)
 
     def set_output_precision(self, precision: np.ndarray) -> None:
         value = np.asarray(precision, dtype=float)
@@ -272,6 +312,16 @@ class BeliefPatch:
     def _encode(self, o: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         pre = self.port.apply(o, self._blocks()) + self._e_b
         return np.tanh(pre), pre
+
+    def encode(self, observations: np.ndarray) -> np.ndarray:
+        """The encoded evidence of a reading before any gain, ``tanh(port(o) + e_b)``, for
+        ``(..., inputs)`` observations: what each block hears, as the repair will hear it
+        once the gains weigh it. A steering patch that decides a block's gain reads this
+        before the gain it sets. Nothing changes."""
+        o = np.asarray(observations, dtype=float)
+        if o.shape[-1] != self.inputs or not np.isfinite(o).all():
+            raise ValueError(f"observations must be a finite (..., {self.inputs}) array")
+        return self._encode(o)[0]
 
     def _expect(self, z: np.ndarray, a: np.ndarray) -> dict[str, np.ndarray]:
         x = np.concatenate([z, a], axis=-1)
@@ -363,6 +413,7 @@ class BeliefPatch:
         z = boundary
         record: dict[str, list[Any]] = {k: [] for k in _RECORD_KEYS}
         implied = surprise and observations is not None and self._implied is not None
+        self._count(n, t, probes=bool(probe and observations is not None))
         for k in range(t):
             ex = self._expect(z, actions[:, k])
             row = observed[:, k]
@@ -526,13 +577,16 @@ class BeliefPatch:
         state: np.ndarray | None = None,
         gains: np.ndarray | None = None,
         probe: bool = False,
+        keep_live: bool = False,
     ) -> BeliefPath:
         """Advance the belief through observed moments: the executed action, then the evidence.
         Nothing is learned or written; the final belief becomes the live state. ``state`` starts
         the moments from a given boundary instead of the live belief (a window that is replayed
-        from the belief that was live at its first moment). ``observed`` masks moments
-        ``(time,)`` or rows ``(batch, time)``; ``gains`` weighs each block's evidence inside the
-        repair; ``probe=True`` computes the residual-alone probe per block."""
+        from the belief that was live at its first moment), and ``keep_live=True`` leaves the
+        live state as it was, so a life that has stepped through the moments can replay them
+        without losing its place. ``observed`` masks moments ``(time,)`` or rows
+        ``(batch, time)``; ``gains`` weighs each block's evidence inside the repair;
+        ``probe=True`` computes the residual-alone probe per block."""
         o, a, mask = self._check(observations, actions, observed)
         n, t = a.shape[:2]
         record = self._forward(
@@ -545,7 +599,8 @@ class BeliefPatch:
             surprise=True,
         )
         path = self._path(record, None)
-        self._state = path.final_state
+        if not keep_live:
+            self._state = path.final_state
         return path
 
     def imagine(
@@ -582,7 +637,7 @@ class BeliefPatch:
         e_raw, _ = self._encode(o)
         rows = np.ones(len(o), dtype=bool)
         surprise = None if self._implied is None else self._surprise(o, z, rows)
-        return BeliefReadback(ex["p"], self._probe(e_raw, ex["p"]), surprise)
+        return BeliefReadback(ex["p"], self._probe(e_raw, ex["p"]), surprise, e_raw)
 
     def observe(
         self,
@@ -597,24 +652,28 @@ class BeliefPatch:
         gains: np.ndarray | None = None,
         loss_weight: np.ndarray | None = None,
         output_gradient: np.ndarray | None = None,
-        backtrack: bool = False,
+        backtrack: bool | None = None,
         probe: bool = False,
+        keep_live: bool = False,
     ) -> BeliefObservation:
         """Learn one chunk of witnessed moments and write their outcomes into the store. ``state``
         starts the chunk from a given boundary instead of the live belief; the final belief under
-        the chunk becomes the live state either way.
+        the chunk becomes the live state unless ``keep_live=True``.
 
         ``loss_weight`` weighs each moment's error, ``(time,)`` or ``(batch, time)``, normalized
         by its sum; a moment of weight zero is neither taught nor written. ``output_gradient``
         ``(batch, time, outputs)`` replaces ``target``: the adjoint then carries that gradient of
         an external loss on the outputs into the parameters and the gains, nothing is written
-        and no loss is reported. With ``backtrack=True`` a step is admitted only after a replay
-        of the chunk from the same boundary, under the proposed parameters and with the store as
-        it stands, lowers the chunk's loss by the Armijo margin, trying up to sixteen halved
-        rates. ``gains`` weighs each block's evidence inside the repair and the gradient into
-        the gains comes back as ``gain_gradient``."""
-        if not isinstance(backtrack, (bool, np.bool_)):
-            raise ValueError("backtrack must be a boolean")
+        and no loss is reported. A step on a target is admitted (``backtrack`` None or True):
+        it is taken only after a replay of the chunk from the same boundary, under the proposed
+        parameters and with the store as it stands, lowers the chunk's loss by the Armijo
+        margin, starting from twice the last admitted step (at most ``rate``) and trying up to
+        sixteen halvings. ``backtrack=False`` takes the plain step at ``rate``; a step on an
+        external gradient is plain, since the library can replay only the loss it can see.
+        ``gains`` weighs each block's evidence inside the repair and the gradient into the
+        gains comes back as ``gain_gradient``."""
+        if backtrack is not None and not isinstance(backtrack, (bool, np.bool_)):
+            raise ValueError("backtrack must be a boolean or None")
         if not np.isfinite(rate) or rate < 0:
             raise ValueError("rate must be finite and nonnegative")
         if (target is None) == (output_gradient is None):
@@ -640,16 +699,18 @@ class BeliefPatch:
                 )
             if backtrack:
                 raise ValueError("backtrack needs a target: the admission replays the chunk's loss")
+        admit = (y is not None) if backtrack is None else bool(backtrack)
         boundary = self._boundary(n, state)
         record = self._forward(o, a, boundary, mask, gain, probe=bool(probe), surprise=True)
         path = self._path(record, y, weight)
-        self._state = path.final_state
+        if not keep_live:
+            self._state = path.final_state
         if (y is not None and path.loss is None) or not np.isfinite(path.output).all():
             return BeliefObservation(False, "nonfinite_prediction", path, {}, None, 0)
         delta, dgains = self._adjoint(o, a, boundary, record, y, weight, dy)
         if rate > 0:
             admitted = self._admit(
-                o, a, mask, gain, weight, boundary, y, delta, rate, backtrack, path.loss
+                o, a, mask, gain, weight, boundary, y, delta, rate, admit, path.loss
             )
         else:
             admitted = (False, "no_step", None, None, 0)
@@ -660,6 +721,7 @@ class BeliefPatch:
         )
 
     def reset(self) -> None:
+        """Forget the live state; the step size and the counters stay."""
         self._state = None
 
     # ------------------------------------------------------------------ learning
@@ -760,9 +822,10 @@ class BeliefPatch:
         backtrack: bool,
         initial: float | None,
     ) -> tuple[bool, str, float | None, float | None, int]:
-        """The step: plain at ``rate``, or the largest halving of ``rate`` whose replay of the
+        """The step: plain at ``rate``, or the largest halving of the start whose replay of the
         chunk from the same boundary, with the store as it stands, lowers the loss by the
-        Armijo margin. Returns (updated, reason, final loss, accepted rate, replays)."""
+        Armijo margin; the start is twice the last admitted step, at most ``rate``. Returns
+        (updated, reason, final loss, accepted rate, replays)."""
         current = self.parameters()
         if not backtrack:
             with np.errstate(over="ignore", invalid="ignore"):
@@ -774,6 +837,7 @@ class BeliefPatch:
         with np.errstate(over="ignore", invalid="ignore"):
             norm_squared = sum(float(np.sum(v * v)) for v in delta.values())
         replays = 0
+        start = rate if self._step_size is None else min(float(rate), 2.0 * self._step_size)
         if (
             initial is not None
             and target is not None
@@ -781,7 +845,7 @@ class BeliefPatch:
             and norm_squared > 0
         ):
             for index in range(_HALVINGS):
-                step = rate * 0.5**index
+                step = start * 0.5**index
                 with np.errstate(over="ignore", invalid="ignore"):
                     proposed = {k: current[k] - step * delta[k] for k in _PARAMETERS}
                 if not all(np.isfinite(v).all() for v in proposed.values()):
@@ -799,6 +863,7 @@ class BeliefPatch:
                     for key, value in current.items():
                         setattr(self, "_" + key, value)
                 replays += 1
+                self.cost["replays"] += 1
                 floor = (
                     64
                     * np.finfo(float).eps
@@ -810,6 +875,7 @@ class BeliefPatch:
                     and loss <= initial - 1e-4 * step * norm_squared
                 ):
                     self._commit(proposed)
+                    self._step_size = float(step)
                     return True, "updated", loss, step, replays
         return False, "no_decreasing_parameter_step", initial, None, replays
 
@@ -859,6 +925,7 @@ class BeliefPatch:
             "output_precision": self._output_precision.copy(),
             "output_code": self._output_code.copy(),
             "input_norm": np.array(self._input_norm),
+            "step_size": np.empty(0) if self._step_size is None else np.array([self._step_size]),
             "state": np.empty((0, self.belief)) if self._state is None else self._state.copy(),
             "meta": np.array(json.dumps(meta, sort_keys=True)),
         }
@@ -892,6 +959,9 @@ class BeliefPatch:
             result.set_parameters({k: snapshot[k] for k in _PARAMETERS})
             result._output_code = np.asarray(snapshot["output_code"], dtype=float).copy()
             result._input_norm = float(np.asarray(snapshot["input_norm"]))
+            if "step_size" in snapshot:
+                kept = np.asarray(snapshot["step_size"], dtype=float).reshape(-1)
+                result._step_size = None if kept.size == 0 else float(kept[0])
             result.records.load_state(
                 {
                     k[len("records_") :]: np.asarray(v)

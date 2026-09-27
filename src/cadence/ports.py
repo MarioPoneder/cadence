@@ -104,10 +104,17 @@ class StructuredPort:
     of the inputs that every map block also reads as constant channels tiled over its grid,
     so what a body did and where it is reach every position before the nonlinearity: the
     effect of an action can then depend on what is where. A map block's kernel then has
-    ``channels_in + count`` input channels."""
+    ``channels_in + count`` input channels. ``mask`` names which inputs the port hears, one
+    flag per input: a masked input is zero to every block, in the forward map, its
+    transpose and the gradient, so which channels a patch reads can be a gene without
+    touching the weights (a steering patch that reads the surprises and not the probes)."""
 
     def __init__(
-        self, inputs: int, blocks: list[Block], broadcast: tuple[int, int] | None = None
+        self,
+        inputs: int,
+        blocks: list[Block],
+        broadcast: tuple[int, int] | None = None,
+        mask: Any = None,
     ) -> None:
         self.inputs = int(inputs)
         self.blocks = list(blocks)
@@ -119,8 +126,17 @@ class StructuredPort:
             s0, count = self.broadcast
             if count < 1 or s0 < 0 or s0 + count > self.inputs:
                 raise ValueError("the broadcast slice must lie inside the inputs")
+        self.mask: np.ndarray | None = None
+        if mask is not None:
+            flags = np.asarray(mask)
+            if flags.shape != (self.inputs,):
+                raise ValueError("mask must have one flag per input")
+            self.mask = flags.astype(bool)
         self.outputs = int(sum(b.outputs for b in self.blocks))
         self._offsets = np.cumsum([0] + [b.outputs for b in self.blocks])
+
+    def _heard(self, u: np.ndarray) -> np.ndarray:
+        return u if self.mask is None else u * self.mask
 
     def weight_shape(self, b: Block) -> tuple[int, ...]:
         """A block's kernel shape, with the broadcast channels added for a map block."""
@@ -154,6 +170,7 @@ class StructuredPort:
     # ------------------------------------------------------------------ the three maps
     def apply(self, u: np.ndarray, weights: list[np.ndarray]) -> np.ndarray:
         """``(..., inputs) -> (..., outputs)``."""
+        u = self._heard(u)
         lead = u.shape[:-1]
         parts = []
         for b, w in zip(self.blocks, weights, strict=True):
@@ -181,13 +198,13 @@ class StructuredPort:
                 if self.broadcast is not None:
                     s0, count = self.broadcast
                     out[..., s0 : s0 + count] += back[..., b.channels_in :, :, :].sum(axis=(-2, -1))
-        return out
+        return self._heard(out)
 
     def gradient(self, v: np.ndarray, u: np.ndarray) -> list[np.ndarray]:
         """The gradient of ``sum(v * (B u))`` with respect to each block's weights, summed over
         every leading axis (batch and time)."""
         n = int(np.prod(u.shape[:-1])) if u.ndim > 1 else 1
-        uf, vf = u.reshape(n, -1), v.reshape(n, -1)
+        uf, vf = self._heard(u).reshape(n, -1), v.reshape(n, -1)
         out = []
         for k, b in enumerate(self.blocks):
             y = vf[:, self._offsets[k] : self._offsets[k + 1]]
@@ -232,6 +249,8 @@ class StructuredPort:
         out: dict[str, Any] = {"inputs": self.inputs, "blocks": [b.to_dict() for b in self.blocks]}
         if self.broadcast is not None:
             out["broadcast"] = list(self.broadcast)
+        if self.mask is not None:
+            out["mask"] = [int(v) for v in self.mask]
         return out
 
     @classmethod
@@ -241,6 +260,7 @@ class StructuredPort:
             int(d["inputs"]),
             [block_from_dict(b) for b in d["blocks"]],
             None if cast is None else (int(cast[0]), int(cast[1])),
+            d.get("mask"),
         )
 
     def dense_matrix(self, weights: list[np.ndarray]) -> np.ndarray:

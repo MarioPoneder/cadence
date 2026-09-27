@@ -154,7 +154,12 @@ zero, one evaluation of the map per block, computed with `probe=True`; and `surp
 `(batch, time, blocks)`, each block's reading against the reading the previous belief's
 slow readout implies, a root mean square over the block's compared channels in the block's
 persistence units (a surprise of one means the belief predicted the sense no better than a
-belief that expects the reading to stay as it was). The surprise needs a declaration,
+belief that expects the reading to stay as it was). `readback` also carries `evidence`
+`(batch, encoded)`, the encoded evidence before any gain, `tanh(port(o) + e_b)`, and
+`encode(observations)` gives it for any `(..., inputs)` reading: a surprise says that a
+sense disagrees, the encoded evidence says what the sense is reading, and a steering patch
+that decides a block's gain reads it before the gain it sets (the night nursery earned rung
+4 only once its steering patch read the ear's evidence beside the surprises). The surprise needs a declaration,
 `set_implied_reading(implied, units)`: the map from the outputs to the reading each block
 should give, with the channels it does not imply left `NaN`, and the mean squared change of
 the compared channels from one moment to the next on a batch of training data. A row that
@@ -177,7 +182,12 @@ assert np.all(path.surprise[:, :, 1] == 0.0)       # the ear has no implied chan
 moment = cortex.readback(o[:, 0], a[:, 0], state=np.zeros((4, 8)))   # before the first moment's repair
 assert np.allclose(moment.residual_alone, path.residual_alone[:, 0])
 assert np.allclose(moment.surprise, path.surprise[:, 0])
+assert np.allclose(moment.evidence, cortex.encode(o[:, 0]))              # what each block reads, before the gains
 ```
+
+The surprise of a stream's first moment compares the reading against the readout of the
+boundary belief, a zero belief when no `state` is given; a life that carries its boundary
+compares against what its last belief implied.
 
 The probes cost one evaluation of the repair map per block and moment; the surprise costs
 one call of the declared map. In the ventriloquist demo the steering patch that read the
@@ -189,24 +199,67 @@ carry the surprise first and ask for the probes when the task shows they help.
 `observe(rate=r)` moves the parameters by `r` times the adjoint. On a loss that is flat
 around the mean predictor and steep once the readout binds, every fixed rate that learned
 diverged within a few dozen chunks and the rates that stayed finite learned nothing. With
-`backtrack=True` the chunk is replayed from the same boundary under the proposed
-parameters, with the store as it stands, and the largest halving of `rate` whose replay
-lowers the chunk's loss by the Armijo margin is taken, sixteen halvings at most; the store
-is written after the admission. `accepted_rate`, `final_loss` and `replay_calls` are on the
-observation. The admission is a check, not an optimizer: the patch keeps no step size and
-no moments of the gradient, and the next chunk starts again from `rate`.
+a target the step is admitted: the chunk is replayed from the same boundary under the
+proposed parameters, with the store as it stands, and the largest halving of the start
+whose replay lowers the chunk's loss by the Armijo margin is taken, sixteen halvings at
+most; the store is written after the admission. The start is twice the last admitted step,
+at most `rate`, so `rate` is a ceiling and the patch finds its own step within it;
+`step_size` holds the last admitted step, travels with the snapshot, survives `reset()`
+and is dropped by `reset_step()`. `accepted_rate`, `final_loss` and `replay_calls` are on
+the observation. The admission keeps no moments of the gradient; it is the default because
+in every lane that learned by the plain step (the shell game, the ventriloquist, the
+lighthouse keeper, the night nursery) the plain step diverged or learned nothing, and the
+two demos that kept their own step size restarted from twice the last accepted one.
+`backtrack=False` takes the plain step at `rate`; a step on an external gradient
+(`output_gradient=`) is plain, since the library can replay only the loss it can see.
 
 ```python
 cortex.reset()
-admitted = cortex.observe(o, a, y, rate=100.0, write=False, backtrack=True)
+admitted = cortex.observe(o, a, y, rate=100.0, write=False)
 assert admitted.updated and admitted.final_loss < admitted.initial_loss
 assert 0 < admitted.accepted_rate < 100.0 and admitted.replay_calls >= 1
+assert cortex.step_size == admitted.accepted_rate          # the next chunk starts from twice this
 ```
 
-A rate of 100 on the patch above diverges within two chunks without the admission (the
-loss goes from 0.46 to 31 to 1e6) and is admitted with it at 3.1, 1.6 or 6.2, with five to
-seven replays per chunk; the loss never rises on an accepted step. A step of `rate` accepted
-at the first replay costs one forward pass more than the plain step.
+A rate of 100 on the patch above diverges within two chunks under the plain step (the
+loss goes from 0.46 to 31 to 1e6) and is admitted at 3.1, 1.6 or 6.2, with five to seven
+replays on the first chunk and fewer on the next, since the start follows the last admitted
+step; the loss never rises on an accepted step. A step accepted at the first replay costs
+one forward pass more than the plain step.
+
+## A life lived online
+
+`assimilate` and `observe` take `state=`, a boundary to start the moments from instead of
+the live belief, and `keep_live=True` leaves the live state where it was. A life that has
+stepped through a window one moment at a time, so a page could draw it, learns from that
+window by replaying it from the belief that was live at its first moment, without losing
+its place in the stream; `state` is the boundary it kept, `keep_live` keeps the present.
+
+```python
+cortex.reset()
+cortex.assimilate(o[:, :3], a[:, :3])                    # the life steps through three moments
+boundary, here = np.zeros((4, 8)), cortex.state          # the boundary it kept, and where it is
+cortex.observe(o[:, :3], a[:, :3], y[:, :3], rate=1.0, write=False, state=boundary, keep_live=True)
+assert np.array_equal(cortex.state, here)                # the step was taken, the place kept
+```
+
+## The cost of a moment
+
+`macs_per_moment(probes=False)` counts the multiply-accumulates of one moment: the port,
+the transition and its gate, the store's reads and the repair map per iteration, the slow
+readout and the store's decode, and with `probes=True` one evaluation of the repair map per
+block. `cost` counts what the patch has computed since `reset_cost()`: every moment
+assimilated, observed, imagined or replayed in an admission, their multiply-accumulates,
+and the admission's replays. Every arm of a comparison at matched compute reads the same
+counter, and a composition sums its patches'.
+
+```python
+cortex.reset_cost()
+cortex.reset()
+taught = cortex.observe(o, a, y, rate=100.0, write=False)
+assert cortex.cost["moments"] == 4 * 6 * (1 + taught.replay_calls)
+assert cortex.cost["macs"] == cortex.cost["moments"] * cortex.macs_per_moment()
+```
 
 ## A weight per moment and a mask per row
 

@@ -496,8 +496,13 @@ A port of dense blocks covering the inputs is the plain patch (the tests check t
 outputs and the updates agree), and a map block answers the same thing wherever it
 appears (a thing at one place and the same thing two positions on give the same
 channel response two cells on). The blocks are genes: which slice, what grid, how
-many channels, what kernel, what stride. A structured port's checkpoint carries
-the port's layout; its `B` and `G` are the blocks' kernels, packed.
+many channels, what kernel, what stride. `mask=` names which inputs the port hears,
+one flag per input: a masked input is zero to every block in the forward map, its
+transpose and the gradient, so which channels a patch reads is a gene too, without
+touching the weights (a steering patch that reads the surprises and not the probes,
+or a brain below a rung that is deaf to the channel the rung reads). A structured
+port's checkpoint carries the port's layout and its mask; its `B` and `G` are the
+blocks' kernels, packed.
 
 ## Two patches in depth
 

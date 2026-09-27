@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+The composition release: what the rung demos (the shell game, the room, the arm, the eye
+and the ear, the dozing cat, the ventriloquist, the lighthouse keeper, the night nursery)
+and the nursery sent back. The belief patch first.
+
+- A step on a target is admitted by default: `BeliefPatch.observe` replays the chunk from
+  its boundary under the proposed parameters and takes the largest halving that lowers the
+  loss by the Armijo margin, starting from twice the last admitted step and at most `rate`,
+  so `rate` is a ceiling and the patch finds its step within it. `step_size` holds the last
+  admitted step, travels with the snapshot, survives `reset()` and is dropped by
+  `reset_step()`. `backtrack=False` is the plain step; a step on an external gradient
+  (`output_gradient=`) is plain, since the library can replay only the loss it can see.
+  Every lane that learned by the plain step diverged or learned nothing, and the two demos
+  that kept a step size restarted from twice the last accepted one.
+- `BeliefReadback.evidence` and `BeliefPatch.encode(observations)`: the encoded evidence
+  before any gain, what each block is reading, for a steering patch that decides a block's
+  gain (the night nursery earned rung 4 on it).
+- `assimilate` and `observe` take `keep_live=True`, which leaves the live state where it
+  was: a life that stepped through a window replays it from the boundary it kept without
+  losing its place.
+- `macs_per_moment(probes=)` and the `cost` counters (`moments`, `macs`, `replays` since
+  `reset_cost()`, every moment assimilated, observed, imagined or replayed in an admission):
+  one accounting for every arm of a comparison at matched compute, where four demos had
+  written their own.
+- `StructuredPort(mask=)`: which inputs the port hears, one flag per input, zero to every
+  block in the forward map, its transpose and the gradient, and carried by `to_dict`; which
+  channels a patch reads is a gene without touching the weights.
+
 The population kernel at the width of a game: what the poker neuroevolution lane sent back.
 
 - `PopulationPatch` reads and writes its record tables through the active cells alone (a
