@@ -215,6 +215,118 @@ class PatchNet:
         )
         return cls(learner, **runtime_options)
 
+    @classmethod
+    def recursive(
+        cls,
+        inputs: int,
+        layers: Sequence[int],
+        outputs: int,
+        *,
+        seed: int = 0,
+        coupling: float = 1.0,
+        config: LearnerConfig | None = None,
+        backend: Backend = "cpu",
+        device: str | None = None,
+        **runtime_options: Any,
+    ) -> PatchNet:
+        """Build observing populations inside one ordinary reciprocal ``PatchNet``.
+
+        ``layers[0]`` is the base hidden population, fully joined to input and
+        output neurons. Each later population is joined in both directions to
+        every earlier neuron, including inputs, outputs and older observers.
+        There are no within-population contacts or privileged overriding layer.
+        Outputs use the same neuron rule and joint solve as the observers.
+
+        A single global scale preserves symmetric random weights while setting
+        their largest absolute incoming row sum to ``coupling``. With the smooth
+        ``tanh(v / 2)`` rule, the initial free map has Lipschitz bound
+        ``coupling / 2`` (default 0.5). This initialization bound need not survive
+        learning and does not qualify arbitrary nudges or temporal anchors.
+        The usual full equation checks still decide whether a phase converged.
+        Widths and couplings are supplied candidate genes, not learned roles.
+        Construction uses synapse lists, with storage proportional to contacts.
+        """
+        def width(name: str, value: object) -> int:
+            if (
+                isinstance(value, (bool, np.bool_))
+                or not isinstance(value, (int, np.integer))
+                or value < 1
+            ):
+                raise ValueError(f"{name} must be a positive integer")
+            return int(value)
+
+        inputs, outputs = width("inputs", inputs), width("outputs", outputs)
+        if not isinstance(layers, (Sequence, np.ndarray)) or isinstance(layers, (str, bytes)):
+            raise ValueError("layers must be a nonempty sequence of positive integers")
+        if isinstance(layers, np.ndarray) and layers.ndim != 1:
+            raise ValueError("layers must be a nonempty sequence of positive integers")
+        sizes = [width(f"layers[{i}]", value) for i, value in enumerate(layers)]
+        if not sizes:
+            raise ValueError("layers must be a nonempty sequence of positive integers")
+        if (
+            isinstance(seed, (bool, np.bool_))
+            or not isinstance(seed, (int, np.integer))
+            or seed < 0
+        ):
+            raise ValueError("seed must be a nonnegative integer")
+        if (
+            isinstance(coupling, (bool, np.bool_))
+            or not isinstance(coupling, (int, float, np.integer, np.floating))
+            or not np.isfinite(coupling)
+            or coupling <= 0
+        ):
+            raise ValueError("coupling must be finite and positive")
+        selected = LearnerConfig(nudge="quadratic") if config is None else config
+        if not isinstance(selected, LearnerConfig) or selected.nudge != "quadratic":
+            raise ValueError("PatchNet requires a quadratic LearnerConfig")
+
+        rng = np.random.default_rng(seed)
+        populations = {
+            "input": tuple(range(inputs)),
+            "layer_0": tuple(range(inputs, inputs + sizes[0])),
+            "output": tuple(range(inputs + sizes[0], inputs + sizes[0] + outputs)),
+        }
+        pres: list[np.ndarray] = []
+        posts: list[np.ndarray] = []
+        signs: list[np.ndarray] = []
+
+        def join(left: Sequence[int], right: Sequence[int]) -> None:
+            pre = np.repeat(left, len(right))
+            post = np.tile(right, len(left))
+            weight = rng.normal(size=len(pre))
+            pres.extend((pre, post))
+            posts.extend((post, pre))
+            signs.extend((weight, weight))
+
+        join(populations["input"], populations["layer_0"])
+        join(populations["layer_0"], populations["output"])
+        base_size = inputs + sizes[0] + outputs
+        count = base_size
+        for level, size in enumerate(sizes[1:], start=1):
+            members = tuple(range(count, count + size))
+            populations[f"layer_{level}"] = members
+            join(range(count), members)
+            count += size
+        populations["observer"] = tuple(range(base_size, count))
+        populations["hidden"] = populations["layer_0"] + populations["observer"]
+        pre, post, weights = np.concatenate(pres), np.concatenate(posts), np.concatenate(signs)
+        row_mass = np.bincount(post, weights=np.abs(weights), minlength=count)
+        weights = (weights / row_mass.max()) * float(coupling)
+        graph = Connectome.from_synapses(
+            count,
+            pre=pre,
+            post=post,
+            sign=weights,
+            populations=populations,
+            label="patch:recursive",
+        )
+        learner = Learner(
+            Brain(graph, learning_neuron_model(leak=1.0), backend=backend, device=device),
+            graph.populations["output"],
+            selected,
+        )
+        return cls(learner, **runtime_options)
+
     def stimulus(self, inputs: np.ndarray, *, amplitude: float = 1.0) -> np.ndarray:
         """Place continuous inputs on the declared input ports as a soft drive."""
         values = np.asarray(inputs, dtype=float)

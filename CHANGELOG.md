@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add `PatchNet.recursive(inputs, layers, outputs)` to build a base and chosen
+  observer widths in one reciprocal graph. Every observer reads and feeds back
+  into the earlier populations; output neurons participate in the same solve.
+  The factory reuses existing settlement and learning and supplies no privileged
+  executive. Document initialization, full-state qualification and fair
+  transformer comparisons in the recursive-settlement guide.
+
 ## 0.17.0 — 2026-09-27
 
 Production contract hardening:

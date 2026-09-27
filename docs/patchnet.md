@@ -1,7 +1,7 @@
 # PatchNet: continuous observations and isolated rehearsal
 
-`PatchNet` composes the settling brain for continuous observations and is kept for
-the experiments that used it; new work starts from the [quickstarts](quickstart.md).
+`PatchNet` composes the settling brain for continuous observations and
+[recursive observers that settle together](recursive-settlement.md).
 The graph interface composes the nonlinear `Brain` and local contrastive `Learner` without
 requiring an external associative store. Its default factory creates a fully
 reciprocal graph; the older `layered` factory alone does not add every reverse

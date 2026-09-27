@@ -357,6 +357,16 @@ Restore with the subclass's `restore`/`load` to preserve mask enforcement.
 
 ## PatchNet (`cadence.patch`)
 
+On main after 0.17.0, `PatchNet.recursive(inputs, layers, outputs, *, seed=0,
+coupling=1.0, config=None, backend="cpu", device=None, **runtime_options)` builds
+one reciprocal graph. `layers[0]` is the base hidden population; later widths
+add observers connected in both directions to all previous neurons. The output
+neurons also settle. `coupling` sets the initial maximum absolute weight row
+sum, not a permanent bound after learning. The factory uses the smooth
+`learning_neuron_model(leak=1.0)` and returns the ordinary `PatchNet`; it does
+not impose executive priority. See the runnable
+[recursive-settlement guide](recursive-settlement.md).
+
 `PatchNet` composes the existing `Brain` and `Learner` for ongoing continuous
 observations. The [guide](patchnet.md) explains the equations, memory boundaries
 and a complete runnable example.
