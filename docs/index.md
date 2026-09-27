@@ -5,6 +5,8 @@ detuning and functional self-reflection. One continuing system should acquire
 skills, retain useful experience, imagine alternatives and repair its behavior
 across applications. The guides distinguish implemented operations from that
 broader research goal. This page is the map, in the order a builder needs it.
+The research paper is
+[Cadence: an architecture for a continuous and efficient stream of intelligence](https://philpapers.org/rec/MUECAP-2).
 
 ## Start here
 
