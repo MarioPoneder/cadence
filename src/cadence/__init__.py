@@ -37,6 +37,18 @@ from .connectome import Connectome
 from .content_memory import ContentMemory
 from .generic import GenericBrain
 from .genome import Genome, Projection, develop, evolve, genes
+from .life import (
+    AlwaysAwake,
+    Decision,
+    Governor,
+    Life,
+    LifeConfig,
+    NeverWakes,
+    PatchGovernor,
+    Signals,
+    ThresholdGovernor,
+)
+from .instruments import dishabituation, orienting
 from .learning import (
     Learner,
     LearnerConfig,
@@ -87,6 +99,17 @@ __all__ = [
     "BeliefReadback",
     "Steered",
     "SteeredPath",
+    "Life",
+    "LifeConfig",
+    "Decision",
+    "Signals",
+    "Governor",
+    "PatchGovernor",
+    "ThresholdGovernor",
+    "AlwaysAwake",
+    "NeverWakes",
+    "orienting",
+    "dishabituation",
     "Boundary",
     "Softmax",
     "Gaze",
