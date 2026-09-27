@@ -25,13 +25,13 @@ topology; ``imagine`` leaves all of them unchanged. Which cortex hears which, th
 width are a genome for ``evolve`` with ``genes``; the channels are ordered by timescale, so the
 band decides what crosses.
 """
-# mypy: ignore-errors
-# The module's annotations follow in a later release; the finite-difference tests bind its arithmetic.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -45,7 +45,7 @@ class _NonfiniteJointPath(ValueError):
     """A numerical proposal failure, distinct from invalid public arguments."""
 
 
-def _sigmoid(x):
+def _sigmoid(x: np.ndarray) -> np.ndarray:
     return 0.5 * (1.0 + np.tanh(0.5 * x))
 
 
@@ -58,7 +58,7 @@ class Port:
     start: int
     width: int
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         for key in ("source", "target", "start", "width"):
             object.__setattr__(self, key, _integer(key, getattr(self, key), 1 if key == "width" else 0))
 
@@ -82,7 +82,7 @@ class Settled:
     z: list[np.ndarray]
     p: list[np.ndarray]
     rounds: list[np.ndarray]
-    paths: list[RecordPath | None]
+    paths: list[RecordPath]
     seam: np.ndarray
     settle: np.ndarray
 
@@ -117,7 +117,16 @@ class JointObservation:
 class JointRecordPatches:
     """Several record patches joined by ports and iterated for a fixed number of rounds."""
 
-    def __init__(self, cortices, own_inputs, ports, *, rounds=1, damping=1.0, cross_adjoint=True):
+    def __init__(
+        self,
+        cortices: Iterable[RecordPatchNet],
+        own_inputs: Sequence[int],
+        ports: Iterable[Port | dict[str, int]],
+        *,
+        rounds: int = 1,
+        damping: float = 1.0,
+        cross_adjoint: bool = True,
+    ) -> None:
         self.cortices = list(cortices)
         if len({id(net) for net in self.cortices}) != len(self.cortices):
             raise ValueError("cortices must be distinct mutable patches")
@@ -134,7 +143,7 @@ class JointRecordPatches:
         if not self.cortices or len(self.own) != len(self.cortices):
             raise ValueError("one own-input count per cortex")
         n = len(self.cortices)
-        self.incoming = [[] for _ in range(n)]  # per target: (port, column offset within the port block)
+        self.incoming: list[list[tuple[Port, int]]] = [[] for _ in range(n)]  # per target: (port, column offset within the port block)
         widths = [0] * n
         for port in self.ports:
             if not (0 <= port.source < n and 0 <= port.target < n) or port.source == port.target:
@@ -169,7 +178,7 @@ class JointRecordPatches:
             net.reset()
 
     # ------------------------------------------------------------------ the joint scan
-    def _port_values(self, i, contexts, scales):
+    def _port_values(self, i: int, contexts: Sequence[np.ndarray], scales: Sequence[np.ndarray]) -> np.ndarray:
         """What cortex ``i``'s ports carry, from the given contexts (batch, hidden) of every cortex."""
         if not self.incoming[i]:
             return np.zeros((contexts[0].shape[0], 0))
@@ -179,7 +188,15 @@ class JointRecordPatches:
             blocks.append(np.zeros_like(band) if self.cut else band)
         return np.concatenate(blocks, axis=1)
 
-    def _settle(self, xs, boundaries, *, params=None, targets=None, reads=True):
+    def _settle(
+        self,
+        xs: Sequence[np.ndarray],
+        boundaries: Sequence[np.ndarray],
+        *,
+        params: Sequence[dict[str, np.ndarray]] | None = None,
+        targets: Sequence[np.ndarray] | None = None,
+        reads: bool = True,
+    ) -> Settled:
         nets = self.cortices
         n = len(nets)
         par = [net.parameters() for net in nets] if params is None else params
@@ -250,7 +267,9 @@ class JointRecordPatches:
         return Settled(inputs, hidden, gate, z, p, rounds, paths, seam, settle)
 
     # ------------------------------------------------------------------ the joint adjoint
-    def _adjoint(self, F, boundaries, targets):
+    def _adjoint(
+        self, F: Settled, boundaries: Sequence[np.ndarray], targets: Sequence[np.ndarray]
+    ) -> list[dict[str, np.ndarray]]:
         nets = self.cortices
         n = len(nets)
         K, a = self.rounds, self.damping
@@ -303,7 +322,9 @@ class JointRecordPatches:
         return deltas
 
     # ------------------------------------------------------------------ interface
-    def _check(self, xs, targets=None):
+    def _check(
+        self, xs: Sequence[np.ndarray], targets: Sequence[np.ndarray] | None = None
+    ) -> tuple[list[np.ndarray], list[np.ndarray] | None]:
         if len(xs) != len(self.cortices):
             raise ValueError("one own-input path per cortex")
         paths = [net._path(x, self.own[i], f"inputs of cortex {i}") for i, (net, x) in enumerate(zip(self.cortices, xs, strict=True))]
@@ -347,6 +368,7 @@ class JointRecordPatches:
         if not np.isfinite(rate) or rate < 0:
             raise ValueError("rate must be finite and nonnegative")
         paths, teach = self._check(xs, targets)
+        assert teach is not None  # observe always teaches
         boundaries = [net._boundary(len(paths[0]), None) for net in self.cortices]
         F = self._settle(paths, boundaries, targets=teach)
         if F.loss is None or F.slow_loss is None:
@@ -446,10 +468,22 @@ class JointRecordPatches:
             return cls.restore({k: arrays[k] for k in arrays.files})
 
 
-def build(hidden: list[int], own_inputs: list[int], outputs: list[int], ports: list[Port | dict[str, int]], *, seed: int, rounds: int = 1, damping: float = 1.0, cross_adjoint: bool = True, groups: list[list[list[int]]] | None = None, **records: object) -> JointRecordPatches:
+def build(
+    hidden: Sequence[int],
+    own_inputs: Sequence[int],
+    outputs: Sequence[int],
+    ports: Iterable[Port | dict[str, int]],
+    *,
+    seed: int,
+    rounds: int = 1,
+    damping: float = 1.0,
+    cross_adjoint: bool = True,
+    groups: Sequence[Sequence[int]] | None = None,
+    **records: Any,
+) -> JointRecordPatches:
     """Record patches of the given widths joined by the ports; ``groups[i]`` are cortex i's categorical groups."""
-    ports = [p if isinstance(p, Port) else Port.from_dict(p) for p in ports]
-    widths = [sum(p.width for p in ports if p.target == i) for i in range(len(hidden))]
+    joined = [p if isinstance(p, Port) else Port.from_dict(p) for p in ports]
+    widths = [sum(p.width for p in joined if p.target == i) for i in range(len(hidden))]
     nets = [RecordPatchNet(own_inputs[i] + widths[i], hidden[i], outputs[i], seed=seed + 101 * i,
                            groups=None if groups is None else groups[i], **records) for i in range(len(hidden))]
-    return JointRecordPatches(nets, own_inputs, ports, rounds=rounds, damping=damping, cross_adjoint=cross_adjoint)
+    return JointRecordPatches(nets, own_inputs, joined, rounds=rounds, damping=damping, cross_adjoint=cross_adjoint)
