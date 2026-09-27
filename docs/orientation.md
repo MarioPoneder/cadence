@@ -9,11 +9,11 @@ what the arrays look like, and what the words mean. Read it once; then the
 
 A Cadence brain is a set of patches joined by ports. A patch holds a bounded local
 state (the potentials of a group of neurons, or one context vector), reads its inputs
-through ports, and repairs its state until it agrees with what its ports hold and
-with its weights. The answer is the settled state. Learning perturbs that state
-toward an outcome and moves the weights on the difference between the perturbed and
-the free state, locally, so there is no backward pass through time or through the settle;
-the record patch's slow step is the adjoint of its own one-moment loss.
+through ports, and updates according to its declared equations. Graph and
+temporal models can qualify a settled state and learn from detuned phases.
+Record models use a causal scan, while belief models use finite repair
+iterations; both train slow weights by an adjoint backward scan through the
+observed window. The [contract guide](contracts.md) distinguishes these cases.
 Beside the slow weights a patch can hold a record store: a fixed sparse code of the
 reading addresses a table that takes an outcome in one write and reads it back at
 the same reading, so a fact is kept without a gradient. A night of sleep moves what
@@ -21,20 +21,21 @@ the store holds into the slow weights.
 
 ![How it learns: settle free, tilt the energy both ways, every synapse reads its two ends](assets/learning-cycle.svg)
 
-The library is NumPy. Nothing in it is a layer, an optimizer or an autograd tape.
-There are four kinds of brains.
+The reference implementations use NumPy; some models also have accelerated
+implementations. Explicit adjoints are reverse-mode differentiation, and
+optional optimizers carry their own state. There are four main model families.
 
 ## The four brains against models you know
 
 | Cadence | The nearest familiar model | What is different |
 | --- | --- | --- |
-| The settling brain (`Genome`, `develop`, `Brain`, `Learner`) | A continuous Hopfield or energy-based recurrent network trained by [equilibrium propagation](https://arxiv.org/abs/1602.05179): rate neurons relax to a fixed point; the gradient is the contrast of a free and a nudged fixed point. | Any wiring, including a measured connectome. Synapse pairs share one weight. A [certificate](certificate.md) says when settling is a contraction and how far the answer is from the equilibrium. Reward learning through eligibility traces and one broadcast prediction error. |
+| The settling brain (`Genome`, `develop`, `Brain`, `Learner`) | A continuous Hopfield or energy-based recurrent network trained by [equilibrium propagation](https://arxiv.org/abs/1602.05179): rate neurons relax to a fixed point; the gradient is the contrast of a free and a nudged fixed point. | Any wiring, including a measured connectome. Reciprocal learning ties paired weights; arbitrary directed imports need not satisfy that gradient contract. A [certificate](certificate.md) says when settling is a contraction and how far the answer is from the equilibrium. Reward learning through eligibility traces and one broadcast prediction error. |
 | The temporal patch (`TemporalPatchNet`) | A tanh RNN, `h[t] = A tanh(h[t-1]) + B u[t]`, `y[t] = C tanh(h[t])`. | Trained by two detuned solves of the whole path's energy and their contrast, with the solves checked for symmetry, instead of backpropagation through time. The same contrast on the input ports, with weights frozen, is planning through the learned model. Chosen responses can be protected by projecting later updates ([orthogonal weight modification](https://www.nature.com/articles/s42256-019-0080-x)). |
 | The record patch (`RecordPatchNet`) | A gated linear RNN with per-channel retention (a minimal GRU or a linear recurrent unit) plus a memory of the kind [Marr](https://doi.org/10.1113/jphysiol.1969.sp008820) and [Albus](https://doi.org/10.1016/0025-5564%2871%2990051-4) proposed for the cerebellum: a fixed random expansion, the `active` strongest cells kept, one [delta-rule](https://arxiv.org/abs/2406.06484) table read through them. | The store is inside the patch and takes an outcome in one write with no gradient; readings generalise by the overlap of their codes. `sleep` teaches the slow weights the store's own completions with the data gone, and rewrites the store at dawn. Categorical ports end in a softmax per group. |
 | The belief patch (`BeliefPatch`) | A recurrent state-space world model: a transition under the executed action, evidence assimilated into the belief, imagination as an open-loop rollout ([Ha and Schmidhuber](https://arxiv.org/abs/1803.10122), [Dreamer](https://arxiv.org/abs/1912.01603)). | The evidence repairs the belief by a few iterations of one nonlinear map that also reads the record store; imagination is the transition alone and consumes no observation; the [imagination loss](belief.md#training-the-transition-the-imagination-loss) makes the transition carry the belief instead of leaning on the next frame. |
 
 Compositions: `RecordPatchStack` puts two record patches in depth, `JointRecordPatches`
-settles several as one equilibrium through declared ports, `StructuredPort` reads a grid
+couples several through finite repair rounds on declared ports, `StructuredPort` reads a grid
 through a tied local kernel (a convolution at the port) and `evolve` mutates and selects
 genomes across lives. [A brain that reads itself](steering.md) composes two belief patches
 into a cortex whose senses a steering patch weighs (`Steered`, the nearest familiar model an
@@ -107,7 +108,8 @@ a receipt and a check for its numbers.
 | Records cortex | a reading `(inputs,)` or `(batch, inputs)` | a dict of field targets | the tables, the running mean and the counters | the configuration from `to_dict()` plus the arrays |
 
 Batch rows are independent streams sharing parameters. `imagine` is private: it
-changes no parameter, record, state or counter. `advance` carries context without
+changes no learned parameter, record or live activity; cost accounting may count
+its work. `advance` carries context without
 learning. `observe` learns and, for a record patch, writes.
 
 ## Glossary
@@ -117,8 +119,9 @@ learning. `observe` learns and, for a record patch, writes.
 - **Port.** A declared band of a patch's state that another patch, or the world,
   reads or drives. Populations of a connectome, the input and output ports of a path,
   a `Port` between record patches.
-- **Settle, settling.** Repeating the neuron update until nothing moves: the forward
-  pass of the settling brain.
+- **Settle, settling.** Repeating local updates under fixed evidence. A qualified
+  equilibrium requires the equation residual to pass, not merely small movement
+  or an exhausted iteration budget.
 - **Equilibrium.** The settled state under fixed inputs and weights. For a path, the
   causal recurrence, which satisfies its temporal equations with zero defect.
 - **Residual.** The remaining error of the fixed-point equations at a state. Small
@@ -151,7 +154,8 @@ learning. `observe` learns and, for a record patch, writes.
   weights those fixed completions with the data gone; rewriting the store afterwards so
   it holds only what the weights did not take.
 - **Context.** The carried state of a record or temporal patch between moments.
-- **Imagine.** A private continuation: the free path from a state, changing nothing.
+- **Imagine.** A private continuation that does not teach or change live activity;
+  diagnostic cost counters may count the computation.
 - **Advance.** Carrying context through observed inputs without learning.
 - **Readback.** The detached state, residuals, counters and revision of a patch, as
   observations an application can read; a patch can read another's readback through a port.

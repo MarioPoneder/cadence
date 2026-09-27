@@ -12,9 +12,12 @@ functional self-reflection across applications. Current APIs expose tested
 operations; they do not establish general intelligence or an automatically
 learned recursive hierarchy. See the architecture and interaction guides.
 
-``PatchNet``, ``Brain``, ``Learner``, ``GenericBrain``, ``Records`` and graph
-construction/evolution helpers remain supported as distinct compatibility
-compositions. Their optional mechanisms are not required by the temporal core.
+Graph ``PatchNet`` checks joint free/nudged equations over reciprocal weights.
+Record models use a causal scan; ``BeliefPatch`` uses finite repair iterations.
+Their slow-weight adjoints and record writes have distinct learning contracts.
+``Steered`` and ``Life`` compose those APIs; joint parameter-step admission is
+not a certificate of one joint observer-observed equilibrium. ``GenericBrain``
+is retained as a legacy composition. See ``docs/contracts.md``.
 """
 
 from __future__ import annotations
@@ -35,17 +38,6 @@ from .checkpoint import load, save
 from .connectome import Connectome
 from .generic import GenericBrain
 from .genome import Genome, Projection, develop, evolve, genes
-from .life import (
-    AlwaysAwake,
-    Decision,
-    Governor,
-    Life,
-    LifeConfig,
-    NeverWakes,
-    PatchGovernor,
-    Signals,
-    ThresholdGovernor,
-)
 from .instruments import dishabituation, orienting
 from .learning import (
     Learner,
@@ -57,6 +49,17 @@ from .learning import (
     naive_efficacy,
     preflight,
     seam_report,
+)
+from .life import (
+    AlwaysAwake,
+    Decision,
+    Governor,
+    Life,
+    LifeConfig,
+    NeverWakes,
+    PatchGovernor,
+    Signals,
+    ThresholdGovernor,
 )
 from .memory import SynapticMemory
 from .neuron import Adaptation, NeuronModel

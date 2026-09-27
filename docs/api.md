@@ -116,7 +116,7 @@ See the [record patch guide](record-patch.md).
   `StackObservation`: `updated`, `reason`, the upper patch's `prediction`,
   `delta`, `initial_loss`, `final_loss`, `accepted_rate` and `writes`.
 - `JointRecordPatches(cortices, own_inputs, ports, *, rounds=1, damping=1.0,
-  cross_adjoint=True)` settles several `RecordPatchNet`s as one equilibrium;
+  cross_adjoint=True)` couples several `RecordPatchNet`s through finite Jacobi rounds;
   each `Port(source, target, start, width)` carries a band of the source's scaled
   context into the target's inputs in the same moment, over `rounds` Jacobi
   rounds. `observe(xs, ys, rate=, backtrack=, write=)` returns a
@@ -124,6 +124,10 @@ See the [record patch guide](record-patch.md).
   `settle` per moment and round, `delta` per cortex, the losses, `writes`);
   `imagine(xs, states=)`, `advance(xs)`, `reset`, `parameters`, `snapshot`,
   `restore`, `clone`, `save`, `load`; `cut = True` zeroes every port.
+  Snapshots preserve the cut flag; saves use atomic replacement. Inputs, targets
+  and state lists must match the cortex count, and nonfinite paths are refused.
+  A failed joint record write restores earlier writes and does not advance live
+  contexts. Fixed rounds do not certify a joint equilibrium.
   `cadence.record_ports.build(hidden, own_inputs, outputs, ports, *, seed, ...)`
   grows the patches at the widths the ports need.
 - `observe(inputs, target, *, rate=1.0, backtrack=False, write=True)`
@@ -136,6 +140,9 @@ See the [record patch guide](record-patch.md).
   `read`, `loss` of the prediction and `slow_loss` of the slow readout),
   `delta`, the slow readout's admission losses and rates, replay count and
   write count.
+  At `rate=0`, single and joint record observations return `updated=False`,
+  `reason="no_step"`; gradients, valid activity and requested record writes remain
+  available, but slow-update counters do not advance.
 - `imagine(inputs, *, state=None)` is private; `advance(inputs)` carries
   context; `reset()` clears context and keeps parameters and records.
 - `dream(inputs)` is the store's completion of a cue from rest, as a target (the chosen
@@ -197,14 +204,16 @@ See the [belief patch guide](belief.md).
   by the Armijo margin (sixteen halvings at most), the start being twice the last admitted
   step and at most `rate`; `backtrack=False` is the plain step at `rate`, and a step on an
   external gradient is plain. `probe=True` computes the residual-alone probe per block.
-- `readback(observations, actions, *, state=None) -> BeliefReadback`: one moment
+- `readback(observations, actions, *, state=None, probe=True) -> BeliefReadback`: one moment
   `(batch, inputs)`, `(batch, actions)` before its repair, from the live belief or `state`:
   `expectation` `(batch, belief)`, `residual_alone` and `surprise` `(batch, blocks)`,
   `evidence` `(batch, encoded)` before any gain. `encode(observations) -> (..., encoded)`:
   the encoded evidence of any reading before any gain. Both change nothing.
 - `step_size`: the last admitted step, None before one; the next admission starts from
   twice it. `reset_step()` drops it; `reset()` keeps it; it travels with the snapshot.
-- `macs_per_moment(*, probes=False) -> int`: the multiply-accumulates of one moment.
+- `macs_per_moment(*, probes=False, surprise=True) -> int`: a dense forward-MAC estimate
+  for one moment; includes spatial kernel reuse. `readback_macs(*, probe=True)` estimates
+  a separate readback. Neither counts the backward adjoint or complete training work.
   `cost`: `{"moments", "macs", "replays"}` counted since `reset_cost()`, every moment
   assimilated, observed, imagined or replayed in an admission.
 - `set_implied_reading(implied, units=None)`: declares the map from the outputs
@@ -256,7 +265,7 @@ See [a brain that reads itself](steering.md).
   learns by its own admitted step. `SteeredPath`: `output`, `gains`, `readback`, `residual`,
   `steering_output`, `loss`, `price`, `objective`, `updated`, `steering_updated`, `step`,
   `halvings`, `replays`, `reason`, `last`, `last_steering`.
-- `boundary() -> Boundary | None`: where the life is (`cortex`, `steering`, `output`, `residual`,
+- `boundary() -> Boundary | None`: a detached copy of where the life is (`cortex`, `steering`, `output`, `residual`,
   `weighing`, `moments`, `heard`: what the previous moment heard and the ages); `run(state=boundary)`
   starts there. `reset()` forgets it.
 - `ablation` (`None`, `"cut"` for gains of one, or a callable over the gains `(batch, blocks)`,
@@ -264,8 +273,12 @@ See [a brain that reads itself](steering.md).
   at run time).
 - `step_size`, `reset_step()`, `moments_per_decision()`, `macs_per_moment()`, `cost`,
   `reset_cost()`, `parameter_count()`, `parameters()`, `set_parameters()`, `snapshot()`,
-  `restore(snapshot, *, rule=None, extra=None)`, `save()`, `load()`. The cortex's implied
-  reading is declared again after a restore.
+  `restore(snapshot, *, rule=None, extra=None, ablation=None)`, `save()`, `load()`.
+  Snapshots preserve the live boundary, gaze/heard/age state, deaf mask and ablation;
+  custom rule, extra-channel or ablation callables must be supplied again. The cortex's
+  implied reading is declared again after a restore. Old snapshots without a live
+  boundary restore parameters but cannot resume the missing activity state. Record
+  writes through `Steered.observe(write=True)` are unsupported and explicitly rejected.
 - Weighings: `Softmax(blocks, *, span=1.0)` (gains summing to the blocks); `Gaze(blocks, *,
   sigma, cut=2.5, lamp=0.2, span=0.5, price=0.0, start=0.0)` (a window whose centre the
   steering output turns; `profile(centre)`, `turn(y)`; the centre is the weighing's state);
@@ -290,14 +303,22 @@ See [a life with a governor](steering.md#a-life-with-a-governor).
 - Governors: `PatchGovernor(genome=None, *, cortex=4, model=GOVERNOR_MODEL, budget=200, chunk=10,
   tolerance=1e-3)` with `hand_set(cortex)` and `space(cortex)`; `ThresholdGovernor(genome)` with
   `HAND_SET` and `SPACE`; `AlwaysAwake(genome)`; `NeverWakes()`. A governor is `settle(signals)
-  -> (mode, steps)`, `after(signals)`, `reset()`, `synapses`.
+  -> (mode, steps)`, `after(signals)`, `reset()`, `synapses`. `PatchGovernor.converged`
+  and `.residual` expose solve qualification; a capped solve selects habit. The
+  threshold governor's cooldown limits repeat learning requests; `LifeConfig`'s
+  eligibility/cooldown still applies independently. `Life.reset()` drops unfinished
+  decisions and clears all replay-window boundaries. Failed learning restores
+  parameters, records, update counts and step-size memory; attempted work stays counted.
 
 ## Instruments (`cadence.instruments`)
 
 - `orienting(gain, events, *, pre=4, post=12, quiet=None, bins=10) -> {"rows", "kinds", "pre",
   "post"}`: per event the baseline, peak, capture, latency and return; per kind the count, the
   capture of the first and last `bins` events, the curve, the mean capture, the latency shares
-  and the mean return.
+  and the mean return. `return` is None when recovery was not observed or capture
+  was nonpositive; `return_censored` distinguishes an unobserved positive capture's
+  recovery. Kind summaries count censored events and omit them from `return_mean`.
+  A partial last habituation bin is retained.
 - `dishabituation(rows, *, consequential, kind, window=60, count=2) -> {"before", "after",
   "events"}`.
 
@@ -368,7 +389,8 @@ and a complete runnable example.
   below `min_count` drop, and the arrays are sorted by `(post, pre)`. `count` (synaptic
   contacts per synapse) defaults to 1 and `sign` to +1.
 - Fields: `n`, `pre`, `post`, `count`, `sign` (arrays), `populations` (name → tuple of
-  neurons), `label`. Property `synapses` (the number of synapses).
+  neurons), `label`. Arrays and the population mapping are read-only; reconstruct
+  topology or use `with_populations` to change groups. Property `synapses` counts synapses.
 - `members(*names)`, `with_populations(**populations)`, `in_degree()`, `out_degree()`,
   `summary()`, `digest()` (SHA-256 of the sorted arrays).
 
@@ -393,7 +415,10 @@ and a complete runnable example.
   passes a precomputed cut, as `with_parameters` does. `brain.layout` is the cut in use.
   `precision` (torch only) is `"float32"` or `"float64"`; the default is float64 except on
   MPS. Float32 is the speed of a consumer GPU; compare it with float64 and record the
-  measured precision error.
+  measured precision error. Parameter arrays and effective `weights` are read-only;
+  assign complete `efficacy`, `bias` or `log_gain` arrays through validated setters,
+  or use `with_parameters` to construct a new brain. Invalid/overflowing values are
+  rejected before changing host parameters or device transport.
 - `settle(stimulus=None, *, steps=60, state=None, mask=None, trajectory=False, nudge=None, tolerance=None) -> BrainState`:
   one stimulus; `stimulus` is a list of neurons at full amplitude, a `{neuron: level}` map, or a
   dense vector. Map values are levels multiplied by `stimulus_amplitude`; dense vectors

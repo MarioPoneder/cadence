@@ -87,7 +87,7 @@ def test_adjoint_gradient_matches_central_differences(precision):
     net.reset()
     parameters = net.parameters()
     result = net.observe(inputs, target, rate=0.0, write=False)
-    assert result.updated and result.delta is not None
+    assert not result.updated and result.reason == "no_step" and result.delta is not None
     assert np.abs(result.prediction.read).max() > 0.0  # the read is live, and outside the loss
 
     def loss(name, value):

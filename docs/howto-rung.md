@@ -9,6 +9,11 @@ with it off, on the numbers in its report, at matched information and compute. T
 order of work, with the night nursery (rung 4, the tiger) as the worked example. The pieces it
 uses are in [a brain that reads itself](steering.md) and [the belief patch](belief.md).
 
+This recipe describes the existing sequential composition demos. A task-scoped
+acceptance does not establish observer and observed activity settling jointly,
+or a depth advantage over matched conventional learners; see the
+[numerical contracts](contracts.md).
+
 ## 1. Read the rung
 
 The ladder states, for each rung, what the steering patch reads and returns, what it unlocks, the
@@ -56,7 +61,8 @@ the control     Steered(cortex, weighing=Rule(threshold_rule, macs=8))         t
 The genome is a dict with the hand-set values (the steering patch's size, damping, span,
 port scale, rate scale, retention, and a `reads_*` flag per channel group), and `genes(space)`
 gives `evolve` its mutation over it. Keep the cortex identical across arms; count every arm with
-`macs_per_moment()` and `cost`.
+`macs_per_moment()` and `cost`. These estimate dense forward work; add backward,
+write, callback and search costs and measure elapsed time for training comparisons.
 
 ## 4. The day
 
@@ -65,6 +71,11 @@ moments, one admitted joint step per chunk from a fresh boundary (`run(o, a, y, 
 state=brain._fresh(n))`), validation on held-out streams every two epochs, the best snapshot
 kept. A day of 120 epochs; short days of 24 to 40 epochs leave the weighing on the wrong sense
 and mislead every pilot. Save the dawn brains (`snapshot()`), they are what the page loads.
+
+Those settings describe the reported nursery experiments, not universal learning
+requirements. Keep training, calibration/validation and final test streams
+disjoint. Any governor baseline or threshold is fixed on calibration data before
+the online night; test targets never choose it.
 
 ## 5. The night
 

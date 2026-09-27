@@ -320,7 +320,7 @@ class Brain:
         self._efficacy: np.ndarray | None = (
             connectome.sign.copy() if efficacy is None else np.asarray(efficacy, float).copy()
         )
-        self.log_gain = np.zeros(connectome.n) if log_gain is None else np.array(log_gain, float)
+        self._log_gain = np.zeros(connectome.n) if log_gain is None else np.array(log_gain, float)
         self._bias: np.ndarray | None = (
             np.zeros(connectome.n) if bias is None else np.array(bias, float)
         )
@@ -390,11 +390,13 @@ class Brain:
 
     @property
     def efficacy(self) -> np.ndarray:
-        """One signed number per synapse; fetched from the device when a learner keeps it there."""
+        """Read-only parameters; replace via the setter or ``with_parameters``."""
         if self._efficacy is None:
             assert self._torch is not None
             self._efficacy = self._torch.host_scale()
-        return self._efficacy
+        result = self._efficacy.view()
+        result.setflags(write=False)
+        return result
 
     @efficacy.setter
     def efficacy(self, value: np.ndarray) -> None:
@@ -403,15 +405,29 @@ class Brain:
 
     @property
     def bias(self) -> np.ndarray:
-        """One number per neuron; fetched from the device when a learner keeps it there."""
+        """Read-only biases; replace via the setter or ``with_parameters``."""
         if self._bias is None:
             assert self._torch is not None
             self._bias = self._torch.host_bias()
-        return self._bias
+        result = self._bias.view()
+        result.setflags(write=False)
+        return result
 
     @bias.setter
     def bias(self, value: np.ndarray) -> None:
         updated = self.with_parameters(bias=value)
+        self.__dict__.update(updated.__dict__)
+
+    @property
+    def log_gain(self) -> np.ndarray:
+        """Read-only gains; explicit replacement rebuilds every derived weight."""
+        result = self._log_gain.view()
+        result.setflags(write=False)
+        return result
+
+    @log_gain.setter
+    def log_gain(self, value: np.ndarray) -> None:
+        updated = self.with_parameters(log_gain=value)
         self.__dict__.update(updated.__dict__)
 
     @property
@@ -486,7 +502,9 @@ class Brain:
     @property
     def weights(self) -> np.ndarray:
         """Effective drive per unit presynaptic activation, one per synapse."""
-        return self._weights
+        result = self._weights.view()
+        result.setflags(write=False)
+        return result
 
     def dense(self) -> np.ndarray:
         """The synapse matrix ``W[pre, post]``: the synaptic input of a batch ``s`` is ``s @ W``.
@@ -611,6 +629,13 @@ class Brain:
         error = self.residual(drive, current, mask=mask, nudge=nudge)
         used = 0
         while used < budget and not np.all(error <= tolerance):
+            if not np.isfinite(error).all() and any(
+                not np.isfinite(value).all()
+                for value in (current.v, current.activation, current.adaptation)
+            ):
+                # A divergent numerical state is not a valid warm start for
+                # another chunk. Keep its failed diagnostic, not a new exception.
+                break
             current = self.settle_batch(
                 drive, steps=min(chunk, budget - used), state=current, mask=mask, nudge=nudge
             )
@@ -978,6 +1003,7 @@ class _TorchKernel:
             raise ValueError("precision must be 'float32' or 'float64'")
         if self.device.type == "mps" and self.dtype == torch.float64:
             raise ValueError("MPS has no float64; use precision='float32' or another device")
+        neuron_model._validate_precision("float32" if self.dtype == torch.float32 else "float64")
         # The parameters, kept on the device in float64 (float32 on MPS, which has no float64)
         # so a learner can move them there without a host round trip per update.
         self.param_dtype = torch.float32 if self.device.type == "mps" else torch.float64
@@ -1001,8 +1027,8 @@ class _TorchKernel:
                 block = self.flat[int(layout.offset[k]) : int(layout.offset[k + 1])]
                 self.blocks.append(block.view(a1 - a0, b1 - b0))
         else:  # per-synapse arrays serve only the gather-scatter path
-            self.pre = torch.from_numpy(connectome.pre).to(self.device)
-            self.post = torch.from_numpy(connectome.post).to(self.device)
+            self.pre = torch.from_numpy(connectome.pre.copy()).to(self.device)
+            self.post = torch.from_numpy(connectome.post.copy()).to(self.device)
         self.set_parameters(
             torch.from_numpy(np.ascontiguousarray(efficacy)).to(self.device, self.param_dtype),
             torch.from_numpy(np.ascontiguousarray(bias)).to(self.device, self.param_dtype),
@@ -1010,17 +1036,34 @@ class _TorchKernel:
 
     def set_parameters(self, scale: Any, bias: Any) -> None:
         """New parameters, as device tensors: the block weights follow, in place."""
+        torch = self.torch
+        if tuple(scale.shape) != tuple(self.gain_pre.shape) or tuple(bias.shape) != (self.n,):
+            raise ValueError("device parameters must match synapse and neuron shapes")
+        weights = (self.gain_pre * scale).to(self.dtype)
+        live_bias = bias.to(self.dtype)
+        if not bool(torch.stack([
+            torch.isfinite(value).all() for value in (scale, bias, weights, live_bias)
+        ]).all()):
+            raise ValueError(
+                "device parameters and effective weights must be finite at runtime precision"
+            )
+        flat = None
+        if self.layout is not None and self.layout.parallel_synapses:
+            flat = torch.zeros_like(self.flat)
+            flat.index_add_(0, self.index, weights)
+            if not bool(torch.isfinite(flat).all()):
+                raise ValueError("summed effective synaptic weights must be finite")
+        # Validation precedes every write to the shared live kernel and blocks.
         self.scale = scale
         self.bias_param = bias
-        weights = (self.gain_pre * scale).to(self.dtype)
         if self.layout is not None:
-            if self.layout.parallel_synapses:
-                self.flat.zero_().index_add_(0, self.index, weights)
+            if flat is not None:
+                self.flat.copy_(flat)
             else:
                 self.flat[self.index] = weights
         else:
             self.w = weights
-        self.bias = bias.to(self.dtype)
+        self.bias = live_bias
 
     def host_scale(self) -> np.ndarray:
         return np.asarray(self.scale.cpu().double().numpy())
@@ -1202,8 +1245,8 @@ class _TorchKernel:
         torch = self.torch
         if self._row_index is None:
             self._row_index = (
-                torch.from_numpy(self._connectome.pre).to(self.device),
-                torch.from_numpy(self._connectome.post).to(self.device),
+                torch.from_numpy(self._connectome.pre.copy()).to(self.device),
+                torch.from_numpy(self._connectome.post.copy()).to(self.device),
             )
         pre, post = self._row_index
         a_plus, a_minus = s_plus[:, pre], s_minus[:, pre]
@@ -1314,13 +1357,20 @@ class _MlxKernel:
     ) -> None:
         import mlx.core as mx
 
+        neuron_model._validate_precision("float32")
         self.mx = mx
         self.backend_name = "mlx"
         self.neuron_model = neuron_model
         self.n = connectome.n
         self.layout = layout
-        self.bias = mx.array(bias.astype(np.float32))
-        flat = layout.flat(weights)
+        with np.errstate(over="ignore", invalid="ignore"):
+            live_bias = bias.astype(np.float32)
+            flat = layout.flat(weights).astype(np.float32)
+        if not np.isfinite(live_bias).all() or not np.isfinite(flat).all():
+            raise ValueError(
+                "device parameters and effective weights must be finite at runtime precision"
+            )
+        self.bias = mx.array(live_bias)
         self.blocks = [
             mx.array(np.ascontiguousarray(b, dtype=np.float32)) for b in layout.blocks(flat)
         ]

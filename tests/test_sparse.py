@@ -102,8 +102,12 @@ def test_new_parameters_cannot_reuse_stale_csr_weights_or_mutate_old_brain():
     changed.efficacy = brain.efficacy * 2
     assert changed._csr is None
     np.testing.assert_allclose(changed._synaptic_input(state), 2 * original, atol=1e-14)
-    changed.weights[:] *= 0.5
+    with pytest.raises(ValueError, match="read-only"):
+        changed.weights[:] *= 0.5
+    changed.efficacy = changed.efficacy * 0.5
+    assert changed._csr is None
     np.testing.assert_allclose(changed._synaptic_input(state), original, atol=1e-14)
+    np.testing.assert_array_equal(brain._synaptic_input(state), original)
     gained = brain.with_parameters(log_gain=np.log(np.full(9, 3.0)))
     np.testing.assert_allclose(gained._synaptic_input(state), 3 * original, atol=1e-14)
 

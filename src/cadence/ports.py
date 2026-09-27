@@ -20,6 +20,16 @@ import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
 
+def _dimension(name: str, value: Any, minimum: int = 1) -> int:
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, (int, np.integer))
+        or value < minimum
+    ):
+        raise ValueError(f"{name} must be an integer >= {minimum}")
+    return int(value)
+
+
 @dataclass(frozen=True)
 class MapBlock:
     """A tied local kernel over a ``(channels_in, height, width)`` grid of the inputs."""
@@ -31,6 +41,13 @@ class MapBlock:
     channels_out: int
     kernel: int
     stride: int = 1
+
+    def __post_init__(self) -> None:
+        _dimension("start", self.start, 0)
+        for name in ("channels_in", "height", "width", "channels_out", "kernel", "stride"):
+            _dimension(name, getattr(self, name))
+        if self.kernel > min(self.height, self.width):
+            raise ValueError("kernel must fit inside the input grid")
 
     @property
     def inputs(self) -> int:
@@ -73,6 +90,11 @@ class DenseBlock:
     inputs: int
     outputs: int
 
+    def __post_init__(self) -> None:
+        _dimension("start", self.start, 0)
+        _dimension("inputs", self.inputs)
+        _dimension("outputs", self.outputs)
+
     @property
     def weights(self) -> tuple[int, ...]:
         return (self.outputs, self.inputs)
@@ -92,6 +114,8 @@ Block = MapBlock | DenseBlock
 def block_from_dict(d: dict[str, Any]) -> Block:
     d = dict(d)
     kind = d.pop("kind")
+    if kind not in ("map", "dense"):
+        raise ValueError(f"unknown port block kind {kind!r}")
     return MapBlock(**d) if kind == "map" else DenseBlock(**d)
 
 
@@ -116,12 +140,23 @@ class StructuredPort:
         broadcast: tuple[int, int] | None = None,
         mask: Any = None,
     ) -> None:
-        self.inputs = int(inputs)
+        self.inputs = _dimension("inputs", inputs)
         self.blocks = list(blocks)
+        if not self.blocks or not all(isinstance(b, (DenseBlock, MapBlock)) for b in self.blocks):
+            raise ValueError("a port needs at least one dense or map block")
         for b in self.blocks:
             if b.start < 0 or b.start + b.inputs > self.inputs:
                 raise ValueError("a block reads outside the inputs")
-        self.broadcast = None if broadcast is None else (int(broadcast[0]), int(broadcast[1]))
+        if broadcast is not None and len(broadcast) != 2:
+            raise ValueError("broadcast must be a (start, count) pair")
+        self.broadcast = (
+            None
+            if broadcast is None
+            else (
+                _dimension("broadcast start", broadcast[0], 0),
+                _dimension("broadcast count", broadcast[1]),
+            )
+        )
         if self.broadcast is not None:
             s0, count = self.broadcast
             if count < 1 or s0 < 0 or s0 + count > self.inputs:
@@ -131,6 +166,8 @@ class StructuredPort:
             flags = np.asarray(mask)
             if flags.shape != (self.inputs,):
                 raise ValueError("mask must have one flag per input")
+            if not np.isin(flags, [False, True]).all():
+                raise ValueError("mask must contain only boolean or 0/1 flags")
             self.mask = flags.astype(bool)
         self.outputs = int(sum(b.outputs for b in self.blocks))
         self._offsets = np.cumsum([0] + [b.outputs for b in self.blocks])
@@ -257,9 +294,9 @@ class StructuredPort:
     def from_dict(cls, d: dict[str, Any]) -> StructuredPort:
         cast = d.get("broadcast")
         return cls(
-            int(d["inputs"]),
+            d["inputs"],
             [block_from_dict(b) for b in d["blocks"]],
-            None if cast is None else (int(cast[0]), int(cast[1])),
+            None if cast is None else tuple(cast),
             d.get("mask"),
         )
 

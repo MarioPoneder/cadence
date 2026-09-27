@@ -4,6 +4,9 @@ A measured wiring diagram becomes one `Brain`: every neuron a unit of the graded
 every synapse class an entry with its count and its sign, one global gain. This page is the
 recipe as two examples ran it, the worm (302 neurons) and the fruit fly (150,802 neurons, brain
 and nerve cord), with the numbers that decide each step and the limits that were measured.
+The purpose is to import structural data, supply declared inputs and read model
+outputs. Biological dynamics and behavior require their own validation; see
+the [numerical and learning contracts](contracts.md).
 The fruit fly's code is in
 [cadence-examples/fly-matrix](https://github.com/muellerberndt/cadence-examples/tree/main/fly-matrix).
 
@@ -112,15 +115,19 @@ Measure the code of the site you want to learn at before designing a lesson on i
 is the same for every stimulus carries nothing a lesson can attach to, and no learning rule
 repairs that downstream.
 
-## 6. The sub-net a page settles
+## 6. Graph coverage in a browser
 
-A browser settles a sub-net: breadth-first from the populations the page reads, strongest
-classes first, under a budget of neurons, a number of hops and a synapse floor. Keep a closure
-receipt: the sub-net's readouts against the whole brain's under the page's stimuli (the fly:
-60,000 neurons, 1,193,847 classes, every readout below 1e-3; 24,000 failed on the antennal
-afferents, 36,000 and 48,000 on odour). Report member-level deviations separately; an odour
-lights over a thousand neurons whose populations agree while their members deviate. Export the
-payload in the library's order of synapses (by receiving neuron, then sender) so the browser
+The current fly export includes all 150,802 neurons and 1,877,099 connection
+classes in its retained fixture. Proofreading and contact-count filters are
+importer choices and remain explicit; no additional 60,000-neuron recruitment
+cap is used by the current local page.
+
+A reduced graph is an optional approximation requiring its own evidence.
+The historical fly subset matched selected population means while missing
+its member-level closure criterion; that does not establish equivalent
+learning or behavior. Compare individual activities, readouts and task outcomes
+under the same stimuli, rather than inferring closure from size alone. Export
+in the library's order of synapses (receiving neuron, then sender) so the browser
 engine can be held to the library by a parity test
 ([the engine and its guide](https://github.com/muellerberndt/cadence-examples/tree/main/engine)).
 
@@ -153,17 +160,17 @@ connectome does not carry, both declared and both generic:
   under every odour, its avoidance cell at 0.01), where a nudge has no slope and no lesson
   moves it. `calibrate_bias(brain, drives, {outputs: 0.5}, per_neuron=True)` finds the bias of
   each readout cell that puts its mean activation over the situations it will decide in at
-  one half, jointly, so a cell that inhibits the other (the fly's avoidance cell onto its
-  approach cell) is accounted for. A target per cell declares a naive bias where the animal
-  has one: the fly's approach cell sits at 0.6 and its avoidance cell at 0.4, its attraction to
-  food smells, because at one half each it made eleven fruitless searches before its first
-  sugar. The array goes into `Brain(bias=...)` and, in a page, into the payload's `bias`.
-- **The seam starts naive.** A specimen's synapse counts at a memory site are that specimen's
-  memories: on the fly's measured counts the naive readout avoided the fruit odour and
-  approached the yeast (0.17 against 0.83) before any lesson, and a smell that is never
-  approached is never rewarded. `naive_efficacy(connectome, plastic)` gives every plastic
-  class the same weight; the learner starts from it (`Brain(efficacy=...)`) and the measured
-  counts stay in the receipt.
+  one half, jointly, so a cell that inhibits another is accounted for. A target
+  such as 0.6/0.4 declares an engineered initial preference; it does not recover
+  innate appetite from the connectome. The current export's payload and receipt
+  specify the actual calibration. The array goes into `Brain(bias=...)`.
+- **The seam's starting strength.** Synapse counts alone do not identify what
+  was inherited versus learned by the specimen. `naive_efficacy(connectome,
+  plastic)` gives plastic classes equal effective magnitude as a controlled
+  initialization for the learning assay. This changes their measured relative
+  strengths and must be reported; it is not a reconstruction of an untrained
+  biological brain. The learner starts from it (`Brain(efficacy=...)`) and the
+  measured counts stay in the receipt.
 
 Then the assay: every action the readout can take must have an outcome, and the outcomes the
 value can balance; one decision per episode, credited to that decision (the fly's page took a
@@ -171,3 +178,7 @@ decision every 0.3 s along an approach and sugar rewarded whichever nudge had be
 With the three in place the fly's T-maze reverses in both directions on the library's
 actor-critic (sugar at one odour, blows there while the sugar moves, the other found: the
 example's `tools/tmaze.py` and its receipt), where before it could not learn one.
+That historical assay does not establish reliable food seeking in the current
+full-scene demo. Transmitter signs are only a simplified fast-interaction map;
+receptor-specific modulation, hormone and peptide signaling, innate appetite
+and detailed muscle dynamics are not imported by assigning those signs.

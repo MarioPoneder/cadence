@@ -368,7 +368,7 @@ def test_backtracking_admits_a_rate_that_diverges_without_it():
     assert admitted.updates == 6
     # the admission starts from twice the last admitted step: after the first chunk the start
     # is below the rate, so the replays fall and every accepted step stays within the ceiling
-    assert all(later <= 2.0 * earlier + 1e-12 for earlier, later in zip(accepted, accepted[1:]))
+    assert all(later <= 2.0 * earlier + 1e-12 for earlier, later in zip(accepted[:-1], accepted[1:], strict=True))
     assert admitted.step_size == accepted[-1]
     # no step reports none
     admitted.reset()

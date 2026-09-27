@@ -1,20 +1,23 @@
-"""Record patches joined by ports: several ``RecordPatchNet``s settled jointly, moment by moment.
+"""Record patches joined by ports, evaluated by fixed Jacobi rounds at each moment.
 
 The building block is the record patch, unchanged. A port is a declared seam between two of
 them: a band of the source cortex's scaled context ``r * h`` (the unit its records read it in,
 and the unit ``RecordPatchStack`` hands upward) is an input of the target cortex in the same
 moment. The joint energy is the sum of every cortex's seam energy and, per port,
-``1/2 |p[t] - S r h_source[t]|^2``; its free path is the zero of every seam. At a moment the
-coupled equations are solved by ``rounds`` Jacobi rounds from the previous moment's contexts:
+``1/2 |p[t] - S r h_source[t]|^2``. A simultaneous solution would make every seam zero. At a moment the
+coupled equations are iterated for ``rounds`` Jacobi rounds from the previous moment's contexts:
 round one is the delayed port (each cortex hears the other's context of the moment before),
 and each further round re-reads the other's context of this moment. After the last round every
 temporal seam is exactly zero (``damping`` one) and the port seams hold what remains: the seam
 residual, logged per moment and per round as the fourth instrument. The slow gradient is one
 backward scan through the moments and the rounds; with ``cross_adjoint`` the adjoint crosses
 every port (the gradient of the target's loss reaches the source's context), without it the port
-is a plain input. Records are read at the settled readings after the scan and written after the
-path, outside the gradient, exactly as in the record patch. For a one-way port two rounds reach
-the exact fixed point; for two-way ports the contraction is measured, not proved.
+is a plain input. Records are read at the last-round readings after the scan and written after the
+path, outside the gradient, exactly as in the record patch. With damping one and a single
+one-way port, two rounds reach the fixed point; longer chains need more rounds. In general
+the returned finite-round path need not be an equilibrium. The recorded movements and port
+seam residuals are diagnostics, not convergence, contraction or uniqueness certificates.
+The adjoint differentiates this finite computation, not an implicit equilibrium limit.
 
 Snapshot and branch isolation: every cortex keeps its own parameters, records, running
 statistics and live context; a snapshot is the list of the cortices' snapshots plus the
@@ -31,10 +34,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .record_patch import RecordPatchNet, RecordPath
+from .record_patch import RecordPatchNet, RecordPath, _input_norms, _integer
 
 FORMAT = "cadence.record-ports/1"
 _KEYS = ("G", "g", "B", "b", "C", "c")
+
+
+class _NonfiniteJointPath(ValueError):
+    """A numerical proposal failure, distinct from invalid public arguments."""
 
 
 def _sigmoid(x):
@@ -50,17 +57,21 @@ class Port:
     start: int
     width: int
 
+    def __post_init__(self):
+        for key in ("source", "target", "start", "width"):
+            object.__setattr__(self, key, _integer(key, getattr(self, key), 1 if key == "width" else 0))
+
     def to_dict(self):
         return dict(source=self.source, target=self.target, start=self.start, width=self.width)
 
     @classmethod
     def from_dict(cls, value):
-        return cls(int(value["source"]), int(value["target"]), int(value["start"]), int(value["width"]))
+        return cls(value["source"], value["target"], value["start"], value["width"])
 
 
 @dataclass(frozen=True)
 class Settled:
-    """The joint free path: per cortex the full inputs (own then ports, as settled), the
+    """The finite-round joint path, without an equilibrium guarantee: per cortex the full inputs,
     context, the per-round gate, port drive, port values and contexts, and the record path;
     per port the seam residual per round; per cortex the change of the context per round."""
 
@@ -77,12 +88,14 @@ class Settled:
     @property
     def loss(self):
         losses = [path.loss for path in self.paths]
-        return None if any(v is None for v in losses) else float(sum(losses))
+        value = None if any(v is None for v in losses) else float(sum(losses))
+        return value if value is not None and np.isfinite(value) else None
 
     @property
     def slow_loss(self):
         losses = [path.slow_loss for path in self.paths]
-        return None if any(v is None for v in losses) else float(sum(losses))
+        value = None if any(v is None for v in losses) else float(sum(losses))
+        return value if value is not None and np.isfinite(value) else None
 
 
 @dataclass(frozen=True)
@@ -99,19 +112,23 @@ class JointObservation:
 
 
 class JointRecordPatches:
-    """Several record patches joined by ports and settled as one equilibrium."""
+    """Several record patches joined by ports and iterated for a fixed number of rounds."""
 
     def __init__(self, cortices, own_inputs, ports, *, rounds=1, damping=1.0, cross_adjoint=True):
         self.cortices = list(cortices)
-        self.own = [int(n) for n in own_inputs]
+        if len({id(net) for net in self.cortices}) != len(self.cortices):
+            raise ValueError("cortices must be distinct mutable patches")
+        self.own = [_integer("own-input count", n, 0) for n in own_inputs]
         self.ports = [p if isinstance(p, Port) else Port.from_dict(p) for p in ports]
-        self.rounds = int(rounds)
+        self.rounds = _integer("rounds", rounds, 1)
         self.damping = float(damping)
+        if not isinstance(cross_adjoint, (bool, np.bool_)):
+            raise ValueError("cross_adjoint must be a boolean")
         self.cross_adjoint = bool(cross_adjoint)
         self.cut = False  # the ablation: every port carries zeros
         if self.rounds < 1 or not 0.0 < self.damping <= 1.0:
             raise ValueError("rounds is a positive integer and damping lies in (0, 1]")
-        if len(self.own) != len(self.cortices):
+        if not self.cortices or len(self.own) != len(self.cortices):
             raise ValueError("one own-input count per cortex")
         n = len(self.cortices)
         self.incoming = [[] for _ in range(n)]  # per target: (port, column offset within the port block)
@@ -168,6 +185,8 @@ class JointRecordPatches:
         scales = [net._scale for net in nets]
         own_G = [xs[i] @ par[i]["G"][:, :self.own[i]].T + par[i]["g"] for i in range(n)]
         own_B = [xs[i] @ par[i]["B"][:, :self.own[i]].T + par[i]["b"] for i in range(n)]
+        if not all(np.isfinite(v).all() for v in own_G + own_B):
+            raise _NonfiniteJointPath("joint input drives must be finite")
         Gp = [par[i]["G"][:, self.own[i]:] for i in range(n)]
         Bp = [par[i]["B"][:, self.own[i]:] for i in range(n)]
         hidden = [np.empty((batch, horizon, net.hidden)) for net in nets]
@@ -208,6 +227,8 @@ class JointRecordPatches:
             slow = net._slow(hidden[i], par[i]["C"], par[i]["c"])
             if reads:
                 readings = net._readings(inputs[i], hidden[i]).reshape(batch * horizon, -1)
+                if not np.isfinite(readings).all():
+                    raise _NonfiniteJointPath("joint record readings must be finite")
                 codes = net.records.code(readings, valued=False)[0].reshape(batch, horizon, -1)
                 read = codes @ net.records.tables["y"]
                 if net._output_code is not None:
@@ -219,6 +240,10 @@ class JointRecordPatches:
             loss = None if target is None else net._loss(output, target)
             slow_loss = None if target is None else net._loss(slow, target)
             paths.append(RecordPath(hidden[i], output, gate[i][:, :, K - 1], read, loss, slow_loss))
+        values = inputs + hidden + gate + z + p + rounds + [seam, settle]
+        values += [v for path in paths for v in (path.output, path.read)]
+        if not all(np.isfinite(v).all() for v in values):
+            raise _NonfiniteJointPath("joint path must be finite")
         return Settled(inputs, hidden, gate, z, p, rounds, paths, seam, settle)
 
     # ------------------------------------------------------------------ the joint adjoint
@@ -283,6 +308,8 @@ class JointRecordPatches:
             raise ValueError("every cortex sees the same batch and horizon")
         teach = None
         if targets is not None:
+            if len(targets) != len(self.cortices):
+                raise ValueError("one target path per cortex")
             teach = []
             for i, net in enumerate(self.cortices):
                 full = np.zeros((paths[i].shape[0], paths[i].shape[1], net.inputs))
@@ -292,6 +319,8 @@ class JointRecordPatches:
 
     def imagine(self, xs, *, states=None):
         paths, _ = self._check(xs)
+        if states is not None and len(states) != len(self.cortices):
+            raise ValueError("one boundary state per cortex")
         boundaries = [net._boundary(len(paths[0]), None if states is None else states[i]) for i, net in enumerate(self.cortices)]
         return self._settle(paths, boundaries)
 
@@ -304,21 +333,42 @@ class JointRecordPatches:
         return F
 
     def observe(self, xs, targets, *, rate=1.0, backtrack=False, write=True):
+        """Run the finite joint scan and its adjoint, optionally writing observed records.
+
+        Invalid inputs or exceptions during record writes leave every cortex unchanged.
+        A rejected slow-parameter proposal may still retain valid activity and record writes,
+        as in ``RecordPatchNet.observe``.
+        """
+        if not isinstance(backtrack, (bool, np.bool_)) or not isinstance(write, (bool, np.bool_)):
+            raise ValueError("backtrack and write must be booleans")
         if not np.isfinite(rate) or rate < 0:
             raise ValueError("rate must be finite and nonnegative")
         paths, teach = self._check(xs, targets)
         boundaries = [net._boundary(len(paths[0]), None) for net in self.cortices]
         F = self._settle(paths, boundaries, targets=teach)
-        for net, path in zip(self.cortices, F.paths, strict=True):
-            net._carry(path)
         if F.loss is None or F.slow_loss is None:
             return JointObservation(False, "nonfinite_prediction", F, None, None, None, 0.0, 0, 0)
         deltas = self._adjoint(F, boundaries, teach)
         writes = 0
         if write:
-            for i, net in enumerate(self.cortices):
-                writes += net._write(F.inputs[i], teach[i], F.hidden[i])
+            for inputs in F.inputs:
+                _input_norms(inputs)
+            # A later cortex's write can overflow after earlier writes succeeded.
+            # Keep learned record state only; fixed projections and parameters are shared.
+            saved = [(net._input_norm, net.records.state()) for net in self.cortices]
+            try:
+                for i, net in enumerate(self.cortices):
+                    writes += net._write(F.inputs[i], teach[i], F.hidden[i])
+            except Exception:
+                for net, (norm, records) in zip(self.cortices, saved, strict=True):
+                    net._input_norm = norm
+                    net.records.load_state(records)
+                raise
+        for net, path in zip(self.cortices, F.paths, strict=True):
+            net._carry(path)
         initial = F.slow_loss
+        if rate == 0:
+            return JointObservation(False, "no_step", F, deltas, initial, initial, 0.0, 0, writes)
         current = self.parameters()
         if not backtrack:
             proposed = [{k: current[i][k] - rate * deltas[i][k] for k in _KEYS} for i in range(len(current))]
@@ -335,7 +385,10 @@ class JointRecordPatches:
                 proposed = [{k: current[i][k] - step * deltas[i][k] for k in _KEYS} for i in range(len(current))]
                 if not all(np.isfinite(v).all() for p in proposed for v in p.values()):
                     continue
-                loss = self._settle(paths, boundaries, params=proposed, targets=teach, reads=False).slow_loss
+                try:
+                    loss = self._settle(paths, boundaries, params=proposed, targets=teach, reads=False).slow_loss
+                except _NonfiniteJointPath:
+                    loss = None
                 replays += 1
                 if loss is None:
                     continue
@@ -349,8 +402,8 @@ class JointRecordPatches:
     # ------------------------------------------------------------------ custody
     def snapshot(self):
         meta = dict(format=FORMAT, own=self.own, ports=[p.to_dict() for p in self.ports], rounds=self.rounds,
-                    damping=self.damping, cross_adjoint=self.cross_adjoint, cortices=len(self.cortices))
-        out = {"meta": np.array(json.dumps(meta, sort_keys=True))}
+                    damping=self.damping, cross_adjoint=self.cross_adjoint, cut=self.cut, cortices=len(self.cortices))
+        out = {"meta": np.array(json.dumps(meta, sort_keys=True, allow_nan=False))}
         for i, net in enumerate(self.cortices):
             for k, v in net.snapshot().items():
                 out[f"cortex{i}_{k}"] = v
@@ -358,22 +411,31 @@ class JointRecordPatches:
 
     @classmethod
     def restore(cls, snapshot):
-        meta = json.loads(str(snapshot["meta"]))
-        if meta.get("format") != FORMAT:
-            raise ValueError("unsupported record-ports checkpoint")
-        nets = []
-        for i in range(int(meta["cortices"])):
-            prefix = f"cortex{i}_"
-            nets.append(RecordPatchNet.restore({k[len(prefix):]: v for k, v in snapshot.items() if k.startswith(prefix)}))
-        return cls(nets, meta["own"], meta["ports"], rounds=meta["rounds"], damping=meta["damping"], cross_adjoint=meta["cross_adjoint"])
+        try:
+            meta = json.loads(str(snapshot["meta"]))
+            if not isinstance(meta, dict) or meta.get("format") != FORMAT:
+                raise ValueError("unsupported record-ports checkpoint")
+            count = _integer("cortices", meta["cortices"], 1)
+            cut = meta.get("cut", False)  # Older checkpoints always restored connected ports.
+            if not isinstance(cut, bool):
+                raise ValueError("cut must be a boolean")
+            nets = []
+            for i in range(count):
+                prefix = f"cortex{i}_"
+                nets.append(RecordPatchNet.restore({k[len(prefix):]: v for k, v in snapshot.items() if k.startswith(prefix)}))
+            out = cls(nets, meta["own"], meta["ports"], rounds=meta["rounds"], damping=meta["damping"], cross_adjoint=meta["cross_adjoint"])
+            out.cut = cut
+            return out
+        except (KeyError, TypeError, IndexError, OverflowError) as error:
+            raise ValueError("invalid record-ports checkpoint") from error
 
     def clone(self):
-        out = JointRecordPatches.restore(self.snapshot())
-        out.cut = self.cut
-        return out
+        return JointRecordPatches.restore(self.snapshot())
 
     def save(self, path):
-        np.savez_compressed(path, **self.snapshot())
+        from .checkpoint import _write
+
+        return _write(self.snapshot(), path)
 
     @classmethod
     def load(cls, path):

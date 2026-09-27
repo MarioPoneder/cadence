@@ -1,9 +1,10 @@
 """A temporal patch with a slow linear context and a fast record inside it.
 
 The state transition is linear in the context and gated by the input; the
-nonlinearity sits at the ports. The energy is quadratic in the context path,
-so its detuned equilibria are unique and the centered detuning contrast equals
-the adjoint (reverse-mode) gradient of the same loss. ``observe`` computes that
+nonlinearity sits at the ports. The energy is quadratic in the context path;
+detuned minima are unique when their checked reduced Hessians are positive definite.
+The centered detuning contrast approaches the adjoint (reverse-mode) gradient
+of the same loss in the small-detuning limit. ``observe`` computes that
 gradient by one backward scan; ``detune`` solves the two detuned equilibria and
 returns the contrast, as the acceptance check of the identity. The slow
 parameters learn the observation itself; the record, read at every moment
@@ -111,6 +112,18 @@ def _integer(name: str, value: int, minimum: int) -> int:
 
 def _sigmoid(x: np.ndarray) -> np.ndarray:
     return np.asarray(0.5 * (1.0 + np.tanh(0.5 * x)))
+
+
+def _input_norms(inputs: np.ndarray) -> np.ndarray:
+    """Finite row norms without squaring a large unscaled observation."""
+    rows = inputs.reshape(-1, inputs.shape[-1])
+    magnitude = np.max(np.abs(rows), axis=1)
+    scaled = rows / np.where(magnitude > 0, magnitude, 1.0)[:, None]
+    with np.errstate(over="ignore", invalid="ignore"):
+        norms = magnitude * np.linalg.norm(scaled, axis=1)
+    if not np.isfinite(norms).all():
+        raise ValueError("input norms must be representable and finite")
+    return norms
 
 
 class RecordPatchNet:
@@ -544,20 +557,36 @@ class RecordPatchNet:
         boundary lowers that loss, trying up to sixteen halved rates. The
         observed outputs are then written into the records of the readings
         that produced the prediction. ``write=False`` learns without writing.
-        The final free context becomes the live state.
+        The final free context becomes the live state. A failed record write
+        restores the records and leaves the live context unchanged.
         """
         if not isinstance(backtrack, (bool, np.bool_)):
             raise ValueError("backtrack must be a boolean")
+        if not isinstance(write, (bool, np.bool_)):
+            raise ValueError("write must be a boolean")
         if not np.isfinite(rate) or rate < 0:
             raise ValueError("rate must be finite and nonnegative")
         path, teaching = self._teaching(inputs, target)
+        if write:
+            _input_norms(path)  # validate before carrying activity or writing any record
         boundary = self._boundary(len(path), None)
         prediction, port, _ = self._free(path, boundary, teaching)
-        self._carry(prediction)
         if prediction.loss is None or prediction.slow_loss is None:
+            self._carry(prediction)
             return RecordObservation(False, "nonfinite_prediction", prediction)
         delta = self._gradient(path, boundary, teaching, prediction, port)
-        writes = self._write(path, teaching, prediction.hidden) if write else 0
+        writes = 0
+        if write:
+            # Witnessing and sequential writes can mutate before a later write
+            # overflows. Preserve learned state, without copying the projection.
+            saved_norm, saved_records = self._input_norm, self.records.state()
+            try:
+                writes = self._write(path, teaching, prediction.hidden)
+            except Exception:
+                self._input_norm = saved_norm
+                self.records.load_state(saved_records)
+                raise
+        self._carry(prediction)
         result = self._admit(path, teaching, boundary, prediction, delta, rate, backtrack)
         return RecordObservation(
             result.updated,
@@ -610,15 +639,25 @@ class RecordPatchNet:
         slow loss on the dreams before and after, and the writes of the dawn.
         """
         passes = _integer("passes", passes, 0)
+        dawn_passes = _integer("dawn_passes", dawn_passes, 0)
+        if not isinstance(backtrack, (bool, np.bool_)):
+            raise ValueError("backtrack must be a boolean")
+        if not np.isfinite(rate) or rate < 0:
+            raise ValueError("rate must be finite and nonnegative")
         dreams = [(self._path(cue, self.inputs, "inputs"), self.dream(cue)) for cue in cues]
         if not dreams:
             raise ValueError("sleep needs at least one cue")
+        if dawn_passes:
+            for path, _ in dreams:
+                _input_norms(path)
+
+        def slow_loss(path: np.ndarray, dream: np.ndarray) -> float:
+            loss = self._free(path, np.zeros((len(path), self.hidden)), dream)[0].slow_loss
+            return float("nan") if loss is None else loss
+
         before = float(
             np.mean(
-                [
-                    self._free(p, np.zeros((len(p), self.hidden)), d)[0].slow_loss or np.nan
-                    for p, d in dreams
-                ]
+                [slow_loss(p, d) for p, d in dreams]
             )
         )
         admitted = 0
@@ -630,14 +669,11 @@ class RecordPatchNet:
                 )
         after = float(
             np.mean(
-                [
-                    self._free(p, np.zeros((len(p), self.hidden)), d)[0].slow_loss or np.nan
-                    for p, d in dreams
-                ]
+                [slow_loss(p, d) for p, d in dreams]
             )
         )
         writes = 0
-        for _ in range(_integer("dawn_passes", dawn_passes, 0)):
+        for _ in range(dawn_passes):
             for path, dream in dreams:
                 self.reset()
                 hidden = self._free(path, np.zeros((len(path), self.hidden)), None)[0].hidden
@@ -662,6 +698,8 @@ class RecordPatchNet:
         backtrack: bool,
     ) -> RecordObservation:
         initial = prediction.slow_loss
+        if rate == 0:
+            return RecordObservation(False, "no_step", prediction, delta, initial, initial, 0.0)
         if not backtrack:
             with np.errstate(over="ignore", invalid="ignore"):
                 proposed = {k: getattr(self, "_" + k) - rate * delta[k] for k in delta}
@@ -734,7 +772,7 @@ class RecordPatchNet:
         do); the writes then land at the codes later readings will use. The
         residual is taken against the parameters that made the prediction."""
         batch, horizon, _ = inputs.shape
-        norms = np.linalg.norm(inputs.reshape(batch * horizon, -1), axis=1)
+        norms = _input_norms(inputs)
         for value in norms:
             self._input_norm += 0.01 * (max(float(value), 1e-6) - self._input_norm)
         readings = self._readings(inputs, hidden).reshape(batch * horizon, -1)
@@ -771,12 +809,13 @@ class RecordPatchNet:
 
         The energy describes the slow patch: its readout residual is
         ``y - C h - c`` and the record read is outside it. With ``y``
-        eliminated, each detuned path minimizes a quadratic that is strictly
-        convex for the tested detuning; conjugate gradients from the free
+        eliminated, each detuned path is admitted only after its reduced
+        quadratic is certified positive definite; conjugate gradients from the free
         path solve its normal equations to ``tolerance``. The contrast of the
         energy's parameter derivatives at the two equilibria, divided by
-        ``2 beta``, is the learning signal of equilibrium detuning. It equals
-        the adjoint gradient of ``observe`` up to terms of order ``beta^2``.
+        ``2 beta``, is the learning signal of equilibrium detuning. On this
+        regular branch its limiting value is the adjoint gradient of ``observe``;
+        finite-beta error is of order ``beta^2`` before numerical solve error.
         Nothing here changes the network; this is the acceptance check of
         that identity.
         """
@@ -785,6 +824,9 @@ class RecordPatchNet:
         path, teaching = self._teaching(inputs, target)
         if not np.isfinite(beta) or beta <= 0:
             raise ValueError("beta must be finite and positive")
+        if not np.isfinite(tolerance) or tolerance <= 0:
+            raise ValueError("tolerance must be finite and positive")
+        max_iterations = _integer("max_iterations", max_iterations, 0)
         boundary = self._boundary(len(path), state)
         hidden, gate, port, _, _, _ = self._forward(path, boundary)
         batch, horizon, _ = path.shape
@@ -812,6 +854,43 @@ class RecordPatchNet:
             def operator(v: np.ndarray) -> np.ndarray:
                 return np.asarray(seam_transpose(seam(v)) + ((v @ self._C.T) * weight) @ self._C)
 
+            # b < 1 makes output elimination valid, but does not make the
+            # negative-detuned hidden quadratic convex. Certify its block
+            # Schur pivots even when the free point has zero gradient (CG
+            # would otherwise accept a saddle without testing curvature).
+            # Cheap sufficient bound: ||S^-1|| <= sum(max(gate)^k).
+            # Positive detuning is SPD by construction. Only an unresolved
+            # negative phase needs the more expensive block factorization.
+            with np.errstate(over="ignore", invalid="ignore"):
+                gain_bound = float(np.sum(np.max(gate) ** np.arange(horizon)))
+                negative_bound = float(np.sum(self._C**2 * np.maximum(-weight, 0)[:, None]))
+                certified = negative_bound * gain_bound**2 < 1 - 64 * np.finfo(float).eps
+            if not certified:
+                with np.errstate(over="ignore", invalid="ignore"):
+                    gram = (self._C.T * weight) @ self._C
+                inverse = None
+                eye = np.eye(self.hidden)
+                try:
+                    for t in range(horizon):
+                        pivot = np.broadcast_to(
+                            eye + gram, (batch, self.hidden, self.hidden)
+                        ).copy()
+                        diagonal = np.arange(self.hidden)
+                        if t + 1 < horizon:
+                            pivot[:, diagonal, diagonal] += gate[:, t + 1] ** 2
+                        if inverse is not None:
+                            g = gate[:, t]
+                            pivot -= g[:, :, None] * inverse * g[:, None, :]
+                        if not np.isfinite(pivot).all():
+                            raise np.linalg.LinAlgError("nonfinite quadratic")
+                        factor = np.linalg.cholesky(0.5 * (pivot + pivot.swapaxes(-1, -2)))
+                        inverse = np.linalg.solve(
+                            factor.swapaxes(-1, -2),
+                            np.linalg.solve(factor, np.broadcast_to(eye, pivot.shape)),
+                        )
+                except np.linalg.LinAlgError:
+                    converged = False
+                    return hidden.copy(), 0, float("inf")
             rhs = seam_transpose(constant) - (q * weight) @ self._C
             x = hidden.copy()
             r = rhs - operator(x)
@@ -819,22 +898,34 @@ class RecordPatchNet:
             rr = float(np.sum(r * r))
             scale = max(float(np.sum(rhs * rhs)), np.finfo(float).tiny)
             iterations = 0
+            if not np.isfinite(rr) or not np.isfinite(scale):
+                converged = False
+                return x, iterations, float("inf")
             while np.sqrt(rr / scale) > tolerance and iterations < max_iterations:
                 ap = operator(p)
                 curvature = float(np.sum(p * ap))
-                if not curvature > 0.0:
+                if not np.isfinite(curvature) or not curvature > 0.0:
                     converged = False
                     break
                 alpha = rr / curvature
                 x += alpha * p
                 r -= alpha * ap
                 new = float(np.sum(r * r))
+                if not np.isfinite(new):
+                    converged = False
+                    break
                 p = r + (new / rr) * p
                 rr = new
                 iterations += 1
-            residual = float(np.sqrt(rr / scale))
-            if residual > tolerance:
+            # A recursive CG residual can drift from the actual equations.
+            # Admission uses a fresh equation evaluation, never NaN comparison.
+            with np.errstate(over="ignore", invalid="ignore"):
+                error = rhs - operator(x)
+                residual = float(np.sqrt(np.sum(error * error) / scale))
+            if not np.isfinite(residual) or residual > tolerance:
                 converged = False
+                if not np.isfinite(residual):
+                    residual = float("inf")
             return x, iterations, residual
 
         def derivatives(h: np.ndarray, sign: float) -> tuple[dict[str, np.ndarray], float]:
@@ -865,6 +956,11 @@ class RecordPatchNet:
         plus_grads, plus_energy = derivatives(plus, 1.0)
         minus_grads, minus_energy = derivatives(minus, -1.0)
         contrast = {k: (plus_grads[k] - minus_grads[k]) / (2.0 * beta) for k in plus_grads}
+        converged = bool(
+            converged
+            and np.isfinite([plus_energy, minus_energy]).all()
+            and all(np.isfinite(value).all() for value in contrast.values())
+        )
         return RecordContrast(
             contrast,
             plus,

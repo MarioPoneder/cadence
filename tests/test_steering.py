@@ -60,6 +60,7 @@ def test_the_readback_layout_and_the_moments_match_the_belief_patch():
     # the moments, replayed by hand under the recorded gains, are the cortex's own moments
     cortex = brain.cortex
     z = np.zeros((3, cortex.belief))
+    prev = np.zeros(3)
     for k in range(5):
         moment = cortex.readback(o[:, k], a[:, k], state=z)
         expected = np.concatenate([moment.residual_alone, moment.surprise, (np.zeros(3) if k == 0 else prev)[:, None], moment.evidence[:, 8:]], axis=-1)
@@ -157,7 +158,8 @@ def test_a_rule_and_fixed_gains_are_the_arms_below_the_rung():
     rule = Steered(_cortex(14), weighing=Rule(lambda r: np.tile([1.6, 0.4], (len(r), 1)), macs=6))
     path = rule.run(o, a, y, rate=4.0)
     np.testing.assert_allclose(path.gains, 1.6 * np.ones((3, 5, 2)) * [1.0, 0.25])
-    assert path.updated and path.steering_output is None and rule.macs_per_moment() == rule.cortex.macs_per_moment() + 6
+    assert path.updated and path.steering_output is None
+    assert rule.macs_per_moment() == rule.cortex.macs_per_moment() + rule.cortex.readback_macs(probe=False) + 6
     assert rule.moments_per_decision() == 1 and rule.channels == 5 and not rule.probes_on
     fixed = Steered(_cortex(14))
     ones = fixed.run(o, a, y, rate=4.0)
@@ -272,7 +274,7 @@ def test_a_lagged_relative_readback_carries_what_the_window_heard():
     first = path.readback[:, 0]
     assert np.all(first[:, : 2 * b] == 0.0) and np.all(first[:, 2 * b] == 0.0) and np.all(first[:, -b:] == 0.0)  # nothing heard yet
     # the second moment reads the first moment's surprise where the window was up, rolled to the centre it had
-    centre0 = brain.boundary().weighing  # after three moments; recompute the first centre from the outputs
+    # Recompute the first centre from the outputs, not the live third-moment centre.
     turns = gaze.turn(path.steering_output)
     centre_after_first = ((0.0 + turns[:, 0]) + np.pi) % (2 * np.pi) - np.pi
     gains0 = path.gains[:, 0]

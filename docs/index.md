@@ -8,6 +8,11 @@ broader research goal. This page is the map, in the order a builder needs it.
 
 ## Start here
 
+Read the [numerical and learning contracts](contracts.md) to distinguish checked
+equilibrium phases, causal scans, finite repair and their learning rules.
+For a runnable observer and observed population in the same checked graph,
+see [recursive observation in one equilibrium](recursive-settlement.md).
+
 1. [Cadence for machine-learning people](orientation.md): the four brains against
    the models you know, where each learning signal comes from, a comparison with
    backprop, the shapes of every array, and a glossary.
@@ -20,7 +25,7 @@ broader research goal. This page is the map, in the order a builder needs it.
 4. [Troubleshooting](troubleshooting.md): the first questions, each answered in a
    paragraph with a pointer.
 
-## Two primitives, and what composes them
+## Computation families and their compositions
 
 - The **settling patch**: bounded local state, ports, an equilibrium under
   constraints, learned by the contrast of a free and a nudged settle. Built from a
@@ -30,8 +35,8 @@ broader research goal. This page is the map, in the order a builder needs it.
   store inside the patch. By day an observation is written once; by night the
   slow weights learn from the store's own dreams (`sleep`).
 
-Everything else composes these two through ports. The [belief patch](belief.md)
-is the composition toward a learned world model: a transition under action, a
+The [belief patch](belief.md) is a finite-iteration learned world model with
+an adjoint training path: a transition under action, a
 repair of the belief by iteration with the store read inside it, and private
 imagination; its input port reads grids through [maps](record-patch.md#maps-a-structured-input-port).
 
@@ -88,7 +93,7 @@ retained behavior before scaling. [Convergence certificates](certificate.md),
 [protocols](protocols.md), [receipts](receipts.md), [the brain viewer](pages.md) and
 [backends, devices, precision](backends.md) are the instruments.
 [Brains from a connectome](connectomes.md) is the recipe for a measured wiring as one brain:
-custody, the gain by protocol, the sub-net a page settles, what a rate model cannot carry,
+custody, the gain by protocol, graph coverage, what a rate model cannot carry,
 and the traps of learning on it.
 
 ## Reference
@@ -100,8 +105,8 @@ says how to run the checks and what a change needs; the
 
 ## The ideas
 
-[Architecture and integration](architecture.md): the contract of the temporal patch and
-the fixed-model actor. [Equilibrium and learned world models](equilibrium-world-models.md):
+[Architecture and integration](architecture.md): the contract of the temporal patch.
+[Equilibrium and learned world models](equilibrium-world-models.md):
 three clocks, changing expected trajectories, evidence and branch isolation, and the
 distinction between current APIs and a proposed shared architecture.
 [Creativity and self-reflection](creativity.md): novel proposal evaluation, recursive

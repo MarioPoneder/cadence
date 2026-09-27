@@ -8,6 +8,11 @@ library that can imagine on its own: the record patch's context is computed from
 of the moment, so without an input it has no next state; the belief patch's transition
 needs only the belief and a declared action.
 
+This API runs a fixed repair budget, not a solve admitted by a global
+fixed-point threshold. Its slow learner differentiates through that finite
+computation. See the [contract guide](contracts.md) before interpreting its
+results as equilibrium or local-detuning evidence.
+
 ```text
 p[t]    = g * z[t-1] + (1 - g) * tanh(T [z[t-1]; a[t-1]] + t_b),   g = sigmoid(G [z; a] + g_b)
 e[t]    = tanh(port(o[t]) + e_b)
@@ -29,8 +34,9 @@ step is the transition alone, with the store read at the expectation and nothing
   for a port whose blocks never meet and nonzero here.
 - **The repair** assimilates evidence: the map reads the belief, the encoded observation,
   the expectation and the store's read together, and moves the belief by a damped step.
-  `BeliefPath.step` is the last move per belief unit and `residual` its size; a familiar
-  moment ends near zero.
+  `BeliefPath.step` is the last move per belief unit and `residual` its size.
+  A small damped move is not an independent fixed-point certificate or a
+  guarantee that a familiar observation is represented correctly.
 - **The store** holds the residual of the slow readout at the code of the final reading,
   coded to `record_width` signs, written once per observed moment with `write=True`. Its
   read enters the repair and patches the readout. No gradient reaches the store; that is
@@ -39,8 +45,9 @@ step is the transition alone, with the store read at the expectation and nothing
   `observe` leaves it unwritten unless asked; the trade-off is the record patch's, a store
   that holds what the slow model does not know against reads that habituate to stale
   residuals.
-- **Imagination** (`imagine(actions)`) leaves parameters, records, state and counters
-  unchanged and consumes no observation. A continuation conditioned on recorded future
+- **Imagination** (`imagine(actions)`) leaves parameters, records and live activity
+  unchanged and consumes no observation; cost counters include its work.
+  A continuation conditioned on recorded future
   inputs is a different measurement; this method cannot make one.
 
 ```python
@@ -255,14 +262,24 @@ readout and the store's decode, and with `probes=True` one evaluation of the rep
 block. `cost` counts what the patch has computed since `reset_cost()`: every moment
 assimilated, observed, imagined or replayed in an admission, their multiply-accumulates,
 and the admission's replays. Every arm of a comparison at matched compute reads the same
-counter, and a composition sums its patches'.
+counter, and a composition adds its own readback work. A map port counts reuse of
+its kernel at every output position. `readback_macs(probe=True)` estimates one
+separate readback; a direct `readback()` call does not increment the patch's counters.
+
+These counters estimate dense forward matrix work. They exclude the backward
+adjoint, optimizer/admission bookkeeping, record writes, nonlinearities, sorting,
+application callbacks and memory traffic. They cannot alone establish equal
+training compute. `imagine` uses the same conservative moment model even though
+it performs fewer operations. Report these conventions and measure total training
+time and memory separately; see [contracts](contracts.md).
 
 ```python
 cortex.reset_cost()
 cortex.reset()
 taught = cortex.observe(o, a, y, rate=100.0, write=False)
 assert cortex.cost["moments"] == 4 * 6 * (1 + taught.replay_calls)
-assert cortex.cost["macs"] == cortex.cost["moments"] * cortex.macs_per_moment()
+expected = 4 * 6 * (cortex.macs_per_moment() + taught.replay_calls * cortex.macs_per_moment(surprise=False))
+assert cortex.cost["macs"] == expected  # admission replays omit surprise diagnostics
 ```
 
 ## A weight per moment and a mask per row

@@ -40,15 +40,15 @@ rung by rung, each with its task, its control and its falsifier.
 
 ## In familiar terms
 
-Cadence is a NumPy library of brains that compute by settling into an equilibrium
-and learn by detuning it. A brain is a set of patches joined by ports: groups of
-neurons with their synapses, or one context vector with a record store beside it.
-The answer is the state the brain settles into under its inputs. Learning settles
-once more with the outputs nudged toward the outcome and moves every synapse on the
-product of its own two ends in the two settled states, so nothing is propagated
-backward through time. The record store is a fixed sparse code of the reading addressing a table
-that takes an outcome in one write and reads it back at the same reading, and a
-night of sleep moves what the store holds into the slow weights.
+Cadence is a library for computation through local state, ports and repair,
+with NumPy implementations and optional accelerated backends. Its graph and
+temporal learners use free and nudged equilibrium contrasts. Record and belief
+models use causal or finite-iteration computations and train slow weights by
+an explicit adjoint backward scan. Record stores additionally learn by local
+writes. These are distinct implementations with different guarantees; the
+[numerical and learning contracts](docs/contracts.md) explain how to choose and
+check them. A night of `sleep` can transfer a record store's completions into
+slow weights under its declared training procedure.
 [Cadence for machine-learning people](https://github.com/muellerberndt/cadence/blob/main/docs/orientation.md)
 maps each brain to the model you know, says where each learning signal comes from,
 and lists the shapes and the words.
@@ -109,7 +109,7 @@ answers the first questions.
 
 ## Which brain
 
-Two primitives, composed through ports, and the belief patch that composes them toward a world model:
+The public families share state and port concepts, with distinct solver and learning contracts:
 
 | You want | Start with | What it supplies |
 | --- | --- | --- |
@@ -120,7 +120,7 @@ Two primitives, composed through ports, and the belief patch that composes them 
 | a belief carried under action, repaired by evidence, that imagines with no observation | the belief patch, [BeliefPatch](https://github.com/muellerberndt/cadence/blob/main/docs/belief.md) | A belief carried by a learned transition under the executed action and repaired by a few iterations of one nonlinear map with the record store read inside it. The composition toward a learned world model, trained with the [imagination loss](https://github.com/muellerberndt/cadence/blob/main/docs/belief.md#training-the-transition-the-imagination-loss) so the transition carries the belief. |
 
 Everything composes through ports: two record patches in depth (`RecordPatchStack`),
-several settled as one equilibrium (`JointRecordPatches`), a grid read through a tied
+several coupled through finite port-repair rounds (`JointRecordPatches`), a grid read through a tied
 kernel at the port (`StructuredPort`), and a genome that `evolve` mutates and selects
 across lives. The [architecture guide](https://github.com/muellerberndt/cadence/blob/main/docs/architecture.md)
 is the contract of the temporal patch.
@@ -135,7 +135,7 @@ of them:
 
 <table>
 <tr>
-<td width="50%"><a href="https://floatingpragma.io/cadence-examples/fly-matrix/"><img src="https://raw.githubusercontent.com/muellerberndt/cadence-examples/main/fly-matrix/screenshot.png" alt="A fly in the Matrix: the whole nervous system of a fruit fly flying a body through a wireframe room"></a><br><b>A fly in the Matrix</b> · <a href="https://floatingpragma.io/cadence-examples/fly-matrix/">live</a> · <a href="https://github.com/muellerberndt/cadence-examples/tree/main/fly-matrix">code</a><br>The 150,802 neurons of a fruit fly, brain and nerve cord wired as measured, as one settling brain flying a body with physics; the physiology gates against shuffled wirings; the mushroom body learning which smell means sugar.</td>
+<td width="50%"><a href="https://floatingpragma.io/cadence-examples/fly-matrix/"><img src="https://raw.githubusercontent.com/muellerberndt/cadence-examples/main/fly-matrix/screenshot.png" alt="A fly in the Matrix: a connectome model with sensory input and a supplied body controller"></a><br><b>A fly in the Matrix</b> · <a href="https://floatingpragma.io/cadence-examples/fly-matrix/">live</a> · <a href="https://github.com/muellerberndt/cadence-examples/tree/main/fly-matrix">code</a><br>Import 150,802 retained neurons, supply sensory inputs and read settled neural outputs. Local mushroom-body learning changes responses; a supplied body controller executes goals. The example documents its model, assistance and source-bound checks.</td>
 <td width="50%"><a href="https://floatingpragma.io/cadence-examples/amen-beats/"><img src="https://raw.githubusercontent.com/muellerberndt/cadence-examples/main/amen/screenshot.png" alt="Amen: one record patch computes a jungle track from silence"></a><br><b>Amen, the jungle composer</b> · <a href="https://floatingpragma.io/cadence-examples/amen-beats/">live</a> · <a href="https://github.com/muellerberndt/cadence-examples/tree/main/amen">code</a><br>One record patch starts from silence, hears each half-beat it plays and computes sixteen bars of drums, bass and texture.</td>
 </tr>
 </table>
@@ -145,11 +145,9 @@ does not establish transfer to the others. Every example states what is supplied
 what is learned, what was measured and what it does not show, and pins the release
 its checks were run against.
 
-Build your own. Fork an example, break it, give the same brain a different body or a
-different sense, and put a task in front of it that nobody has tried. Every example,
-finished or half-working, is data for us: it says what the architecture does where we
-have not looked, and that is what scales this work toward the full humanoid simulation.
-Hack things. Be crazy. Chaos is how we learn. The examples repository's
+Build on an example with explicit sensory and action interfaces, reproducible
+checks and measured resource costs. Report what is supplied, what is learned
+and which behaviors the evidence supports. The examples repository's
 [contributing section](https://github.com/muellerberndt/cadence-examples#contributing)
 says what an example needs to live there, including the card every example README carries.
 

@@ -349,6 +349,27 @@ class Learner:
 
     # -- the rule
 
+    def _validate_phases(
+        self, free: BrainState, nudged: BrainState, opposite: BrainState | None
+    ) -> None:
+        """A contrast pairs the same streams, never NumPy's broadcast rows.
+
+        Read resident tensor shapes without fetching activations from a device.
+        This is a shape contract, not an equilibrium or provenance certificate.
+        """
+        shapes = []
+        for state in (free, nudged) if opposite is None else (free, nudged, opposite):
+            activation = state.__dict__.get("activation")
+            if activation is None and state.device is not None and "s" in state.device:
+                shape = tuple(state.device["s"].shape)
+            else:
+                shape = np.asarray(state.activation).shape
+            shapes.append(shape)
+        shape = shapes[0]
+        if (len(shape) != 2 or shape[0] == 0 or shape[1] != self.brain.connectome.n
+                or any(other != shape for other in shapes[1:])):
+            raise ValueError("all phases must have the same nonempty (batch, neurons) shape")
+
     def contrast(
         self, free: BrainState, nudged: BrainState, opposite: BrainState | None = None
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -356,6 +377,7 @@ class Learner:
 
         One-sided: ``(nudged - free) / beta``. Centered: ``(nudged - opposite) / (2 beta)``.
         """
+        self._validate_phases(free, nudged, opposite)
         w = self.brain.connectome
         beta = self.config.beta
         minus_state, span = (free, beta) if opposite is None else (opposite, 2.0 * beta)
@@ -391,6 +413,7 @@ class Learner:
     ) -> tuple[np.ndarray, np.ndarray]:
         """The same differences as ``contrast``, one row per batch element: ``(batch, edges)``
         and ``(batch, n)``. What a per-row eligibility trace reads."""
+        self._validate_phases(free, nudged, opposite)
         w = self.brain.connectome
         beta = self.config.beta
         s_plus = nudged.activation
@@ -436,6 +459,8 @@ class Learner:
             ]
         if not all_trainable:  # tying never moves a frozen synapse
             delta_scale[~self.plastic_synapses] = 0.0
+        if not np.isfinite(delta_scale).all():
+            raise ValueError("scaled and tied steps must remain finite")
         scale = self.brain.efficacy + delta_scale
         assert self.plastic_neurons is not None
         delta_bias = np.where(self.plastic_neurons, delta_bias, 0.0)
@@ -500,7 +525,9 @@ class Learner:
         cfg = self.config
         if not (cfg.momentum or cfg.normalize):
             return edges, neurons
-        held = self._moments_on_device(kernel)
+        previous = self._moments_on_device(kernel)
+        held = {"holder": kernel, **{name: previous[name].clone() for name in _MOMENTS}}
+        self.__dict__["_device_moments"] = held
         count = self.contrast_updates + 1
         raw_edges, raw_neurons = edges, neurons
         if cfg.momentum:
@@ -519,6 +546,10 @@ class Learner:
             neurons = neurons / (
                 (held["second_moment_bias"] / correction).sqrt() + cfg.normalize_floor
             )
+        if not bool(kernel.torch.stack([
+            kernel.torch.isfinite(held[name]).all() for name in _MOMENTS
+        ]).all()):
+            raise ValueError("optimizer moments must remain finite")
         return edges, neurons
 
     def _device_indices(self, kernel: Any) -> dict[str, Any]:
@@ -573,6 +604,12 @@ class Learner:
     def _apply_device(self, kernel: Any, delta_scale: Any, delta_bias: Any) -> dict[str, float]:
         """``apply`` on the device: the same masks, tying, decay and bounds, no host array."""
         torch, cfg = kernel.torch, self.config
+        if (
+            tuple(delta_scale.shape) != (self.brain.connectome.synapses,)
+            or tuple(delta_bias.shape) != (self.brain.connectome.n,)
+            or not bool(torch.isfinite(delta_scale).all() & torch.isfinite(delta_bias).all())
+        ):
+            raise ValueError("steps must be finite vectors, one per synapse and one per neuron")
         ix = self._device_indices(kernel)
         d = delta_scale.clone()
         if ix["synapses"] is not None:
@@ -591,6 +628,8 @@ class Learner:
             ]
         if ix["synapses"] is not None:  # tying never moves a frozen synapse
             d = d * ix["synapses"]
+        if not bool(torch.isfinite(d).all()):
+            raise ValueError("scaled and tied steps must remain finite")
         scale = kernel.scale + d
         db = delta_bias if ix["neurons"] is None else delta_bias * ix["neurons"]
         bias = kernel.bias_param + db
@@ -619,6 +658,21 @@ class Learner:
         self, free: BrainState, nudged: BrainState, opposite: BrainState | None = None
     ) -> dict[str, float]:
         """Move every trainable synapse and every neuron on its own two-phase difference."""
+        # Proposed optimizer history is part of the update transaction. A bad
+        # contrast or an unrepresentable parameter step must not poison a retry.
+        moments = {"_" + name: self.__dict__.get("_" + name) for name in _MOMENTS}
+        held = self.__dict__.get("_device_moments")
+        try:
+            return self._update(free, nudged, opposite)
+        except Exception:
+            self.__dict__.update(moments)
+            self.__dict__["_device_moments"] = held
+            raise
+
+    def _update(
+        self, free: BrainState, nudged: BrainState, opposite: BrainState | None = None
+    ) -> dict[str, float]:
+        self._validate_phases(free, nudged, opposite)
         cfg = self.config
         minus_state, span = (free, cfg.beta) if opposite is None else (opposite, 2.0 * cfg.beta)
         kernel = self._device_kernel(nudged, minus_state)
@@ -630,6 +684,8 @@ class Learner:
             self.contrast_updates += 1
             return report
         synapse_term, neuron_term = self.contrast(free, nudged, opposite)
+        if not np.isfinite(synapse_term).all() or not np.isfinite(neuron_term).all():
+            raise ValueError("phase contrasts must be finite")
         raw_synapse, raw_neuron = synapse_term, neuron_term
         count = self.contrast_updates + 1  # only this optimizer's own history
         if cfg.momentum > 0:  # still local: a synapse accumulates only its own contrast
@@ -648,6 +704,8 @@ class Learner:
             synapse_term, neuron_term = synapse_term / rms, neuron_term / rms_bias
         delta_scale = cfg.eta * synapse_term
         delta_bias = cfg.eta_bias * neuron_term
+        if not all(np.isfinite(getattr(self, name)).all() for name in _MOMENTS):
+            raise ValueError("optimizer moments must remain finite")
         report = self.apply(delta_scale, delta_bias)
         self.contrast_updates += 1
         return report

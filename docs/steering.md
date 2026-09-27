@@ -1,29 +1,35 @@
 # A brain that reads itself
 
-Metacognition, in this library, is recursive self-observation: a patch of the same kind as the
-others takes as its evidence the readback of the rest of the brain, its beliefs, repair residuals
-and surprises, and its settled state returns to them as boundary conditions. This guide is the
-composition that does it: the **steered cortex**, whose senses are weighed by a steering patch;
-the **governor**, a settling patch that reads the brain's own signals and decides when to think;
-and the **life**, the loop that runs both. Nothing here is a new rule. Two belief patches, a seam,
-one admitted step, and a settling brain of a dozen neurons. Three demos wrote each of these
-before it was here (the ventriloquist, the lighthouse keeper and the night nursery wrote the
-steered cortex; the room and the dozing cat wrote the life), and the library carries them so the
-next rung does not write them a fourth time.
+This guide implements sequential self-readback: a belief patch reads the cortex's
+diagnostics and returns sensory gains for the cortex's next finite repair.
+The **steered cortex** has senses weighed by a steering patch. The **governor**
+reads the brain's own signals and decides when to think, and the **life** runs
+both. These compose existing belief models and a settling graph governor with
+an explicit learning interface and admitted parameter steps. The ventriloquist,
+lighthouse keeper and night nursery first implemented the steered cortex
+locally; the room and dozing cat implemented the life loop. The library now
+provides those shared operations.
 
-Two facts from the flagship paper shape the design. A tower of linear readbacks that re-enter the
-drive additively collapses to one matrix, so a steering patch contributes nothing unless it acts
-on the equations below it: a gain that multiplies evidence inside the repair, a gaze that changes
-which observation arrives, a budget that changes how long a repair runs. And a rung is earned only
-by a task the brain below it fails at matched information and compute, so every composition here
-carries the same accounting and the same three-way switch: the step on, the step off (the brain
-below), and a hand-designed control.
+**This composition does not jointly settle observer and observed activity.**
+The observer sees a recorded readback, computes its output, and the cortex
+then repairs under that output. Joint parameter admission checks a proposed
+weight step, not a common fixed point. A recursive network with one equilibrium
+must instead include all observing states and their feedback in the same
+equations and stopping check. The [contract guide](contracts.md) makes this
+distinction explicit.
+
+Under the flagship theorem's linear/additive assumptions, a tower of readbacks
+can be absorbed into one effective map. Nonlinear observation, gain control,
+restricted sensing and a computation budget create distinctions worth testing;
+they do not by themselves establish useful depth. A rung needs a task advantage
+at matched information and resources. Compare the step on, the step off and a
+hand-designed control, then test against strong matched conventional models.
 
 ## The steered cortex
 
 `Steered(cortex, steering, weighing)` puts a second `BeliefPatch` over the first. Each moment,
 the cortex's readback is assembled into a vector the steering patch observes, the steering
-patch settles, the weighing turns its outputs into a gain per block of the cortex's port, and
+patch runs its finite repair, the weighing turns its outputs into a gain per block of the cortex's port, and
 the cortex assimilates the moment under those gains. The readback's channels, in order:
 
 | channels | what they carry |
@@ -125,7 +131,7 @@ def rule(readback):                                                        # the
     return np.stack([2.0 - ear, ear], axis=-1)
 control = Steered(cortex, weighing=Rule(rule, macs=6))
 ruled = control.run(o, a, y, rate=4.0, state=control._fresh(4))
-assert ruled.steering_output is None and control.macs_per_moment() == cortex.macs_per_moment() + 6
+assert ruled.steering_output is None and control.macs_per_moment() == cortex.macs_per_moment() + cortex.readback_macs(probe=False) + 6
 below = Steered(cortex)                                                    # fixed gains of one: the brain below rung 2
 assert np.all(below.run(o, a, state=below._fresh(4)).gains == 1.0)
 ```
@@ -140,7 +146,10 @@ steering patch still runs and is counted, a callable ablation maps the gains (th
 ventriloquist's shuffle, `lambda g: g[:, ::-1]`); `brain.deaf = mask` zeroes readback channels. Every
 arm reads one accounting: `macs_per_moment()` (the cortex's moment with the probes when read,
 the steering patch's moment, a rule's declared operations), `moments_per_decision()`, and
-`cost`, the two patches' counters summed with the joint admission's replays.
+`cost`, the two patches' counters summed with the joint admission's replays and
+actually executed current-moment readbacks. These are dense forward-work estimates;
+adjoints, selection, callbacks and non-MAC operations require separate accounting.
+A zero gain does not make the current dense port kernel sparse.
 
 ```python
 brain.ablation = "cut"
@@ -150,13 +159,13 @@ brain.ablation = None
 brain.deaf = np.array([True, True, True, False, True])   # deaf to the ear's surprise
 assert np.all(brain.run(o, a, state=brain._fresh(4)).readback[:, :, 3] == 0.0)
 brain.deaf = None
-assert brain.macs_per_moment() == cortex.macs_per_moment() + steering.macs_per_moment()
+assert brain.macs_per_moment() == cortex.macs_per_moment() + cortex.readback_macs(probe=brain.probes_on) + steering.macs_per_moment()
 ```
 
 ## A life lived online
 
 A page steps a brain one moment at a time and learns from a chunk it has already shown.
-`boundary()` is where the brain is between two moments (both beliefs, the previous output and
+`boundary()` returns a detached copy of where the brain is between two moments (both beliefs, the previous output and
 residual, the weighing's state, the moments seen); `run(state=boundary)` starts there, and
 `keep_live=True` leaves the live boundary where it was. Keep the boundary before a chunk, step
 through it, then learn from it: the replay makes the same moments the steps made.

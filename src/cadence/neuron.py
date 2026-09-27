@@ -76,6 +76,19 @@ class NeuronModel:
         """Activation the raw sigmoid would emit at v = 0; subtracted so rest emits nothing."""
         return float(1.0 / (1.0 + np.exp(self.slope * self.threshold)))
 
+    def _validate_precision(self, dtype: str) -> None:
+        """Reject a rule whose rebasing constants fail in a backend's precision."""
+        rest = self.rest_emission
+        values = [self.dt, self.slope, self.threshold, rest,
+                  1.0 / (1.0 - rest), self.leak / rest]
+        if self.adaptation is not None:
+            values.extend([self.adaptation.tau_steps, self.adaptation.strength,
+                           1.0 / self.adaptation.tau_steps])
+        with np.errstate(over="ignore", under="ignore"):
+            cast = np.asarray(values, dtype=dtype)
+        if not np.isfinite(cast).all() or cast[0] <= 0 or cast[1] <= 0 or not 0 < cast[3] < 1:
+            raise ValueError("neuron rule is not representable at runtime precision")
+
     def activation(self, v: np.ndarray) -> np.ndarray:
         rest = self.rest_emission
         r = np.exp((-self.slope) * (v - self.threshold))

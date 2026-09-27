@@ -12,3 +12,5 @@ data/
 *_receipt.json
 .coverage
 htmlcov/
+
+.DS_Store

@@ -18,6 +18,8 @@ from typing import Any
 
 import numpy as np
 
+from .belief import _integer
+
 __all__ = ["orienting", "dishabituation"]
 
 
@@ -42,12 +44,24 @@ def orienting(
     capture of the first and of the last ``bins`` events, the curve of captures in
     consecutive groups of ``bins``, the mean capture, latency shares (at the onset, one frame
     after, none) and the mean latency of the events that captured, the mean return and the
-    mean baseline."""
+    mean baseline. A return is ``None`` if no positive capture occurred or it
+    was not observed to return within the available post-event frames; the
+    latter case has ``return_censored=True``. Partial final curve bins are kept."""
     g = np.asarray(gain, dtype=float)
-    if g.ndim != 1:
-        raise ValueError("gain must be a (frames,) trace")
-    if pre < 1 or post < 0 or bins < 1:
-        raise ValueError("pre and bins must be positive and post nonnegative")
+    if g.ndim != 1 or not np.isfinite(g).all():
+        raise ValueError("gain must be a finite (frames,) trace")
+    pre, post, bins = _integer("pre", pre, 1), _integer("post", post, 0), _integer("bins", bins, 1)
+    checked = []
+    for kind, start, length in events:
+        if not isinstance(kind, str):
+            raise ValueError("event kind must be text")
+        # Out-of-range events are skipped below, but fractional frame indices
+        # must not be silently truncated or fail inside a NumPy slice.
+        for name, value in (("start", start), ("length", length)):
+            if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+                raise ValueError(f"event {name} must be an integer")
+        checked.append((kind, int(start), int(length)))
+    events = sorted(checked, key=lambda event: event[1])
     T = len(g)
     inside = np.zeros(T, dtype=bool)
     for _, start, length in events:
@@ -70,18 +84,30 @@ def orienting(
         capture = peak - base
         latency = int(np.argmax(during - base >= 0.5 * capture)) if capture > 1e-9 else -1
         after = g[start + length : start + length + post]
-        if capture > 0.02:
+        if capture > 0:
             back = np.flatnonzero(after <= base + 0.2 * capture)
-            ret = int(back[0]) if len(back) else post
+            ret = int(back[0]) if len(back) else None
         else:
-            ret = 0
-        rows.append({"kind": kind, "start": start, "length": length, "baseline": base, "peak": peak, "capture": capture, "latency": latency, "return": ret})
+            ret = None
+        rows.append(
+            {
+                "kind": kind,
+                "start": start,
+                "length": length,
+                "baseline": base,
+                "peak": peak,
+                "capture": capture,
+                "latency": latency,
+                "return": ret,
+                "return_censored": bool(capture > 0 and ret is None),
+            }
+        )
     kinds: dict[str, Any] = {}
     for kind in sorted({r["kind"] for r in rows}):
         mine = [r for r in rows if r["kind"] == kind]
         caps = [r["capture"] for r in mine]
         lats = [r["latency"] for r in mine]
-        groups = max(1, len(caps) // bins)
+        groups = (len(caps) + bins - 1) // bins
         curve = [float(np.mean(caps[i * bins : (i + 1) * bins])) for i in range(groups)]
         kinds[kind] = {
             "count": len(mine),
@@ -93,7 +119,8 @@ def orienting(
             "latency_one": float(np.mean([lat == 1 for lat in lats])),
             "latency_none": float(np.mean([lat < 0 for lat in lats])),
             "latency_mean": _mean([lat for lat in lats if lat >= 0]),
-            "return_mean": _mean([r["return"] for r in mine]),
+            "return_mean": _mean([r["return"] for r in mine if r["return"] is not None]),
+            "return_censored": sum(r["return_censored"] for r in mine),
             "baseline_mean": _mean([r["baseline"] for r in mine]),
             "peak_mean": _mean([r["peak"] for r in mine]),
         }
@@ -112,6 +139,7 @@ def dishabituation(
     events of ``kind`` within ``window`` frames before it and of the first ``count`` after it,
     pooled over the consequential events: a habituated response that returns after a
     consequential event shows as ``after`` above ``before``."""
+    window, count = _integer("window", window, 0), _integer("count", count, 1)
     before: list[float] = []
     after: list[float] = []
     others = sorted((r for r in rows if r["kind"] == kind), key=lambda r: r["start"])

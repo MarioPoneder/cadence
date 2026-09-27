@@ -2,6 +2,60 @@
 
 ## Unreleased
 
+Production contract hardening:
+
+- Keep observer and observed neurons in one qualified reciprocal graph with the
+  runnable [recursive settlement guide](docs/recursive-settlement.md). This uses
+  existing `PatchNet` operations; it does not add a second solver or claim that
+  greater recursive depth has demonstrated a capability or efficiency advantage.
+- Reject mismatched free/nudged stream shapes and overflowing parameter
+  proposals before clipping. A nonfinite graph solve returns unqualified
+  diagnostics and cannot poison the next `PatchNet` observation.
+- Roll back single-record observations completely when a later record write
+  fails, including records, learned state and live activity.
+- Keep Life's baseline and surprise readback finite, including perfect predictions
+  and very small baselines; validate imagination candidates and costs. Replay windows stop at resets, so learning cannot fabricate transitions
+  between episodes. Joint record compositions reject aliased child instances and
+  reject invalid observation masks before they can become factual record writes.
+
+- Reject nonfinite device parameters, effective weights and precision-dependent
+  neuron constants before installing them. Failed learner and actor/critic
+  updates restore optimizer, eligibility and reward statistics for a valid retry.
+- Make connectome arrays/populations and exposed Brain parameter arrays
+  read-only. Replace parameters through complete validated setters or
+  `with_parameters`; change groups with `with_populations`. This prevents stale
+  cached transport after in-place edits.
+- Check record detuning's negative-phase curvature even at a zero-gradient
+  saddle, recompute its actual equation residual, and reject nonfinite or
+  malformed solves. Stabilize input normalization and validate sleep options
+  before learning.
+- Preserve cut-port ablations in joint-record checkpoints and write snapshots
+  atomically. Validate joint paths/options before state changes, reject nonfinite
+  trial losses, and restore earlier record writes when a later cortex write fails.
+  The composition still runs a fixed number of rounds, without a convergence guarantee.
+- Zero-rate observations on single/joint record patches retain valid activity and
+  record writes but return `no_step`, without claiming a slow-weight update or
+  incrementing its counter. Gradients remain available to composition callers.
+- Preserve complete learned state on rejected online learning, detach replay
+  history from caller arrays, and replay birth windows from their original
+  boundary. Steered checkpoints now preserve the live boundary, gaze/heard/age
+  channels and ablations; custom callables must be provided when restoring.
+- Make joint parameter proposals exception-safe, correct the scaled Armijo
+  directional derivative, honor sleeping-cortex configuration, and explicitly
+  reject unsupported Steered record writes. Capped governors fall back to habit;
+  the threshold governor's cooldown gene now takes effect.
+- Count spatial kernel reuse and executed composition readbacks in dense
+  forward-work estimates. Document excluded backward work and distinguish
+  these estimates from total training FLOPs.
+- Report unobserved orienting returns as nullable/censored, retain partial
+  habituation bins, and validate traces and frame counts.
+- Add [numerical and learning contracts](docs/contracts.md), distinguishing
+  qualified equilibria, fixed-budget repair, adjoints and joint parameter
+  admission. Update connectome/modeling scope, API migration and runnable guides.
+- Repair the minimal-install CI reference to a removed guide, include belief
+  and steering smoke checks, and package the contributor guide and linked
+  benchmark sources in source distributions.
+
 The composition release: what the rung demos (the shell game, the room, the arm, the eye
 and the ear, the dozing cat, the ventriloquist, the lighthouse keeper, the night nursery)
 and the nursery sent back. The belief patch first.
@@ -13,8 +67,9 @@ and the nursery sent back. The belief patch first.
   admitted step, travels with the snapshot, survives `reset()` and is dropped by
   `reset_step()`. `backtrack=False` is the plain step; a step on an external gradient
   (`output_gradient=`) is plain, since the library can replay only the loss it can see.
-  Every lane that learned by the plain step diverged or learned nothing, and the two demos
-  that kept a step size restarted from twice the last accepted one.
+  Several tested lanes found divergence or weak learning with fixed steps; the two demos
+  that kept a step size restarted from twice the last accepted one. This is evidence for
+  an admission option, not a universal failure theorem for fixed-rate learning.
 - `BeliefReadback.evidence` and `BeliefPatch.encode(observations)`: the encoded evidence
   before any gain, what each block is reading, for a steering patch that decides a block's
   gain (the night nursery earned rung 4 on it).
@@ -23,8 +78,9 @@ and the nursery sent back. The belief patch first.
   losing its place.
 - `macs_per_moment(probes=)` and the `cost` counters (`moments`, `macs`, `replays` since
   `reset_cost()`, every moment assimilated, observed, imagined or replayed in an admission):
-  one accounting for every arm of a comparison at matched compute, where four demos had
-  written their own.
+  a common estimate of dense forward work, where four demos had written their own.
+  Complete training comparisons must also measure backward work and the exclusions
+  documented in the contracts guide.
 - `StructuredPort(mask=)`: which inputs the port hears, one flag per input, zero to every
   block in the forward map, its transpose and the gradient, and carried by `to_dict`; which
   channels a patch reads is a gene without touching the weights.

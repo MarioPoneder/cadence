@@ -1,0 +1,95 @@
+# Numerical and learning contracts
+
+Cadence exposes several implementations of state, repair and learning. Choose
+an API by its equations, stopping rule and update contract. Sharing the word
+"patch" does not make their solvers or learning guarantees interchangeable.
+
+## Choose the computation
+
+| API | How it computes | How it learns | Qualification |
+| --- | --- | --- | --- |
+| `Brain`, `Learner` | Rate neurons exchange activity over a directed graph. | Free/nudged local contrasts; optional reward traces. | `Brain.equilibrate` checks the full fixed-point equations. `settle` alone may run a fixed budget or stop on activity movement. Directed wiring does not inherit a reciprocal energy gradient theorem. |
+| `PatchNet` | The reciprocal graph core with persistent free activity and explicit evidence ports. | Free and two nudged phases of the same network; commits only qualified phases. | All required phases must pass the equation residual. The gradient interpretation also needs compatible effective weights, a smooth stable branch and the small-nudge limit. |
+| `TemporalPatchNet` | A causal free path and jointly repaired teaching paths over a finite time window. | Centered contrasts of parameter derivatives. | Whole-path residual and branch checks; the dense hidden-width solves have a different cost from sparse graph transport. |
+| `RecordPatchNet` | A gated causal context scan with local record reads. | `observe` uses an adjoint backward scan; record writes use a local delta rule. | The causal path solves its declared free equations. `detune` separately checks quadratic continuous-output teaching phases; this is not the default training path or a categorical-port guarantee. |
+| `BeliefPatch` | A transition followed by a fixed number of nonlinear repair iterations per observation. | An adjoint through the iterations and the time window; optional admitted parameter steps. | A finite repair budget is not a convergence certificate. Its `residual` records the last damped move, not a globally qualified fixed-point error. |
+| `Steered`, `Life` | Compositions that sequence a cortex, steering and a governor. | The participating models' updates, with replay/admission. | Joint parameter-step admission is not a joint equilibrium of observer and observed activity. |
+
+`RecordPatchStack`, `JointRecordPatches` and the experimental partitioned
+temporal model have their own [port](record-patch.md#several-patches-joined-by-ports)
+and [routing](partitioned.md) contracts. Finite port rounds or a causal routing
+graph do not establish a general all-patch convergence theorem.
+
+## Reading an answer and accepting a lesson
+
+For a fixed-point claim, independently evaluate the declared equations at the
+returned state. Check finite values and the largest relevant defect, including
+slow states when the model has them. A small integration step can make activity
+move very little while the equation defect remains large. A numerical residual
+does not, by itself, prove uniqueness, stability or useful behavior.
+
+An admitted parameter step has a narrower meaning: the proposed parameters
+reduce a declared loss on a replay of the current observation/window. It does
+not establish retention on earlier tasks, generalization or biological
+plausibility. Keep those evaluations separate. Eligibility, reward and source
+identity must remain attached to the action that was actually executed.
+
+An adjoint is reverse-mode differentiation even when written explicitly in
+NumPy without an autograd tape. Equivalence with an equilibrium contrast must
+be established for the particular equations, parameters, phase limits and
+loss; it is not inherited from another class's theorem.
+
+## State and production integration
+
+Keep live state, learned parameters, record tables, optimizer/step-size state,
+random state and accounting separate. Save every component needed for an
+exact continuation, including the boundary of a replay window. A custom
+callable policy or weighing needs its own reproducible configuration; an
+array snapshot cannot serialize arbitrary application code.
+
+Validate shapes and finite values before mutation. Invalid calls and failed
+transactions must not partially install parameters or records. Accounting of
+attempted work may advance even when an update is rejected; it must never be
+presented as accepted learning. An `imagine` call must not teach or alter live
+activity, but an implementation can count its computational work.
+
+`Connectome` arrays and its population mapping are read-only. `Brain.efficacy`,
+`bias`, `log_gain` and effective `weights` expose read-only arrays. Replace complete
+parameters through validated setters or `with_parameters`; rebuild topology and
+use `with_populations` for population changes. This keeps transport caches and
+CPU/device implementations in agreement. For other APIs, use their owning
+parameter/update interface;
+direct array access is not a portable backend update protocol. Pin the library
+revision and backend for reproducible results, and run parity checks when
+changing device or precision. See [backends](backends.md), [API](api.md) and
+[receipts](receipts.md).
+
+## Biological imports and recursive observation
+
+A connectome provides structural evidence, not a complete dynamical model.
+Transmitter predictions, receptor effects, temporal scales, sensory mappings,
+plasticity and body interfaces require explicit data or assumptions. The
+[connectome guide](connectomes.md) describes those choices. Importing all
+retained neurons does not recover missing chemistry or innate behavior.
+
+For an observer to belong to the same equilibrium as the system it observes,
+its state and feedback must enter the same coupled equations and stopping
+check. Readback changes during repair, and the observing patches repair in
+response. A sequential controller over frozen diagnostics is a different
+contract. Additional recursive depth is a testable architecture choice;
+better capability or training efficiency must be measured against matched
+shallow, feed-forward and recurrent controls.
+The [recursive-settlement example](recursive-settlement.md) builds this coupled
+mechanism with existing `PatchNet` APIs and verifies a causal interface cut.
+
+`BeliefPatch` and `Steered` MAC counters are dense forward-work estimates, including
+executed readbacks and replayed forward moments. They exclude adjoints, record
+writes, nonlinearities, optimizer bookkeeping, application callbacks and memory
+traffic. Governor steps reported as moment equivalents are a declared cost model,
+not measured hardware work. Use complete profiling for a training-efficiency claim.
+
+The production goal is an efficient, reliable library for these computations.
+Current component checks do not establish replacement of a general-purpose
+learning framework. Compare total training work, elapsed time, peak memory,
+inference cost, generalization and retention; include failed solves, nudged
+phases and admission replays in the cost.

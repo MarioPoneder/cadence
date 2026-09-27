@@ -1,25 +1,27 @@
-"""A brain that reads itself: a cortex whose senses are weighed by a steering patch of the same rule.
+"""A cortex whose senses are weighed by a steering patch of the same rule.
 
 The cortex is a ``BeliefPatch`` with a gain per block of its observation port. The steering patch is
-a second ``BeliefPatch`` whose observation is the cortex's readback of the moment, what each sense is
-saying and how far the belief disagrees with it, and whose outputs a weighing turns into the gains
-the cortex's repair runs under. Nothing here is a new rule: two patches, a seam, and one admitted step.
+a second ``BeliefPatch`` whose observation is the cortex's readback of the moment: what each sense
+says and how far the belief disagrees with it. A weighing turns its outputs into the gains the
+cortex's repair runs under. Two patches, a seam, and one admitted parameter step.
+Readback, steering and cortex execute sequentially; they do not jointly solve
+one observer-observed fixed point. The adjoint treats recorded readbacks as given.
 
-    r[t]      = [probe_b; surprise_b; residual[t-1]; output[t-1]; evidence_b; extra[t]]   the readback
+    r[t]      = [probe_b; surprise_b; residual[t-1]; output[t-1]; evidence_b; extra[t]]
     y_s[t]    = steering(r[t])                       the steering patch's moment
-    gain[t]   = W(y_s[t])                            the weighing: a softmax over the blocks, or a window
+    gain[t]   = W(y_s[t])                           a softmax over blocks, or a window
     z[t]      = cortex(o[t], a[t]; gain[t])          the cortex's moment under the gains
 
 Which channels of the readback the steering patch hears is a gene, the mask of its port. The
 weighing is the application's declaration: ``Softmax`` moves weight between senses (gains that sum
-to the number of blocks), ``Gaze`` is a window over a ring of blocks whose centre the steering output
-turns, under a price on the turn, and ``Rule`` is a hand-written map from the readback to the gains,
+to the number of blocks), ``Gaze`` is a window over a ring whose centre the steering output turns,
+under a price on the turn, and ``Rule`` is a hand-written map from the readback to the gains,
 the control. Learning is within the life: the cortex's adjoint gives its deltas and the gradient
 into the gains; the weighing pulls that gradient back to the steering patch's outputs; the steering
 patch's adjoint under it gives its deltas; one joint step is admitted by a replay of the chunk (the
 steering patch on the recorded readbacks, taken as given, the cortex under the gains it then
-returns), halved while the objective does not fall by the Armijo margin, starting from twice the last
-admitted step. The cortex can sleep while the steering patch learns.
+returns), halved while the objective does not fall by the Armijo margin, starting from twice the
+last admitted step. The cortex can sleep while the steering patch learns.
 
 Three demos wrote this composition before it was here: the ventriloquist (rung 2), the lighthouse
 keeper (rung 3) and the night nursery (rung 4).
@@ -29,13 +31,14 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Mapping, Sequence
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from .belief import _HALVINGS, BeliefPatch, BeliefPath
+from .belief import _HALVINGS, BeliefPatch, BeliefPath, _integer
 
 FORMAT = "cadence-steered/1"
 
@@ -77,7 +80,7 @@ class Softmax(Weighing):
     ventriloquist's and the night nursery's."""
 
     def __init__(self, blocks: int, *, span: float = 1.0) -> None:
-        self.blocks = int(blocks)
+        self.blocks = _integer("blocks", blocks, 2)
         self.outputs = self.blocks
         if self.blocks < 2:
             raise ValueError("a softmax weighing needs at least two blocks")
@@ -122,7 +125,7 @@ class Gaze(Weighing):
         price: float = 0.0,
         start: float = 0.0,
     ) -> None:
-        self.blocks = int(blocks)
+        self.blocks = _integer("blocks", blocks, 2)
         self.outputs = 1
         if self.blocks < 2:
             raise ValueError("a gaze needs at least two blocks")
@@ -131,8 +134,15 @@ class Gaze(Weighing):
                 raise ValueError(f"{name} must be finite and positive")
         if not np.isfinite(price) or price < 0:
             raise ValueError("price must be finite and nonnegative")
-        self.sigma, self.cut, self.lamp, self.span = float(sigma), float(cut), float(lamp), float(span)
+        self.sigma, self.cut, self.lamp, self.span = (
+            float(sigma),
+            float(cut),
+            float(lamp),
+            float(span),
+        )
         self.price_per_turn = float(price)
+        if not np.isfinite(start):
+            raise ValueError("start must be finite")
         self.start = float(start)
         self.bearings = 2.0 * np.pi * np.arange(self.blocks) / self.blocks
 
@@ -161,7 +171,9 @@ class Gaze(Weighing):
         turns = self.turn(ys)
         dcentre = np.zeros((n, t))
         for k in range(t):
-            centre = _wrap(np.asarray(states[k], dtype=float) + turns[:, k])  # the centre the gains were read at
+            centre = _wrap(
+                np.asarray(states[k], dtype=float) + turns[:, k]
+            )  # the centre the gains were read at
             _, jac = self.profile(centre)
             dcentre[:, k] = np.sum(dgains[:, k] * jac, axis=-1)
         dturn = dcentre + self.price_per_turn * turns / (n * t)
@@ -192,7 +204,7 @@ class Rule:
         if not callable(fn):
             raise ValueError("a rule is a callable from the readback to the gains")
         self.fn = fn
-        self.macs = int(macs)
+        self.macs = _integer("macs", macs, 0)
 
     def __call__(self, readback: np.ndarray) -> np.ndarray:
         return np.asarray(self.fn(readback), dtype=float)
@@ -292,6 +304,8 @@ class Steered:
         reads_age: bool = False,
         age_core: float = 0.5,
     ) -> None:
+        if steering is cortex:
+            raise ValueError("cortex and steering must be distinct mutable patches")
         self.cortex = cortex
         self.steering = steering
         self.rule: Rule | None = None
@@ -315,19 +329,23 @@ class Steered:
         elif weighing is not None:
             raise ValueError("a weighing needs a steering patch")
         self.reads_output = bool(reads_output)
-        self.evidence = tuple(int(b) for b in evidence)
+        self.evidence = tuple(_integer("evidence block", b, 0) for b in evidence)
         for b in self.evidence:
             if not 0 <= b < cortex.block_count:
                 raise ValueError("evidence names a block the cortex does not have")
         if (extra is None) != (extra_channels == 0):
             raise ValueError("extra and extra_channels come together")
-        self.extra, self.extra_channels = extra, int(extra_channels)
+        if extra is not None and not callable(extra):
+            raise ValueError("extra must be callable")
+        self.extra, self.extra_channels = extra, _integer("extra_channels", extra_channels, 0)
         if not np.isfinite(rate_scale) or rate_scale <= 0:
             raise ValueError("rate_scale must be finite and positive")
         self.rate_scale = float(rate_scale)
         self.lagged, self.relative, self.reads_age = bool(lagged), bool(relative), bool(reads_age)
         if self.relative and not isinstance(self.weighing, Gaze):
-            raise ValueError("a relative readback rolls the blocks to a gaze's centre; it needs a Gaze weighing")
+            raise ValueError(
+                "a relative readback rolls the blocks to a gaze's centre; it needs a Gaze weighing"
+            )
         if not np.isfinite(age_core) or age_core < 0:
             raise ValueError("age_core must be finite and nonnegative")
         self.age_core = float(age_core)
@@ -350,6 +368,7 @@ class Steered:
         self._live: Boundary | None = None
         self._step_size: float | None = None
         self._replays = 0
+        self._readback_macs = 0
 
     # ------------------------------------------------------------------ what it is
     @property
@@ -381,7 +400,9 @@ class Steered:
     def macs_per_moment(self) -> int:
         """One accounting for every arm: the cortex's moment with the probes when read, the
         steering patch's moment, or the rule's declared operations."""
-        macs = self.cortex.macs_per_moment(probes=self.probes_on)
+        macs = self.cortex.macs_per_moment(probes=self.lagged and self.probes_on)
+        if not self.lagged:
+            macs += self.cortex.readback_macs(probe=self.probes_on)
         if self.steering is not None:
             macs += self.steering.macs_per_moment()
         if self.rule is not None:
@@ -397,6 +418,7 @@ class Steered:
             for key, value in self.steering.cost.items():
                 total[key] += value
         total["replays"] += self._replays
+        total["macs"] += self._readback_macs
         return total
 
     def reset_cost(self) -> None:
@@ -404,6 +426,7 @@ class Steered:
         if self.steering is not None:
             self.steering.reset_cost()
         self._replays = 0
+        self._readback_macs = 0
 
     def parameter_count(self) -> int:
         count = sum(v.size for v in self.cortex.parameters().values())
@@ -418,9 +441,16 @@ class Steered:
         return out
 
     def set_parameters(self, parameters: Mapping[str, Mapping[str, np.ndarray]]) -> None:
-        self.cortex.set_parameters(parameters["cortex"])
+        expected = {"cortex"} | ({"steering"} if self.steering is not None else set())
+        if set(parameters) != expected:
+            raise ValueError("parameters must contain exactly the composition's patches")
+        cortex = self.cortex._validated_parameters(parameters["cortex"])
+        steering = None
         if self.steering is not None:
-            self.steering.set_parameters(parameters["steering"])
+            steering = self.steering._validated_parameters(parameters["steering"])
+        self.cortex.set_parameters(cortex)
+        if self.steering is not None and steering is not None:
+            self.steering.set_parameters(steering)
 
     # ------------------------------------------------------------------ the boundary
     def _fresh(self, n: int) -> Boundary:
@@ -439,7 +469,9 @@ class Steered:
         return {
             "probe": np.zeros((n, b)),
             "surprise": np.zeros((n, b)),
-            "evidence": np.zeros((n, sum(self.cortex.port.blocks[i].outputs for i in self.evidence))),
+            "evidence": np.zeros(
+                (n, sum(self.cortex.port.blocks[i].outputs for i in self.evidence))
+            ),
             "gains": np.zeros((n, b)),
             "age": np.zeros((n, b)),
         }
@@ -455,7 +487,7 @@ class Steered:
 
     def boundary(self) -> Boundary | None:
         """Where the life is, to be kept before a window and replayed from after it."""
-        return self._live
+        return deepcopy(self._live)
 
     def reset(self) -> None:
         """Forget the live boundary; the step size and the counters stay."""
@@ -465,12 +497,40 @@ class Steered:
             self.steering.reset()
 
     def _check_boundary(self, state: Boundary, n: int) -> None:
-        if state.cortex.shape != (n, self.cortex.belief):
+        if not isinstance(state, Boundary):
+            raise ValueError("state must be a Boundary")
+        if state.cortex.shape != (n, self.cortex.belief) or not np.isfinite(state.cortex).all():
             raise ValueError("the boundary's cortex belief must match (batch, belief)")
         if (self.steering is None) != (state.steering is None):
-            raise ValueError("the boundary must carry a steering belief exactly when there is a steering patch")
+            raise ValueError(
+                "the boundary must carry a steering belief exactly when there is a steering patch"
+            )
         if state.steering is not None and state.steering.shape != (n, self.steering.belief):  # type: ignore[union-attr]
             raise ValueError("the boundary's steering belief must match (batch, belief)")
+        if state.steering is not None and not np.isfinite(state.steering).all():
+            raise ValueError("the boundary's steering belief must be finite")
+        if state.output is not None and (
+            state.output.shape != (n, self.cortex.outputs) or not np.isfinite(state.output).all()
+        ):
+            raise ValueError("the boundary's output must be finite with shape (batch, outputs)")
+        if (
+            state.residual.shape != (n,)
+            or not np.isfinite(state.residual).all()
+            or np.any(state.residual < 0)
+        ):
+            raise ValueError("the boundary's residual must be finite and nonnegative")
+        _integer("boundary moments", state.moments, 0)
+        if isinstance(self.weighing, Gaze):
+            value = np.asarray(state.weighing, dtype=float)
+            if value.shape != (n,) or not np.isfinite(value).all():
+                raise ValueError("the boundary's gaze must be finite with shape (batch,)")
+        if state.heard is not None:
+            expected = self._nothing_heard(n)
+            if set(state.heard) != set(expected) or any(
+                np.asarray(state.heard[k]).shape != v.shape or not np.isfinite(state.heard[k]).all()
+                for k, v in expected.items()
+            ):
+                raise ValueError("the boundary's heard channels have invalid shapes or values")
 
     # ------------------------------------------------------------------ the moments
     def _readback(
@@ -489,8 +549,11 @@ class Steered:
             probe, surprise = heard["probe"], heard["surprise"]
         else:
             rb = self.cortex.readback(o_k, a_k, state=z_c, probe=self.probes_on)
+            self._readback_macs += n * self.cortex.readback_macs(probe=self.probes_on)
             probe = rb.residual_alone
-            surprise = np.zeros((n, self.cortex.block_count)) if rb.surprise is None else rb.surprise
+            surprise = (
+                np.zeros((n, self.cortex.block_count)) if rb.surprise is None else rb.surprise
+            )
         parts = [self._roll(probe, centre), self._roll(surprise, centre), prev_residual[:, None]]
         if self.reads_output:
             out = np.zeros((n, self.cortex.outputs)) if prev_output is None else prev_output
@@ -501,7 +564,7 @@ class Steered:
             if self.lagged:
                 parts.append(heard["evidence"])
             else:
-                assert rb is not None
+                assert rb is not None and rb.evidence is not None
                 for b in self.evidence:
                     parts.append(rb.evidence[:, self.cortex._block_slices[b]])
         if self.extra is not None:
@@ -514,7 +577,9 @@ class Steered:
             r = r * self.deaf
         return np.asarray(r)
 
-    def _weigh_one(self, r: np.ndarray, z_s: np.ndarray | None, wstate: Any) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None, Any, BeliefPath | None]:
+    def _weigh_one(
+        self, r: np.ndarray, z_s: np.ndarray | None, wstate: Any
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None, Any, BeliefPath | None]:
         n = len(r)
         y_s = path_s = None
         if self.steering is not None:
@@ -527,6 +592,7 @@ class Steered:
             g, wstate = self.weighing.gains(y_s, wstate)
         elif self.rule is not None:
             g = self.rule(r)
+            self._readback_macs += n * self.rule.macs
             if g.shape != (n, self.cortex.block_count):
                 raise ValueError("the rule must return (batch, blocks) gains")
         else:
@@ -555,29 +621,58 @@ class Steered:
         z_c, z_s = start.cortex.copy(), None if start.steering is None else start.steering.copy()
         prev_output = None if start.output is None else start.output.copy()
         prev_residual = start.residual.copy()
-        wstate = start.weighing
+        wstate = deepcopy(start.weighing)
         heard = {k: v.copy() for k, v in (start.heard or self._nothing_heard(n)).items()}
         remember = self.lagged or self.reads_age
-        col: dict[str, list[Any]] = {k: [] for k in ("y", "g", "r", "res", "ys", "read", "wstate")}
+        col: dict[str, Any] = {k: [] for k in ("y", "g", "r", "res", "ys", "read", "wstate")}
         path = path_s = None
         for k in range(t):
             r = self._readback(o[:, k], a[:, k], z_c, prev_output, prev_residual, heard, wstate)
             g, z_s, y_s, wstate, path_s = self._weigh_one(r, z_s, wstate)
             path = self.cortex.assimilate(
-                o[:, k][:, None], a[:, k][:, None], gains=g[:, None], state=z_c, keep_live=True, probe=self.lagged and self.probes_on
+                o[:, k][:, None],
+                a[:, k][:, None],
+                gains=g[:, None],
+                state=z_c,
+                keep_live=True,
+                probe=self.lagged and self.probes_on,
             )
             z_c = path.final_state
             prev_output, prev_residual = path.output[:, 0], path.residual[:, 0]
             if remember:
+                assert path.evidence is not None
                 up = (g > 0.0).astype(float)
                 heard = {
-                    "probe": (path.residual_alone[:, 0] if path.residual_alone is not None else np.zeros_like(g)) * up,
-                    "surprise": (path.surprise[:, 0] if path.surprise is not None else np.zeros_like(g)) * up,
-                    "evidence": np.concatenate([path.evidence[:, 0, self.cortex._block_slices[b]] for b in self.evidence], axis=-1) if self.evidence else heard["evidence"],
+                    "probe": (
+                        path.residual_alone[:, 0]
+                        if path.residual_alone is not None
+                        else np.zeros_like(g)
+                    )
+                    * up,
+                    "surprise": (
+                        path.surprise[:, 0] if path.surprise is not None else np.zeros_like(g)
+                    )
+                    * up,
+                    "evidence": np.concatenate(
+                        [path.evidence[:, 0, self.cortex._block_slices[b]] for b in self.evidence],
+                        axis=-1,
+                    )
+                    if self.evidence
+                    else heard["evidence"],
                     "gains": g.copy(),
-                    "age": np.where(g >= self.age_core, 0.0, heard["age"] + 1.0 / self.cortex.block_count),
+                    "age": np.where(
+                        g >= self.age_core, 0.0, heard["age"] + 1.0 / self.cortex.block_count
+                    ),
                 }
-            for key, value in (("y", path.output[:, 0]), ("g", g), ("r", r), ("res", prev_residual), ("ys", y_s), ("read", path.read[:, 0]), ("wstate", wstate)):
+            for key, value in (
+                ("y", path.output[:, 0]),
+                ("g", g),
+                ("r", r),
+                ("res", prev_residual),
+                ("ys", y_s),
+                ("read", path.read[:, 0]),
+                ("wstate", wstate),
+            ):
                 col[key].append(value)
         col["last"], col["last_s"] = path, path_s
         end = Boundary(z_c, z_s, prev_output, prev_residual, wstate, start.moments + t, heard)
@@ -634,6 +729,43 @@ class Steered:
         learn_cortex: bool = True,
         backtrack: bool = True,
     ) -> SteeredPath:
+        """Run a sequential chunk and optionally admit a parameter step.
+
+        Invalid inputs or a failed replay leave live boundaries and parameters
+        unchanged. Compute counters include attempted work. The readback is
+        held fixed in the learning replay; this is not a joint fixed-point solve.
+        """
+        live, cortex_state = self._live, self.cortex._state
+        steering_state = None if self.steering is None else self.steering._state
+        try:
+            return self._run(
+                observations,
+                actions,
+                target,
+                rate=rate,
+                state=state,
+                keep_live=keep_live,
+                learn_cortex=learn_cortex,
+                backtrack=backtrack,
+            )
+        except Exception:
+            self._live, self.cortex._state = live, cortex_state
+            if self.steering is not None:
+                self.steering._state = steering_state
+            raise
+
+    def _run(
+        self,
+        observations: np.ndarray,
+        actions: np.ndarray,
+        target: np.ndarray | None = None,
+        *,
+        rate: float = 0.0,
+        state: Boundary | None = None,
+        keep_live: bool = False,
+        learn_cortex: bool = True,
+        backtrack: bool = True,
+    ) -> SteeredPath:
         """Live one chunk ``(batch, time, inputs)``, ``(batch, time, actions)`` from the live
         boundary (or ``state``): the readback, the gains, the cortex's moment, in order. With a
         ``target`` ``(batch, time, outputs)`` and a ``rate``, both patches take one joint step,
@@ -644,17 +776,37 @@ class Steered:
         o = np.asarray(observations, dtype=float)
         a = np.asarray(actions, dtype=float)
         if o.ndim != 3 or o.shape[2] != self.cortex.inputs or not np.isfinite(o).all():
-            raise ValueError(f"observations must be a finite (batch, time, {self.cortex.inputs}) array")
+            raise ValueError(
+                f"observations must be a finite (batch, time, {self.cortex.inputs}) array"
+            )
         n, t = o.shape[:2]
+        if n < 1 or t < 1:
+            raise ValueError("a chunk needs at least one stream and one moment")
         if a.shape != (n, t, self.cortex.actions) or not np.isfinite(a).all():
             raise ValueError(f"actions must be a finite (batch, time, {self.cortex.actions}) array")
         if not np.isfinite(rate) or rate < 0:
             raise ValueError("rate must be finite and nonnegative")
-        start = state if state is not None else (self._live if self._live is not None and len(self._live.cortex) == n else self._fresh(n))
+        if not isinstance(backtrack, (bool, np.bool_)) or not isinstance(
+            learn_cortex, (bool, np.bool_)
+        ):
+            raise ValueError("backtrack and learn_cortex must be booleans")
+        if target is not None:
+            target = np.asarray(target, dtype=float)
+            if target.shape != (n, t, self.cortex.outputs) or not np.isfinite(target).all():
+                raise ValueError("target must be a finite (batch, time, outputs) array")
+        start = (
+            state
+            if state is not None
+            else (
+                self._live
+                if self._live is not None and len(self._live.cortex) == n
+                else self._fresh(n)
+            )
+        )
         self._check_boundary(start, n)
         col, end = self._forward(o, a, start)
         if not keep_live:
-            self._live = end
+            self._live = deepcopy(end)
             self.cortex._state = end.cortex.copy()
             if self.steering is not None and end.steering is not None:
                 self.steering._state = end.steering.copy()
@@ -663,12 +815,19 @@ class Steered:
         r = np.stack(col["r"], axis=1)
         residual = np.stack(col["res"], axis=1)
         ys = None if col["ys"][0] is None else np.stack(col["ys"], axis=1)
-        result = dict(output=y, gains=gains, readback=r, residual=residual, steering_output=ys, loss=None, price=0.0, last=col["last"], last_steering=col["last_s"])
+        result = dict(
+            output=y,
+            gains=gains,
+            readback=r,
+            residual=residual,
+            steering_output=ys,
+            loss=None,
+            price=0.0,
+            last=col["last"],
+            last_steering=col["last_s"],
+        )
         if target is None:
             return SteeredPath(**result)
-        target = np.asarray(target, dtype=float)
-        if target.shape != (n, t, self.cortex.outputs) or not np.isfinite(target).all():
-            raise ValueError("target must be a finite (batch, time, outputs) array")
         slow = y - np.stack(col["read"], axis=1)
         loss = self.cortex._loss(slow, target)
         price = 0.0
@@ -683,38 +842,74 @@ class Steered:
             if not learn_cortex:
                 return SteeredPath(**result)
             taught = self.cortex.observe(
-                o, a, target, gains=gains, state=start.cortex, rate=rate, write=False, backtrack=backtrack, keep_live=True
+                o,
+                a,
+                target,
+                gains=gains,
+                state=start.cortex,
+                rate=rate,
+                write=False,
+                backtrack=backtrack,
+                keep_live=True,
             )
-            result.update(updated=taught.updated, step=taught.accepted_rate, replays=taught.replay_calls, reason=taught.reason)
+            result.update(
+                updated=taught.updated,
+                step=taught.accepted_rate,
+                replays=taught.replay_calls,
+                reason=taught.reason,
+            )
             if taught.updated and taught.accepted_rate is not None:
                 self._step_size = float(taught.accepted_rate)
             return SteeredPath(**result)
         # the joint step
-        assert self.steering is not None and self.weighing is not None
-        grad = self.cortex.observe(o, a, target, gains=gains, state=start.cortex, rate=0.0, write=False, keep_live=True)
+        assert self.steering is not None and self.weighing is not None and ys is not None
+        grad = self.cortex.observe(
+            o, a, target, gains=gains, state=start.cortex, rate=0.0, write=False, keep_live=True
+        )
         if grad.gain_gradient is None or grad.initial_loss is None:
             return SteeredPath(**result, reason="nonfinite_prediction")
-        dy = self.weighing.pull(ys, gains, grad.gain_gradient, [start.weighing] + col["wstate"][:-1])
+        dy = self.weighing.pull(
+            ys, gains, grad.gain_gradient, [start.weighing] + col["wstate"][:-1]
+        )
         seam = self.steering.observe(
-            r, np.zeros((n, t, self.steering.actions)), output_gradient=dy, rate=0.0, write=False, state=start.steering, keep_live=True
+            r,
+            np.zeros((n, t, self.steering.actions)),
+            output_gradient=dy,
+            rate=0.0,
+            write=False,
+            state=start.steering,
+            keep_live=True,
         )
         delta_c, delta_s = grad.delta, seam.delta
         if not delta_s:
             return SteeredPath(**result, reason="nonfinite_prediction")
         before_c, before_s = self.cortex.parameters(), self.steering.parameters()
         with np.errstate(over="ignore", invalid="ignore"):
-            norm_squared = (sum(float(np.sum(v * v)) for v in delta_c.values()) if learn_cortex else 0.0) + self.rate_scale**2 * sum(float(np.sum(v * v)) for v in delta_s.values())
+            norm_squared = (
+                sum(float(np.sum(v * v)) for v in delta_c.values()) if learn_cortex else 0.0
+            ) + self.rate_scale * sum(float(np.sum(v * v)) for v in delta_s.values())
         objective0 = loss + price
         if not np.isfinite(norm_squared) or norm_squared <= 0:
             return SteeredPath(**result, reason="no_gradient")
-        start_step = float(rate) if (self._step_size is None or not backtrack) else min(float(rate), 2.0 * self._step_size)
+        start_step = (
+            float(rate)
+            if (self._step_size is None or not backtrack)
+            else min(float(rate), 2.0 * self._step_size)
+        )
         replays = 0
         for attempt in range(_HALVINGS if backtrack else 1):
             step = start_step * 0.5**attempt
             with np.errstate(over="ignore", invalid="ignore"):
-                proposed_c = {k: before_c[k] - (step * delta_c[k] if learn_cortex else 0.0) for k in before_c}
-                proposed_s = {k: before_s[k] - step * self.rate_scale * delta_s[k] for k in before_s}
-            if not (all(np.isfinite(v).all() for v in proposed_c.values()) and all(np.isfinite(v).all() for v in proposed_s.values())):
+                proposed_c = {
+                    k: before_c[k] - (step * delta_c[k] if learn_cortex else 0.0) for k in before_c
+                }
+                proposed_s = {
+                    k: before_s[k] - step * self.rate_scale * delta_s[k] for k in before_s
+                }
+            if not (
+                all(np.isfinite(v).all() for v in proposed_c.values())
+                and all(np.isfinite(v).all() for v in proposed_s.values())
+            ):
                 continue
             self.cortex.set_parameters(proposed_c)
             self.steering.set_parameters(proposed_s)
@@ -722,17 +917,47 @@ class Steered:
                 self.cortex.updates += int(learn_cortex)
                 self.steering.updates += 1
                 self._step_size = step
-                result.update(updated=learn_cortex, steering_updated=True, step=step, halvings=attempt, replays=0, reason="updated")
+                result.update(
+                    updated=learn_cortex,
+                    steering_updated=True,
+                    step=step,
+                    halvings=attempt,
+                    replays=0,
+                    reason="updated",
+                )
                 return SteeredPath(**result)
-            after = self._objective(o, a, target, r, gains, start)
+            try:
+                after = self._objective(o, a, target, r, gains, start)
+            except FloatingPointError:
+                after = None
+            finally:
+                self.cortex.set_parameters(before_c)
+                self.steering.set_parameters(before_s)
             replays += 1
             self._replays += 1
-            floor = 64 * np.finfo(float).eps * max(abs(objective0), abs(after or 0.0), np.finfo(float).tiny)
-            if after is not None and after < objective0 - floor and after <= objective0 - 1e-4 * step * norm_squared:
+            floor = (
+                64
+                * np.finfo(float).eps
+                * max(abs(objective0), abs(after or 0.0), np.finfo(float).tiny)
+            )
+            if (
+                after is not None
+                and after < objective0 - floor
+                and after <= objective0 - 1e-4 * step * norm_squared
+            ):
+                self.cortex.set_parameters(proposed_c)
+                self.steering.set_parameters(proposed_s)
                 self.cortex.updates += int(learn_cortex)
                 self.steering.updates += 1
                 self._step_size = step
-                result.update(updated=learn_cortex, steering_updated=True, step=step, halvings=attempt, replays=replays, reason="updated")
+                result.update(
+                    updated=learn_cortex,
+                    steering_updated=True,
+                    step=step,
+                    halvings=attempt,
+                    replays=replays,
+                    reason="updated",
+                )
                 return SteeredPath(**result)
             self.cortex.set_parameters(before_c)
             self.steering.set_parameters(before_s)
@@ -757,7 +982,25 @@ class Steered:
             "relative": self.relative,
             "reads_age": self.reads_age,
             "age_core": self.age_core,
+            "ablation": "callable" if callable(self.ablation) else self.ablation,
+            "live": self._live is not None,
         }
+        if self._live is not None:
+            live = self._live
+            meta["live_moments"] = live.moments
+            out["live_cortex"] = live.cortex.copy()
+            out["live_residual"] = live.residual.copy()
+            for key, value in (
+                ("steering", live.steering),
+                ("output", live.output),
+                ("weighing", live.weighing),
+            ):
+                if value is not None:
+                    out["live_" + key] = np.array(value, dtype=float, copy=True)
+            if live.heard is not None:
+                out.update({"live_heard_" + k: v.copy() for k, v in live.heard.items()})
+        if self.deaf is not None:
+            out["deaf"] = np.array(self.deaf, copy=True)
         out["meta"] = np.array(json.dumps(meta, sort_keys=True))
         out["step_size"] = np.empty(0) if self._step_size is None else np.array([self._step_size])
         return out
@@ -769,6 +1012,7 @@ class Steered:
         *,
         rule: Callable[[np.ndarray], np.ndarray] | None = None,
         extra: Callable[..., np.ndarray] | None = None,
+        ablation: Callable[[np.ndarray], np.ndarray] | None = None,
     ) -> Steered:
         """The composition from its snapshot. A rule and an extra-channel callable are code and
         come back as arguments; the cortex's implied reading is a declaration and is not part
@@ -777,10 +1021,18 @@ class Steered:
             meta = json.loads(str(snapshot["meta"]))
             if meta.get("format") != FORMAT:
                 raise ValueError("unsupported steered checkpoint")
-            cortex = BeliefPatch.restore({k[len("cortex_") :]: v for k, v in snapshot.items() if k.startswith("cortex_")})
+            cortex = BeliefPatch.restore(
+                {k[len("cortex_") :]: v for k, v in snapshot.items() if k.startswith("cortex_")}
+            )
             steering = None
             if any(k.startswith("steering_") for k in snapshot):
-                steering = BeliefPatch.restore({k[len("steering_") :]: v for k, v in snapshot.items() if k.startswith("steering_")})
+                steering = BeliefPatch.restore(
+                    {
+                        k[len("steering_") :]: v
+                        for k, v in snapshot.items()
+                        if k.startswith("steering_")
+                    }
+                )
             weighing: Weighing | Rule | None = None
             if meta["rule"]:
                 if rule is None:
@@ -804,8 +1056,53 @@ class Steered:
                 reads_age=bool(meta.get("reads_age", False)),
                 age_core=float(meta.get("age_core", 0.5)),
             )
-            kept = np.asarray(snapshot["step_size"], dtype=float).reshape(-1)
+            kept = np.asarray(snapshot["step_size"], dtype=float)
+            if kept.shape not in ((0,), (1,)) or not np.isfinite(kept).all() or np.any(kept <= 0):
+                raise ValueError("step_size must be empty or one finite positive value")
             result._step_size = None if kept.size == 0 else float(kept[0])
+            saved_ablation = meta.get("ablation")
+            if saved_ablation == "callable":
+                if not callable(ablation):
+                    raise ValueError("this checkpoint needs its ablation= callable")
+                result.ablation = ablation
+            elif saved_ablation in (None, "cut"):
+                result.ablation = saved_ablation
+            else:
+                raise ValueError("invalid checkpoint ablation")
+            if "deaf" in snapshot:
+                deaf = np.asarray(snapshot["deaf"], dtype=float)
+                if deaf.shape != (result.channels,) or not np.isfinite(deaf).all():
+                    raise ValueError("deaf must be finite with one value per readback channel")
+                result.deaf = deaf.copy()
+            if meta.get("live", False):
+
+                def live_array(key: str) -> np.ndarray | None:
+                    value = snapshot.get("live_" + key)
+                    return None if value is None else np.array(value, dtype=float, copy=True)
+
+                heard = {
+                    k.removeprefix("live_heard_"): np.array(v, dtype=float, copy=True)
+                    for k, v in snapshot.items()
+                    if k.startswith("live_heard_")
+                }
+                live = Boundary(
+                    np.array(snapshot["live_cortex"], dtype=float, copy=True),
+                    live_array("steering"),
+                    live_array("output"),
+                    np.array(snapshot["live_residual"], dtype=float, copy=True),
+                    live_array("weighing"),
+                    meta["live_moments"],
+                    heard or None,
+                )
+                result._check_boundary(live, len(live.cortex))
+                result._live = live
+                result.cortex._state = live.cortex.copy()
+                if result.steering is not None and live.steering is not None:
+                    result.steering._state = live.steering.copy()
+            else:
+                # Older checkpoints carried patch states but no composition
+                # boundary. They can restore parameters, not a continuation.
+                result.reset()
             return result
         except (KeyError, TypeError, IndexError) as error:
             raise ValueError("invalid steered checkpoint") from error

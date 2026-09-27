@@ -125,18 +125,22 @@ class Valence:
             return np.zeros_like(delta)
         if self.level > 0:
             rho = self.level
+            mean, var = self.mean, self.var
             if self.per_stream:
-                if not isinstance(self.mean, np.ndarray) or len(self.mean) != len(delta):
-                    self.mean, self.var = np.zeros(len(delta)), np.zeros(len(delta))
-                self.mean = np.where(known, rho * self.mean + (1 - rho) * delta, self.mean)
-                self.var = np.where(
-                    known, rho * self.var + (1 - rho) * (delta - self.mean) ** 2, self.var
+                if not isinstance(mean, np.ndarray) or len(mean) != len(delta):
+                    mean, var = np.zeros(len(delta)), np.zeros(len(delta))
+                mean = np.where(known, rho * mean + (1 - rho) * delta, mean)
+                var = np.where(
+                    known, rho * var + (1 - rho) * (delta - mean) ** 2, var
                 )
             else:
-                self.mean = rho * self.mean + (1 - rho) * float(delta[known].mean())
-                self.var = rho * self.var + (1 - rho) * float(
-                    ((delta[known] - self.mean) ** 2).mean()
+                mean = rho * mean + (1 - rho) * float(delta[known].mean())
+                var = rho * var + (1 - rho) * float(
+                    ((delta[known] - mean) ** 2).mean()
                 )
+            if not np.isfinite(mean).all() or not np.isfinite(var).all():
+                raise ValueError("valence moments must remain finite")
+            self.mean, self.var = mean, var
             scale = np.sqrt(self.var) + 1e-6
             centred = delta - self.mean if self.units else (delta - self.mean) / scale
             if self.floor > 0:
@@ -472,6 +476,26 @@ class ActorCritic:
         their traces reset. At least one real transition is required. Updates are
         averaged over the observed rows, independent of padding.
         """
+        arrays = ("trace", "trace_bias", "trace_critic")
+        saved = {name: None if getattr(self, name) is None else getattr(self, name).copy()
+                 for name in arrays}
+        saved.update({name: getattr(self, name) for name in
+                      ("_trace_device", "velocity", "velocity_bias", "second_moment",
+                       "second_moment_bias", "updates", "_valence")})
+        valence = None if self._valence is None else (self._valence.mean, self._valence.var)
+        try:
+            return self._learn(reward, done, next_drive, bootstrap, observed=observed)
+        except Exception:
+            self.__dict__.update(saved)
+            if valence is not None:
+                assert self._valence is not None
+                self._valence.mean, self._valence.var = valence
+            raise
+
+    def _learn(
+        self, reward: np.ndarray, done: np.ndarray, next_drive: np.ndarray,
+        bootstrap: np.ndarray | None = None, *, observed: np.ndarray | None = None,
+    ) -> dict[str, float]:
         reward, done, next_drive, bootstrap = self._validated_transition(
             reward, done, next_drive, bootstrap
         )
@@ -540,6 +564,8 @@ class ActorCritic:
         )
         raw_target = reward + cfg.gamma * next_value
         td_error = raw_target - value
+        if not np.isfinite(td_error).all():
+            raise ValueError("TD errors must remain finite")
         delta = td_error
         if cfg.dopamine_center > 0:
             delta = self._centre(delta, observed)
@@ -585,21 +611,13 @@ class ActorCritic:
             step_bias = step_bias / (np.sqrt(self.second_moment_bias / correction) + 1e-3)
         step_scale = cfg.eta * step_scale
         step_bias = cfg.eta_bias * step_bias
+        if not all(np.isfinite(getattr(self, name)).all() for name in
+                   ("velocity", "velocity_bias", "second_moment", "second_moment_bias")):
+            raise ValueError("optimizer moments must remain finite")
+        critic_weights, critic_bias = self._critic_candidate(td_error, delta, observed)
         next_brain = self.learner.brain
         report = self.learner.apply(step_scale, step_bias)
-        critic_trace = self.trace_critic
-        if cfg.critic_normalize:
-            critic_trace = critic_trace / (1.0 + (critic_trace**2).sum(axis=1, keepdims=True))
-        # Calibrated TD retains reward units; legacy mode uses the same bounded
-        # signal as the actor. Modulation can change the critic's fixed point.
-        critic_delta = (
-            np.where(observed, td_error / observed.mean(), 0.0)
-            if cfg.critic_target == "td"
-            else delta
-        )
-        critic_step = cfg.eta_critic * (critic_delta[:, None] * critic_trace).mean(axis=0)
-        self.w_critic += critic_step[:-1]
-        self.b_critic += float(critic_step[-1])
+        self.w_critic, self.b_critic = critic_weights, critic_bias
         # a finished row forgets its traces
         if done.any():
             self.trace[done] = 0.0
@@ -620,6 +638,28 @@ class ActorCritic:
         traces = self.trace if plastic.all() else self.trace[:, plastic]
         report["trace"] = float(np.abs(traces).mean())
         return report
+
+    def _critic_candidate(
+        self, td_error: np.ndarray, delta: np.ndarray, observed: np.ndarray
+    ) -> tuple[np.ndarray, float]:
+        cfg = self.config
+        critic_trace = self.trace_critic
+        assert critic_trace is not None
+        if cfg.critic_normalize:
+            critic_trace = critic_trace / (1.0 + (critic_trace**2).sum(axis=1, keepdims=True))
+        # Calibrated TD retains reward units; legacy mode uses the same bounded
+        # signal as the actor. Modulation can change the critic's fixed point.
+        critic_delta = (
+            np.where(observed, td_error / observed.mean(), 0.0)
+            if cfg.critic_target == "td"
+            else delta
+        )
+        critic_step = cfg.eta_critic * (critic_delta[:, None] * critic_trace).mean(axis=0)
+        weights = self.w_critic + critic_step[:-1]
+        bias = self.b_critic + float(critic_step[-1])
+        if not np.isfinite(weights).all() or not np.isfinite(bias):
+            raise ValueError("critic parameters must remain finite")
+        return weights, bias
 
     def _saturation(self, free: BrainState) -> float:
         """The fraction of output activations within ``SATURATION_BAND`` of 0 or 1, where the
@@ -732,6 +772,8 @@ class ActorCritic:
         )
         raw_target = reward + cfg.gamma * next_value
         td_error = raw_target - value
+        if not np.isfinite(td_error).all():
+            raise ValueError("TD errors must remain finite")
         delta = td_error
         if cfg.dopamine_center > 0:
             delta = self._centre(delta, observed)
@@ -739,25 +781,14 @@ class ActorCritic:
             delta = np.clip(delta, -cfg.dopamine_cap, cfg.dopamine_cap)
         delta = np.where(observed, delta / observed.mean(), 0.0)
         self.updates += 1
+        critic_weights, critic_bias = self._critic_candidate(td_error, delta, observed)
         d = torch.as_tensor(np.asarray(delta, dtype=float), dtype=trace.dtype, device=trace.device)
         d = d[:, None]
         next_brain = self.learner.brain
         report = self.learner._apply_device(
             kernel, cfg.eta * (d * trace).mean(dim=0), cfg.eta_bias * (d * trace_bias).mean(dim=0)
         )
-        critic_trace = self.trace_critic
-        if cfg.critic_normalize:
-            critic_trace = critic_trace / (1.0 + (critic_trace**2).sum(axis=1, keepdims=True))
-        # Calibrated TD retains reward units; legacy mode uses the same bounded
-        # signal as the actor. Modulation can change the critic's fixed point.
-        critic_delta = (
-            np.where(observed, td_error / observed.mean(), 0.0)
-            if cfg.critic_target == "td"
-            else delta
-        )
-        critic_step = cfg.eta_critic * (critic_delta[:, None] * critic_trace).mean(axis=0)
-        self.w_critic += critic_step[:-1]
-        self.b_critic += float(critic_step[-1])
+        self.w_critic, self.b_critic = critic_weights, critic_bias
         if done.any():  # a finished stream forgets its traces
             keep = torch.as_tensor(~done, dtype=trace.dtype, device=trace.device)[:, None]
             trace = trace * keep

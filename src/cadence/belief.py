@@ -21,9 +21,11 @@ record read is treated as given (no gradient reaches the store), as in the recor
 gain of each observation-port block multiplies that block's encoded evidence before the repair
 map and the store read see it, so it acts in every iteration; the scan also returns the
 gradient into each gain. The store holds the residual of the slow readout at the code of the
-final reading, written once per observed moment. Everything private (``imagine``,
-``readback``) leaves parameters, records, state and counters unchanged and consumes no
-observation.
+final reading, written once per observed moment. ``imagine`` leaves parameters,
+records and live state unchanged, consumes no new observation, and counts its
+computational work. ``readback`` evaluates a supplied reading without changing
+those fields or counters. The last damped repair move is a diagnostic, not a
+certificate that these fixed-budget iterations reached an equilibrium.
 """
 
 from __future__ import annotations
@@ -36,7 +38,7 @@ from typing import Any
 
 import numpy as np
 
-from .ports import StructuredPort
+from .ports import MapBlock, StructuredPort
 from .records import Records
 
 FORMAT = "cadence-belief/1"
@@ -232,12 +234,29 @@ class BeliefPatch:
         self._step_size = None
 
     # ------------------------------------------------------------------ accounting
-    def macs_per_moment(self, *, probes: bool = False) -> int:
+    def _port_macs(self) -> int:
+        return sum(
+            int(np.prod(self.port.weight_shape(b)))
+            * (b.out_height * b.out_width if isinstance(b, MapBlock) else 1)
+            for b in self.port.blocks
+        )
+
+    def readback_macs(self, *, probe: bool = True) -> int:
+        """Dense MAC estimate of a readback; excludes a caller's implied-reading callback."""
+        fi = 2 * self.belief + self.encoded + self.record_width + 1
+        return int(
+            self._port_macs()
+            + 2 * self.belief * (self.belief + self.actions)
+            + (self.block_count * self.belief * fi if probe else 0)
+            + (self.outputs * self.belief if self._implied is not None else 0)
+        )
+
+    def macs_per_moment(self, *, probes: bool = False, surprise: bool = True) -> int:
         """Multiply-accumulates of one moment: the port, the transition and its gate, the
         store's reads and the repair map per iteration, the slow readout and the store's
         decode; with ``probes`` one evaluation of the repair map per block for the
         residual-alone probes. One accounting for every arm of a comparison."""
-        port = sum(int(np.prod(self.port.weight_shape(b))) for b in self.port.blocks)
+        port = self._port_macs()
         za = self.belief + self.actions
         transition = 2 * self.belief * za
         reading = self.encoded + self.belief
@@ -246,7 +265,8 @@ class BeliefPatch:
         repair = self.iterations * (read + self.belief * fi) + read
         readout = self.outputs * self.belief + self.record_width * self.outputs
         probing = self.block_count * self.belief * fi if probes else 0
-        return int(port + transition + repair + readout + probing)
+        comparing = self.outputs * self.belief if surprise and self._implied is not None else 0
+        return int(port + transition + repair + readout + probing + comparing)
 
     def reset_cost(self) -> None:
         """Zero the counters: ``cost["moments"]`` counts every moment the patch computed
@@ -254,9 +274,9 @@ class BeliefPatch:
         their multiply-accumulates, ``cost["replays"]`` the admission's replays."""
         self.cost = {"moments": 0, "macs": 0, "replays": 0}
 
-    def _count(self, n: int, t: int, *, probes: bool = False) -> None:
+    def _count(self, n: int, t: int, *, probes: bool = False, surprise: bool = True) -> None:
         self.cost["moments"] += int(n * t)
-        self.cost["macs"] += int(n * t) * self.macs_per_moment(probes=probes)
+        self.cost["macs"] += int(n * t) * self.macs_per_moment(probes=probes, surprise=surprise)
 
     def set_output_precision(self, precision: np.ndarray) -> None:
         value = np.asarray(precision, dtype=float)
@@ -287,6 +307,10 @@ class BeliefPatch:
         return {k: getattr(self, "_" + k).copy() for k in _PARAMETERS}
 
     def set_parameters(self, parameters: Mapping[str, np.ndarray]) -> None:
+        for key, value in self._validated_parameters(parameters).items():
+            setattr(self, "_" + key, value)
+
+    def _validated_parameters(self, parameters: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
         current = self.parameters()
         if set(parameters) != set(current):
             raise ValueError(f"parameters must contain exactly {', '.join(_PARAMETERS)}")
@@ -296,8 +320,7 @@ class BeliefPatch:
             if value.shape != old.shape or not np.isfinite(value).all():
                 raise ValueError(f"{key} must be finite with shape {old.shape}")
             values[key] = value.copy()
-        for key, value in values.items():
-            setattr(self, "_" + key, value)
+        return values
 
     def _blocks(self) -> list[np.ndarray]:
         out, at = [], 0
@@ -319,7 +342,7 @@ class BeliefPatch:
         once the gains weigh it. A steering patch that decides a block's gain reads this
         before the gain it sets. Nothing changes."""
         o = np.asarray(observations, dtype=float)
-        if o.shape[-1] != self.inputs or not np.isfinite(o).all():
+        if o.ndim < 1 or o.shape[-1] != self.inputs or not np.isfinite(o).all():
             raise ValueError(f"observations must be a finite (..., {self.inputs}) array")
         return self._encode(o)[0]
 
@@ -413,7 +436,7 @@ class BeliefPatch:
         z = boundary
         record: dict[str, list[Any]] = {k: [] for k in _RECORD_KEYS}
         implied = surprise and observations is not None and self._implied is not None
-        self._count(n, t, probes=bool(probe and observations is not None))
+        self._count(n, t, probes=bool(probe and observations is not None), surprise=implied)
         for k in range(t):
             ex = self._expect(z, actions[:, k])
             row = observed[:, k]
@@ -528,6 +551,10 @@ class BeliefPatch:
     @staticmethod
     def _rows(value: Any, n: int, t: int, name: str, dtype: type) -> np.ndarray:
         """A per-moment array given as ``(time,)`` or ``(batch, time)``, as ``(batch, time)``."""
+        if dtype is bool:
+            raw = np.asarray(value)
+            if raw.dtype.kind not in "biuf" or not np.isin(raw, [0, 1]).all():
+                raise ValueError(f"{name} must contain only boolean or binary flags")
         v: np.ndarray = np.asarray(value, dtype=dtype)
         if v.shape == (n, t):
             return v.copy()
@@ -599,6 +626,8 @@ class BeliefPatch:
             surprise=True,
         )
         path = self._path(record, None)
+        if not np.isfinite(path.belief).all() or not np.isfinite(path.output).all():
+            raise FloatingPointError("nonfinite belief prediction")
         if not keep_live:
             self._state = path.final_state
         return path
@@ -616,7 +645,10 @@ class BeliefPatch:
         _, a, mask = self._check(None, actions, None)
         n, t = a.shape[:2]
         record = self._forward(None, a, self._boundary(n, state), mask, self._gains(gains, n, t))
-        return self._path(record, None)
+        path = self._path(record, None)
+        if not np.isfinite(path.belief).all() or not np.isfinite(path.output).all():
+            raise FloatingPointError("nonfinite belief prediction")
+        return path
 
     def readback(
         self,
@@ -712,18 +744,27 @@ class BeliefPatch:
         boundary = self._boundary(n, state)
         record = self._forward(o, a, boundary, mask, gain, probe=bool(probe), surprise=True)
         path = self._path(record, y, weight)
-        if not keep_live:
-            self._state = path.final_state
         if (y is not None and path.loss is None) or not np.isfinite(path.output).all():
             return BeliefObservation(False, "nonfinite_prediction", path, {}, None, 0)
         delta, dgains = self._adjoint(o, a, boundary, record, y, weight, dy)
+        before_write = (
+            (self.parameters(), self._step_size, self.updates) if write and y is not None else None
+        )
         if rate > 0:
             admitted = self._admit(
                 o, a, mask, gain, weight, boundary, y, delta, rate, admit, path.loss
             )
         else:
             admitted = (False, "no_step", None, None, 0)
-        writes = self._write(record, y, weight) if write and y is not None else 0
+        try:
+            writes = self._write(record, y, weight) if write and y is not None else 0
+        except Exception:
+            if before_write is not None:
+                self.set_parameters(before_write[0])
+                self._step_size, self.updates = before_write[1:]
+            raise
+        if not keep_live:
+            self._state = path.final_state
         updated, reason, final, accepted, replays = admitted
         return BeliefObservation(
             updated, reason, path, delta, path.loss, writes, final, accepted, replays, dgains
@@ -893,6 +934,17 @@ class BeliefPatch:
     ) -> int:
         """Write the slow readout's residual, coded, at the final reading of each observed
         moment; a row whose loss weight is zero is not written."""
+        before, norm = self.records.state(), self._input_norm
+        try:
+            return self._write_moments(record, target, weight)
+        except Exception:
+            self.records.load_state(before)
+            self._input_norm = norm
+            raise
+
+    def _write_moments(
+        self, record: dict[str, list[Any]], target: np.ndarray, weight: np.ndarray | None = None
+    ) -> int:
         written = 0
         t = len(record["y"])
         for k in range(t):
@@ -966,10 +1018,22 @@ class BeliefPatch:
                 seed=config["seed"],
             )
             result.set_parameters({k: snapshot[k] for k in _PARAMETERS})
-            result._output_code = np.asarray(snapshot["output_code"], dtype=float).copy()
-            result._input_norm = float(np.asarray(snapshot["input_norm"]))
+            code = np.asarray(snapshot["output_code"], dtype=float)
+            if code.shape != (result.outputs, result.record_width) or not np.isfinite(code).all():
+                raise ValueError("invalid belief output code")
+            result._output_code = code.copy()
+            norm = np.asarray(snapshot["input_norm"], dtype=float)
+            if norm.shape != () or not np.isfinite(norm) or norm <= 0:
+                raise ValueError("input_norm must be a finite positive scalar")
+            result._input_norm = float(norm)
             if "step_size" in snapshot:
-                kept = np.asarray(snapshot["step_size"], dtype=float).reshape(-1)
+                kept = np.asarray(snapshot["step_size"], dtype=float)
+                if (
+                    kept.shape not in ((0,), (1,))
+                    or not np.isfinite(kept).all()
+                    or np.any(kept <= 0)
+                ):
+                    raise ValueError("step_size must be empty or one finite positive value")
                 result._step_size = None if kept.size == 0 else float(kept[0])
             result.records.load_state(
                 {
@@ -978,9 +1042,11 @@ class BeliefPatch:
                     if k.startswith("records_")
                 }
             )
-            state = np.asarray(snapshot["state"])
+            state = np.asarray(snapshot["state"], dtype=float)
+            if state.ndim != 2 or state.shape[1] != result.belief or not np.isfinite(state).all():
+                raise ValueError("state must be a finite (batch, belief) array")
             result._state = None if not len(state) else state.astype(float).copy()
-            result.updates = int(meta["updates"])
+            result.updates = _integer("updates", meta["updates"], 0)
             return result
         except (KeyError, TypeError, IndexError) as error:
             raise ValueError("invalid belief checkpoint") from error

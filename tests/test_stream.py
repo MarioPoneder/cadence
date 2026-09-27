@@ -184,9 +184,7 @@ def test_afterglow_is_brightest_where_the_moment_changed() -> None:
     """The afterglow weighs each hidden neuron's trace by its movement since the last moment:
     a neuron that changed glows, one that stood still fades; with focus 0 it is the Echo."""
     w, _ = cd.stateful(3, 1, 2, 3, 3, seed=1)
-    w.populations["afterglow"] = w.populations[
-        "context"
-    ]  # the same paired range, under the afterglow's name
+    w = w.with_populations(afterglow=w.populations["context"])
     brain = cd.Brain(w, cd.learning_neuron_model(dt=1.0))
     glow = cd.Afterglow(w, decay=0.5, focus=1.0)
     echo = cd.Afterglow(w, decay=0.5, focus=0.0)
@@ -221,7 +219,7 @@ def test_the_trace_reads_a_state_on_the_device_the_same_as_on_the_host() -> None
     if "torch" not in cd.available_backends():
         pytest.skip("no torch")
     w, _ = cd.stateful(3, 1, 2, 3, 3, seed=1)
-    w.populations["afterglow"] = w.populations["context"]
+    w = w.with_populations(afterglow=w.populations["context"])
     drive = np.zeros((2, w.n))
     drive[:, 0] = 1.0
     host = cd.Brain(w, cd.learning_neuron_model(dt=1.0)).settle_batch(drive, steps=30)

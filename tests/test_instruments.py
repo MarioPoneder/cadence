@@ -45,7 +45,8 @@ def test_the_habituation_curve_and_the_kinds_summary():
     clock = out["kinds"]["clock"]
     assert clock["count"] == 11
     assert clock["capture_first"] > clock["capture_last"]       # the clock habituates
-    assert len(clock["curve"]) == 2 and clock["curve"][0] > clock["curve"][1]
+    assert len(clock["curve"]) == 3 and clock["curve"][0] > clock["curve"][1]
+    assert clock["curve"][-1] == pytest.approx(0.4)  # the final partial bin is not discarded
     assert clock["latency_zero"] == 1.0 and clock["latency_none"] == 0.0
     assert out["kinds"]["cry"]["capture_mean"] == pytest.approx(0.5)
 

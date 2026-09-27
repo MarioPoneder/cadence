@@ -120,6 +120,6 @@ of chosen responses is [response protection](temporal-memory.md).
 | a decision or evaluation over a fixed set of inputs, an explicit graph, a policy that learns from reward | the settling brain |
 | continuous observations and actions with a learned dynamics model and private planning | the temporal patch |
 
-Older compositions (`GenericBrain`, `PatchNet`, content memory, rehearsal, sequence
-readback) are kept for the experiments that used them; see the
+The reciprocal `PatchNet` and the older `GenericBrain` composition have their
+own learning and state contracts; see the
 [index](index.md#kept-for-existing-experiments).

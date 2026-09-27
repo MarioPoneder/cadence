@@ -549,7 +549,7 @@ solver or a joint equilibrium convergence guarantee.
 
 ## Several patches joined by ports
 
-`JointRecordPatches` settles several record patches as one equilibrium. A
+`JointRecordPatches` couples several record patches through a fixed number of repair rounds. A
 `Port(source, target, start, width)` declares a seam: the band
 `[start, start + width)` of the source patch's scaled context `r * h` (the unit
 its records read it in, and the unit the stack hands upward) is an input of the
@@ -557,11 +557,18 @@ target patch in the same moment. The target's gate and input port read it
 through their ordinary weights, and its records key on what crosses; nothing
 else crosses. The joint energy adds `1/2 |p[t] - S r h_source[t]|^2` per port to
 the patches' seam energies, and at every moment `rounds` Jacobi rounds from the
-previous moment's contexts solve the coupled equations: round one is the delayed
+previous moment's contexts approximate the coupled equations: round one is the delayed
 port, each further round re-reads the other patch's context of this moment. For
-a one-way port two rounds reach the exact fixed point; for two-way ports the
-contraction is measured, not proved. The seam residual per moment and round is
+a single one-way port from an independent source, two undamped rounds reach the
+fixed point; longer port chains need more rounds. Recurrent ports have no general
+convergence guarantee here. Inspect the remaining equations independently before
+claiming a joint equilibrium: a fixed round count is not a stopping certificate.
+The seam residual per moment and round is
 the fourth instrument beside the residual, the surprise and the update.
+
+Snapshots retain whether ports were cut, alongside each cortex's learned and
+live state. Invalid/nonfinite paths cannot become live contexts. Joint record
+writes are transactional: failure on a later cortex restores earlier writes.
 
 ```python
 import numpy as np

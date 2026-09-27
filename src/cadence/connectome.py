@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from hashlib import sha256
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
@@ -48,6 +49,8 @@ def _edge_arrays(
         raise ValueError("pre, post, count, and sign must have one entry per synapse")
     if not np.isfinite(count_a).all() or not np.isfinite(sign_a).all():
         raise ValueError("count and sign must be finite")
+    if (count_a < 0).any():
+        raise ValueError("contact counts must be nonnegative; use sign for inhibition")
     return pre_a, post_a, count_a, sign_a
 
 
@@ -60,7 +63,7 @@ class Connectome:
     post: np.ndarray
     count: np.ndarray
     sign: np.ndarray
-    populations: dict[str, tuple[int, ...]] = field(default_factory=dict)
+    populations: Mapping[str, tuple[int, ...]] = field(default_factory=dict)
     label: str = "connectome"
 
     def __post_init__(self) -> None:
@@ -77,11 +80,13 @@ class Connectome:
         object.__setattr__(
             self,
             "populations",
-            {
+            MappingProxyType({
                 k: tuple(int(i) for i in np.unique(_neuron_indices(tuple(v), self.n, k)))
                 for k, v in self.populations.items()
-            },
+            }),
         )
+        for name in ("pre", "post", "count", "sign"):
+            getattr(self, name).setflags(write=False)
 
     # -- construction
 
@@ -103,6 +108,8 @@ class Connectome:
         Synapses with fewer than ``min_count`` contacts are dropped, and
         parallel synapses between the same pair are merged by summing counts.
         """
+        if not np.isfinite(min_count) or min_count < 0:
+            raise ValueError("min_count must be finite and nonnegative")
         pre_a, post_a, count_a, sign_a = _edge_arrays(n, pre, post, count, sign)
         keep = (pre_a != post_a) & (count_a >= min_count)
         pre_a, post_a, count_a, sign_a = pre_a[keep], post_a[keep], count_a[keep], sign_a[keep]

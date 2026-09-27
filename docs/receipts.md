@@ -91,6 +91,16 @@ life adds the governor's steps as moments and the decisions by mode (`Life.compu
 rung that reads a gain's response to events carries `orienting`'s output per kind (the
 count, the capture of the first and last events, the curve, the latency shares, the mean
 return) and the `dishabituation` pair, so that two demos' captures mean the same thing.
+Unobserved returns are `null`, with `return_censored=true` after a positive capture;
+they are not counted as observed recovery at the end of the window. Partial final
+habituation bins remain in the curve.
+
+Label MAC counts as dense forward-work estimates. Include their exclusions
+(adjoints, writes, nonlinearities, callbacks and memory traffic) and any governor
+step-to-moment conversion. They are not total training FLOPs. Report total elapsed
+time, peak memory, learning/search work and all failed attempts for an efficiency
+comparison. Test targets must never calibrate the governor or choose a baseline;
+record the disjoint calibration/validation split and its seeds.
 
 ## Editing invalidates, on purpose
 

@@ -177,7 +177,7 @@ def test_the_afterglow_remembers_a_cue_against_a_static_background() -> None:
         ("afterglow of the interpretation, focus 2", 2.0),
     ):
         w, tie = cd.stateful(v + background, 1, 4, 24, v, seed=0)
-        w.populations["afterglow"] = w.populations["context"]
+        w = w.with_populations(afterglow=w.populations["context"])
         scores[name] = _one_moment_ago(
             np.random.default_rng(0), w, cd.Afterglow(w, decay=0.5, focus=focus), tie, v, background
         )

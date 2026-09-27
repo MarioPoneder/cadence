@@ -61,7 +61,7 @@ class PatchNet:
 
     All three phases use the same explicit step budget and full equation
     residual. A weight update is committed only if every required phase
-    converges. A rejected attempt retains its target-free activity but does not
+    converges. A rejected attempt retains finite target-free activity but does not
     change weights, optimizer history, or consumed source IDs. Batch rows are
     persistent streams: call ``reset`` when their identities change.
 
@@ -263,7 +263,11 @@ class PatchNet:
     def settle(self, drive: np.ndarray) -> Equilibrium:
         """Advance live, target-free activity without any learned-parameter update."""
         phase = self._solve(drive, self._state, self._anchor_nudge(self._state))
-        self._state = _copy_state(phase.state)
+        candidate = _copy_state(phase.state)
+        assert candidate is not None
+        if all(np.isfinite(v).all() for v in
+               (candidate.v, candidate.activation, candidate.adaptation)):
+            self._state = candidate
         return phase
 
     def observe(

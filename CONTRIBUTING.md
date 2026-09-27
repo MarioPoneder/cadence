@@ -30,7 +30,7 @@ The test suite includes `tests/test_documentation.py`, which executes every Pyth
 of the listed guides in order and checks that every local link and anchor in `README.md`
 and `docs/` resolves. A change to a guide's code is a change to a test. The minimal-install
 job builds the wheel with NumPy alone and runs the quickstart, the record patch, the
-temporal guides and the build guide without optional backends.
+temporal, belief, steering and build guides without optional backends.
 
 The Lean library under `lean/` is checked separately (`python3 lean/check.py` with the
 pinned toolchain; see [lean/README.md](lean/README.md)).
@@ -44,9 +44,13 @@ pinned toolchain; see [lean/README.md](lean/README.md)).
 - **A guide.** A public name is described in `docs/api.md`, and a new capability gets a
   section with a runnable snippet in the guide that owns it; add that guide to
   `tests/test_documentation.py` so the snippet keeps running.
-- **Contracts kept.** `imagine` changes nothing; `observe` carries only valid free
-  activity; a failed step changes no parameter, revision or counter; checkpoints load on
-  any backend. The audit tests (`tests/test_audit_*.py`) check these.
+- **Contracts kept.** Imagination does not teach or change live activity;
+  cost counters may count attempted computation. Invalid calls and failed
+  transactions cannot partially install parameters or records. Qualification,
+  continuation and device portability follow the owning API's
+  [contract](docs/contracts.md); do not transfer a graph guarantee to a finite
+  repair or temporal model. The audit tests (`tests/test_audit_*.py`) check
+  specific cases and backends.
 - **Plain prose.** State what an operation does and what it does not establish, in the
   register of the existing guides.
 
@@ -54,8 +58,8 @@ pinned toolchain; see [lean/README.md](lean/README.md)).
 
 | Path | What lives there |
 | --- | --- |
-| `src/cadence/` | the library: `brain.py`, `learning.py`, `genome.py`, `regions.py` (the settling brain); `temporal.py`, `planning.py`, `temporal_memory.py`; `record_patch.py`, `records.py`, `record_stack.py`, `record_ports.py`, `ports.py`; `belief.py`, `belief_torch.py`; `demo.py` and the viewer `brain_scan.js` |
-| `tests/` | pytest, 800-odd tests |
+| `src/cadence/` | the library: `brain.py`, `learning.py`, `genome.py`, `regions.py` (the settling brain); `temporal.py`, `planning.py`, `temporal_memory.py`; `record_patch.py`, `records.py`, `record_stack.py`, `record_ports.py`, `ports.py`; `belief.py`, `belief_torch.py`; `steering.py`, `life.py`, `instruments.py` (composition); `demo.py` and the viewer `brain_scan.js` |
+| `tests/` | unit, numerical, integration and documentation contract tests |
 | `docs/` | the guides; `docs/index.md` is the map |
 | `lean/` | the Lean proofs and their audit |
 

@@ -3,7 +3,7 @@
 Cadence aims at generalized intelligence through overlap consensus, equilibrium
 detuning and evolving functional self-reflection. This page is the integration
 contract of the temporal patch (`TemporalPatchNet`, its planner and
-`TemporalMemory`) and of the fixed-model actor: local repair, persistent
+`TemporalMemory`): local repair, persistent
 activity, explicit response protection, private imagination and continuous action
 planning, what each operation changes, and what its bounded tests establish. The
 [record patch](record-patch.md) and the [belief patch](belief.md) state their
@@ -29,7 +29,7 @@ work. The graph interfaces of earlier applications stay available.
 | Functional self-readback | `TemporalPatchNet.readback`, plan diagnostics | Detached state, residual/energy, revision, uncertainty and proposal information can be inspected or explicitly fed back by an application. |
 | Private imagination | `TemporalPatchNet.imagine`, the planner | Private predicted paths leave live state and learned parameters unchanged. Their usefulness depends on model quality. |
 | Goal-directed action | `TemporalPatchNet.plan` | The temporal learner privately repairs bounded continuous input ports and accepts only decreasing target-free prediction cost. |
-| Continued life | Both components' snapshots/checkpoints | Parameters, activity, supplied task settings and bound compressed state can resume; save explicit protection together with its net. |
+| Continued life | Model and protection snapshots/checkpoints | Parameters, activity and supplied task settings can resume; save explicit protection together with its net. |
 
 The nonlinear temporal learner can acquire an action/consequence relation and
 use that same model to plan continuous controls. Its input gradient is another
@@ -37,8 +37,6 @@ centered equilibrium contrast, with parameters held fixed. Every candidate is
 replayed without a goal nudge before acceptance. Its measured prediction accuracy
 and the subsequent executed outcome remain separate checks.
 
-The linear actor has a distinct state space and factual-history interface;
-its position/displacement model illustrates exact Gaussian compression.
 Application adapters define sensory meanings, executable actions and teaching
 access. The base library contains no musical structure, game policy, language
 task or physical objective that silently supplies the missing skill.

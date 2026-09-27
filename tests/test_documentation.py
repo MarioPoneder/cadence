@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
         "docs/build.md",
         "docs/belief.md",
         "docs/steering.md",
+        "docs/recursive-settlement.md",
     ],
 )
 def test_introductory_python_snippets(page, tmp_path, monkeypatch):
@@ -59,3 +60,13 @@ def test_local_documentation_links_resolve():
                 if anchor not in slugs and f'id="{anchor}"' not in content:
                     problems.append(f"{page.name}: missing anchor {target}")
     assert not problems, "\n".join(problems)
+
+
+def test_minimal_install_ci_guides_exist():
+    """The installed-wheel smoke must not depend on a retired source guide."""
+    workflow = ROOT / ".github/workflows/ci.yml"
+    if not workflow.exists():
+        pytest.skip("CI workflows are not included in the source distribution")
+    pages = re.findall(r'"(docs/[^"\n]+\.md)"', workflow.read_text())
+    assert pages, "The minimal-install job must exercise documented examples"
+    assert all((ROOT / page).is_file() for page in pages)
