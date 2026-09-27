@@ -1,17 +1,19 @@
 """The block transport: the synapse matrix as dense blocks between ranges of neurons.
 
-A layered connectome is mostly empty space. Its input neurons receive nothing, its
-hidden neurons hear only the inputs and the outputs, and the inputs, once
-stimulated, do not move after the first step. A single dense ``n x n`` product per
-step pays for all of that empty space and re-multiplies the still inputs every
-step. Block transport avoids those unnecessary matrix entries and repeated products.
+A connectome can contain dense projections between populations while leaving
+many other population pairs unconnected. A single dense ``n x n`` product pays
+for those empty entries. Some graphs also have source populations with no
+incoming synapses; once their activity stops changing, their outgoing products
+can be reused. Recursive input populations receive feedback and are not such
+sources. Even a source can take several steps to relax under a fixed drive.
 
 The layout here cuts the neurons into contiguous ranges at the boundaries of the
 connectome's named populations (a population that is not one contiguous run is ignored) and keeps
 one dense block per ordered pair of ranges that carries at least one synapse.
-The synaptic input of a step is the sum of the block products, and the product of a
-range whose activation is bit-for-bit what it was at the previous step is
-reused rather than recomputed. Nothing changes in what a neuron reads: the
+The synaptic input of a step is the sum of the block products. For a source
+range, an outgoing product is reused only when its activation is bit-for-bit
+what it was at the previous step. Products from ranges that receive feedback
+are recomputed. Nothing changes in what a neuron reads: the
 synaptic input is the same sum of the same messages, in a different association order,
 and the conformance check against the neuron-by-neuron reference still holds to
 rounding. The same blocks give the learning rule its contrast as one small
@@ -135,8 +137,9 @@ class BlockTransport:
     """The synaptic input of a batch as a sum of block products, reusing still ranges.
 
     One instance serves one settling run: ``synaptic_input`` is called once per step with
-    the activations the step reads, and a block is recomputed only when its
-    presynaptic range changed since the previous call.
+    the activations the step reads. A source range's products may be reused
+    when its activation is unchanged; products from all other ranges are
+    recomputed on every call.
     """
 
     def __init__(self, layout: Layout, flat: np.ndarray) -> None:
