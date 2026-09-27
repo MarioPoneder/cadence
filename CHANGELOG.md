@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+- Strict typing extends to `cadence.fused`: the mypy override is gone and a
+  typed wrapper keeps each compiled kernel's signature visible to the checker.
+  The public methods of `cadence.record_ports` carry argument and return
+  types. `timing.environment()` catches only the errors an absent or broken
+  optional backend raises (`ImportError`, `AttributeError`, `OSError`) instead
+  of every exception.
+- Direct tests for `belief_torch`, `connectome`, `fused` (each compiled kernel
+  against the NumPy arithmetic it replaces), `memory`, `neuron`, `protocol`,
+  `receipts`, `reference`, `timing` and the exported readback types, each
+  instance obtained from its real producer.
+- Every Python block in `docs/` now runs in the test suite or is marked
+  `<!-- not-run -->`, with a test that fails when a new block is neither. The
+  api, backends, interaction, learning, partitioned, planning, population,
+  protocols, receipts and record-patch pages join the executed set, and the
+  minimal-install check runs each page as a script so `__file__` exists.
+  Contributed by @bastitva0-blip (#47).
+
 ## 0.18.0 — 2026-09-27
 
 - The whole-brain viewer (`brain_scan.js`, the replay page), the atlas (`cadence.atlas`:
