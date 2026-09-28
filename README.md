@@ -35,7 +35,9 @@ an optional action-value interface supports learning from the consequences
 of actions. The current models learn scalar quantities and context-dependent
 outputs; useful depth and comparative performance are still being evaluated.
 
-The library is pure Python and uses only the standard library.
+The library is pure Python and uses only the standard library. Building on
+Cadence with a coding agent: hand it [AGENTS.md](AGENTS.md), the operational
+pitfalls file, alongside the docs.
 
 ## The roadmap
 

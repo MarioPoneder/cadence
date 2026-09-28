@@ -4,6 +4,13 @@ Encoders are pure context functions. They neither learn targets nor choose
 outputs. Numeric grids accept declared ranges in any units; calibration can
 estimate ranges and rank coordinates from any finite numeric observation vector.
 No game package is imported by this module.
+
+An encoder's optional integer ``cells`` attribute declares its context count.
+Declaring it activates witness-mass weighting in ``Cortex`` (coarse levels
+admit at cells_level/cells_finest), which suits long-episode tasks and slows
+coarse learning on short-episode ones; AGENTS.md records both failure
+signatures. Builders here declare ``cells``; leave it off a custom map, or
+pass ``level_weights`` of ones, to keep every level at full witness mass.
 """
 
 from __future__ import annotations

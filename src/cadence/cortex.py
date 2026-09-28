@@ -158,6 +158,12 @@ class Cortex:
     level_weights : sequence of float or None
         Witness mass multipliers, one positive value per level. None uses declared
         context counts relative to the finest level, or ones for custom maps.
+        Witness mass is a task-scale choice, not a free improvement: masses far
+        below one let long episodes admit without one flush washing a coarse
+        level's whole decay window, but on short episodes they slow coarse
+        welding until learning looks dead (flat means, exhausted novelty).
+        Compare episode length times mass against the 1/(1-decay) window, and
+        pass explicit ones to disable mass weighting for short-episode tasks.
     max_columns : int, default 100000
         Maximum stored (level, context, output) entries. Reads do not allocate them.
     max_cache : int, default 4096
