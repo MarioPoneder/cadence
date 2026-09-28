@@ -1,17 +1,30 @@
-"""Cadence: brains built from one element, the cortical column.
+"""Self-reading columns and contextual predictors with local settlement."""
 
-``CorticalColumn(height=H)`` is the element with a vertical dimension -
-H observer stages on one belief; height 1 is the qualified candidate
-exactly (``cadence.element`` holds that frozen source). ``Cortex`` is a
-trainable hierarchy of column banks wired by calibration; its structure
-is depth x width x height. Quickstart in the README; API and parameters
-in docs/REFERENCE.md; variants in docs/VARIANTS.md.
-"""
 from .column import CorticalColumn
-from .cortex import Cortex
-from .element import settle, solve_cluster_forest
-from .wiring import calibrate, wire
+from .cortex import Cortex, SettlementError
+from .element import Port, settle, solve_cluster_forest
+from .wiring import (
+    BinnedFeatures,
+    ConstantFeatures,
+    IdentityFeatures,
+    calibrate,
+    grid,
+    wire,
+)
 
-__version__ = '0.20.0'
-__all__ = ['CorticalColumn', 'Cortex', 'calibrate', 'wire',
-           'settle', 'solve_cluster_forest', '__version__']
+__version__ = "0.20.0"
+__all__ = [
+    "BinnedFeatures",
+    "ConstantFeatures",
+    "Cortex",
+    "CorticalColumn",
+    "IdentityFeatures",
+    "Port",
+    "SettlementError",
+    "__version__",
+    "calibrate",
+    "grid",
+    "settle",
+    "solve_cluster_forest",
+    "wire",
+]

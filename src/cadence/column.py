@@ -1,226 +1,307 @@
-"""The public CorticalColumn: the element with a vertical dimension.
+"""A configurable scalar column with recursively coupled precision observers.
 
-``height`` is the column's internal microcircuit depth - how many
-observer stages sit on the belief, the analogue of a layer's hidden
-size in other frameworks:
-
-- height 1: belief + precision observer. This is the qualified element
-  exactly; every number it produces is identical to
-  ``cadence.element.CorticalColumn`` (tested).
-- height 2: adds a rate hyper-observer that reads the precision
-  observer's live proposal and feeds its rate back - the demonstrated
-  recursive-readback stack.
-- height H: further rate observers, each reading the stage below and
-  feeding its rate down, all settled by the unchanged repair law. No
-  new solver, no new schedule: stacking is composition.
-
-Admission custody (ordered events, duplicates, budgets, capacity,
-checkpoint validation) mirrors the element verbatim; the height-1
-identity test pins the mirror. ``META_SHAPE``/``META_RATE`` are the
-declared hyper-observer constants; their prior expected rate is 1, the
-element's ``PRIOR_RATE``, so growing height leaves priors consistent.
+Height one is the element's belief/precision loop. Extra stages read the live
+proposal below and supply its rate: all stages settle in the same port graph.
+A taller stack changes the model; depth alone promises neither better accuracy
+nor biological fidelity. Admission and checkpoint custody are shared with the
+base element rather than independently reimplemented.
 """
+
 from __future__ import annotations
 
-import json
+from types import MappingProxyType
 
 from . import element as el
 
 META_SHAPE = 4.0
 META_RATE = 4.0
-SCHEMA = 'cortical-column-state/2'
+SCHEMA = "column-state/1"
+
+
+def _rate_parameters(shape, rate):
+    """Validate both supplied hyperparameters and their derived initial ratio."""
+    shape = el._finite(shape, "meta_shape", positive=True)
+    rate = el._finite(rate, "meta_rate", positive=True)
+    ratio = el._finite(shape / rate, "initial meta precision", positive=True)
+    return shape, rate, ratio
+
+
+def _initial_rate(anchor, shape, rate):
+    """Require a representable initial feedback message before building ports."""
+    return el._finite(
+        anchor + shape / (rate + 1.0), "initial meta feedback", positive=True
+    )
 
 
 class RateObserver:
-    """A rate hyper-observer: reads the stage below, proposes its total rate.
+    """Read a lower precision/rate and return anchor + shape/(rate_in+below).
 
-    The proposal is ``anchor + META_SHAPE / (rate_in + below)``: the
-    stage below keeps its fixed prior rate as an anchor and the
-    hyper-observer adds a live, restrainable surplus. Without the
-    anchor the chain is degenerate at zero dispersion - the rate
-    message drains toward zero, licensing unbounded precision, and the
-    stack has no finite fixed point (observed as tall columns refusing
-    to qualify heavy zero-scatter evidence). ``read_key``/``up_key``
-    are injected so one class serves both the standalone column stack
-    and per-level stacks inside a Cortex.
+    The positive anchor prevents the unanchored zero-dispersion degeneracy.
+    ``shape`` and ``rate`` are supplied model parameters, not learned biology.
     """
 
-    def __init__(self, anchor: float, read_key: str, up_key: str | None = None):
-        self.anchor, self.read_key, self.up_key = anchor, read_key, up_key
+    def __init__(
+        self, anchor, read_key, up_key=None, *, shape=META_SHAPE, rate=META_RATE
+    ):
+        self.anchor = el._finite(anchor, "anchor", positive=True)
+        self.shape, self.rate, _ = _rate_parameters(shape, rate)
+        _initial_rate(self.anchor, self.shape, self.rate)
+        if (
+            not isinstance(read_key, str)
+            or not read_key
+            or (up_key is not None and (not isinstance(up_key, str) or not up_key))
+        ):
+            raise ValueError("Observer port keys must be nonempty strings")
+        self.read_key, self.up_key = read_key, up_key
 
     def emit(self, port, inbox):
-        below = inbox[self.read_key]
-        rate_in = inbox.get(self.up_key, META_RATE) if self.up_key else META_RATE
-        return self.anchor + META_SHAPE / (rate_in + below)
+        below = el._finite(inbox[self.read_key], "lower proposal", positive=True)
+        rate_in = inbox.get(self.up_key, self.rate) if self.up_key else self.rate
+        rate_in = el._finite(rate_in, "incoming rate", positive=True)
+        denominator = el._finite(rate_in + below, "total incoming rate", positive=True)
+        return el._finite(
+            self.anchor + self.shape / denominator, "outgoing rate", positive=True
+        )
 
 
-def stage_ports(observer, height: int, tau_init: float, *, prefix: str = ''):
-    """Hyper-observer ports for stages 2..height above ``observer``.
-
-    With a ``prefix`` (a Cortex level tag) every port name is scoped so
-    several stacks can settle in one graph. Stage 2 uses the element's
-    own ``meta_feedback`` key so the unchanged ``PrecisionObserver``
-    reads its rate; higher stages chain rate observers.
-    """
+def stage_ports(
+    observer,
+    height,
+    tau_init,
+    *,
+    prefix="",
+    prior_rate=el.PRIOR_RATE,
+    meta_shape=META_SHAPE,
+    meta_rate=META_RATE,
+):
+    """Build stages 2..height; a prefix scopes names in a larger shared graph."""
+    el._integer(height, "height", minimum=1)
+    if not isinstance(prefix, str):
+        raise ValueError("prefix must be a string")
+    prior_rate = el._finite(prior_rate, "prior_rate", positive=True)
+    meta_shape, meta_rate, meta_ratio = _rate_parameters(meta_shape, meta_rate)
+    tau_init = el._finite(tau_init, "initial precision", positive=True)
     ports = []
-    below, read_key = observer, prefix + 'meta_readback'
+    below, read_key = observer, prefix + "meta_readback"
     for stage in range(2, height + 1):
-        down_key = (prefix + 'meta_feedback' if stage == 2
-                    else '%shyper_feedback%d' % (prefix, stage))
-        up_key = ('%shyper_feedback%d' % (prefix, stage + 1)
-                  if stage < height else None)
-        rate = RateObserver(el.PRIOR_RATE if stage == 2 else META_RATE,
-                            read_key, up_key)
-        ports.append(el.Port(read_key, below, rate, 'scalar',
-                             tau_init if stage == 2 else META_SHAPE / META_RATE))
-        ports.append(el.Port(down_key, rate, below, 'scalar',
-                             (el.PRIOR_RATE if stage == 2 else META_RATE)
-                             + META_SHAPE / (META_RATE + 1.0)))
-        below, read_key = rate, '%shyper_readback%d' % (prefix, stage + 1)
+        down_key = (
+            prefix + "meta_feedback" if stage == 2 else f"{prefix}hyper_feedback{stage}"
+        )
+        up_key = f"{prefix}hyper_feedback{stage + 1}" if stage < height else None
+        anchor = prior_rate if stage == 2 else meta_rate
+        rate = RateObserver(anchor, read_key, up_key, shape=meta_shape, rate=meta_rate)
+        ports.append(
+            el.Port(
+                read_key,
+                below,
+                rate,
+                "scalar",
+                tau_init if stage == 2 else meta_ratio,
+            )
+        )
+        ports.append(
+            el.Port(
+                down_key,
+                rate,
+                below,
+                "scalar",
+                _initial_rate(anchor, meta_shape, meta_rate),
+            )
+        )
+        below, read_key = rate, f"{prefix}hyper_readback{stage + 1}"
     return ports
 
 
-def stack_ports(w, s1, s2, height: int, start=None):
-    ports = el.scalar_ports(w, s1, s2, start)
+def stack_ports(
+    w,
+    s1,
+    s2,
+    height,
+    start=None,
+    *,
+    prior_shape=el.PRIOR_SHAPE,
+    prior_rate=el.PRIOR_RATE,
+    meta_shape=META_SHAPE,
+    meta_rate=META_RATE,
+):
+    """Compose the belief and every observer into one port graph."""
+    el._integer(height, "height", minimum=1)
+    ports = el.scalar_ports(
+        w, s1, s2, start, prior_shape=prior_shape, prior_rate=prior_rate
+    )
     if height > 1:
-        ports += stage_ports(ports[0].target, height, ports[1].message)
+        ports += stage_ports(
+            ports[0].target,
+            height,
+            ports[1].message,
+            prior_rate=prior_rate,
+            meta_shape=meta_shape,
+            meta_rate=meta_rate,
+        )
     return ports
 
 
-def settle_stack(w, s1, s2, height: int, *, budget=el.MAX_SWEEPS, start=None, lesion=None):
-    ports = stack_ports(w, s1, s2, height, start)
-    result = el.settle(ports, budget=budget, lesion=lesion)
-    mean, variance = result['messages']['readback']
-    stages = {stage: result['messages']['meta_feedback' if stage == 2
-                                        else 'hyper_feedback%d' % stage]
-              for stage in range(2, height + 1)}
-    return {'mean': mean, 'variance': variance,
-            'precision': result['messages']['feedback'], 'stages': stages,
-            'sweeps': result['sweeps'], 'converged': result['converged'],
-            'executed_residual': result['executed_residual'],
-            'full_residual': result['full_residual'],
-            'stationarity': result['stationarity']}
+def settle_stack(
+    w,
+    s1,
+    s2,
+    height,
+    *,
+    budget=el.MAX_SWEEPS,
+    start=None,
+    lesion=None,
+    prior_shape=el.PRIOR_SHAPE,
+    prior_rate=el.PRIOR_RATE,
+    meta_shape=META_SHAPE,
+    meta_rate=META_RATE,
+    tolerance=el.RESIDUAL_TOL,
+    damping=1.0,
+):
+    """Run the generic repair law over a composed column; report all stages."""
+    ports = stack_ports(
+        w,
+        s1,
+        s2,
+        height,
+        start,
+        prior_shape=prior_shape,
+        prior_rate=prior_rate,
+        meta_shape=meta_shape,
+        meta_rate=meta_rate,
+    )
+    result = el.settle(
+        ports,
+        budget=budget,
+        lesion=lesion,
+        tolerance=tolerance,
+        damping=damping,
+        lesion_precision=prior_shape / prior_rate,
+    )
+    mean, variance = result["messages"]["readback"]
+    stages = {
+        stage: result["messages"][
+            "meta_feedback" if stage == 2 else f"hyper_feedback{stage}"
+        ]
+        for stage in range(2, height + 1)
+    }
+    return {
+        "mean": mean,
+        "variance": variance,
+        "precision": result["messages"]["feedback"],
+        "stages": stages,
+        **{
+            key: result[key]
+            for key in (
+                "sweeps",
+                "converged",
+                "executed_residual",
+                "full_residual",
+                "stationarity",
+            )
+        },
+    }
 
 
-class CorticalColumn:
-    """One column, ``height`` observer stages tall; height 1 is the element."""
+class CorticalColumn(el.CorticalColumn):
+    """A scalar column with ``height`` jointly settling observer stages.
 
-    def __init__(self, height: int = 1):
-        if isinstance(height, bool) or not isinstance(height, int) or height < 1:
-            raise ValueError('height must be an integer of at least 1')
-        self.height = height
-        self._evidence = el.EvidenceFactor(el.PRIOR_WEIGHT, el.Fraction(0), el.Fraction(0))
-        self._cursor = 0
-        self._last = None
+    Parameters inherit :class:`cadence.element.CorticalColumn`: decay, capacity,
+    value_bound, settle_budget, tolerance, damping, prior_weight, prior_shape,
+    prior_rate and max_statistic_bits. Height defaults to 1; meta_shape=4 and
+    meta_rate=4 configure additional rate observers at heights 2 and above.
+    ``config`` is read-only and fully bound into checkpoints.
 
-    # -- transactional witness admission (mirrors the element verbatim) -----
-    def observe(self, event, value, *, kind='witness', budget=el.MAX_SWEEPS):
-        if kind != 'witness':
-            raise ValueError('Only witnessed events are admissible; %r is not owned experience' % (kind,))
-        if isinstance(event, bool) or not isinstance(event, int):
-            raise ValueError('Event identifier must be an integer')
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise ValueError('Witness value must be an integer')
-        if abs(value) > el.VALUE_BOUND:
-            raise ValueError('Witness value outside the declared integer domain')
-        if event == self._cursor and self._cursor > 0:
-            if value == self._last:
-                return {'accepted': False, 'qualified': False, 'duplicate': True, 'sweeps': 0}
-            raise ValueError('Conflicting retry of the latest committed event')
-        if event != self._cursor + 1:
-            raise ValueError('Out-of-order event identifier; expected %d' % (self._cursor + 1))
-        if self._cursor >= el.CAPACITY:
-            raise ValueError('Declared witness capacity (%d) exhausted' % el.CAPACITY)
-        prospective = self._evidence.temper(el.DECAY).combine(el.witness_factor(value))
-        result = settle_stack(prospective.weight, prospective.linear,
-                              prospective.square, self.height, budget=budget)
-        if not result['converged']:
-            return {'accepted': False, 'qualified': False, 'duplicate': False,
-                    'sweeps': result['sweeps']}
-        self._evidence = prospective
-        self._cursor, self._last = event, value
-        return {'accepted': True, 'qualified': True, 'duplicate': False,
-                'sweeps': result['sweeps']}
+    Example::
 
-    # -- read-only query -----------------------------------------------------
+        column = CorticalColumn(height=2, decay=0.95, value_bound=100)
+        column.add(12.5)
+        result = column.query()
+        if result['qualified']:
+            print(result['answer'], result['variance'])
+    """
+
+    _schema = SCHEMA
+
+    def __init__(
+        self,
+        height=1,
+        *,
+        decay=el.DECAY,
+        capacity=None,
+        value_bound=el.VALUE_BOUND,
+        settle_budget=el.MAX_SWEEPS,
+        tolerance=el.RESIDUAL_TOL,
+        damping=1.0,
+        prior_weight=el.PRIOR_WEIGHT,
+        prior_shape=el.PRIOR_SHAPE,
+        prior_rate=el.PRIOR_RATE,
+        meta_shape=META_SHAPE,
+        meta_rate=META_RATE,
+        max_statistic_bits=el.MAX_STATISTIC_BITS,
+    ):
+        el._integer(height, "height", minimum=1)
+        super().__init__(
+            decay=decay,
+            capacity=capacity,
+            value_bound=value_bound,
+            settle_budget=settle_budget,
+            tolerance=tolerance,
+            damping=damping,
+            prior_weight=prior_weight,
+            prior_shape=prior_shape,
+            prior_rate=prior_rate,
+            max_statistic_bits=max_statistic_bits,
+        )
+        meta_shape, meta_rate, _ = _rate_parameters(meta_shape, meta_rate)
+        if height > 1:
+            _initial_rate(self.config["prior_rate"], meta_shape, meta_rate)
+        if height > 2:
+            _initial_rate(meta_rate, meta_shape, meta_rate)
+        self._config = MappingProxyType(
+            {
+                **self.config,
+                "height": height,
+                "meta_shape": meta_shape,
+                "meta_rate": meta_rate,
+            }
+        )
+
+    @property
+    def height(self):
+        """Number of coupled observer stages (read-only)."""
+        return self.config["height"]
+
+    def _settle(self, evidence, *, budget=None, start=None, lesion=None):
+        return settle_stack(
+            evidence.weight,
+            evidence.linear,
+            evidence.square,
+            self.height,
+            budget=self.config["settle_budget"] if budget is None else budget,
+            start=start,
+            lesion=lesion,
+            prior_shape=self.config["prior_shape"],
+            prior_rate=self.config["prior_rate"],
+            meta_shape=self.config["meta_shape"],
+            meta_rate=self.config["meta_rate"],
+            tolerance=self.config["tolerance"],
+            damping=self.config["damping"],
+        )
+
     def query(self):
-        result = settle_stack(self._evidence.weight, self._evidence.linear,
-                              self._evidence.square, self.height)
-        return {'answer': result['mean'], 'variance': result['variance'],
-                'precision': result['precision'], 'stages': result['stages'],
-                'qualified': result['converged'], 'residual': result['full_residual']}
+        """Return the settled scalar belief and stage rates without admitting data."""
+        result = self._settle(self._evidence)
+        return {
+            "answer": result["mean"],
+            "variance": result["variance"],
+            "precision": result["precision"],
+            "stages": result["stages"],
+            "qualified": result["converged"],
+            "residual": result["full_residual"],
+        }
 
-    # -- persistent continuation ----------------------------------------------
-    def snapshot(self):
-        return json.dumps({'schema': SCHEMA, 'height': self.height,
-                           'cursor': self._cursor, 'last': self._last,
-                           'w': str(self._evidence.weight),
-                           's1': str(self._evidence.linear),
-                           's2': str(self._evidence.square)},
-                          sort_keys=True, separators=(',', ':'))
-
-    def restore(self, text):
-        try:
-            state = json.loads(text)
-        except (TypeError, ValueError) as error:
-            raise ValueError('Malformed checkpoint: %s' % error)
-        if not isinstance(state, dict):
-            raise ValueError('Malformed checkpoint')
-        if state.get('schema') == el.SCHEMA and self.height == 1:
-            state = {**state, 'schema': SCHEMA, 'height': 1}  # element continuity
-        if state.get('schema') != SCHEMA:
-            raise ValueError('Unknown checkpoint schema')
-        if state.get('height') != self.height:
-            raise ValueError('Checkpoint height does not match this column')
-        if set(state) != {'schema', 'height', 'cursor', 'last', 'w', 's1', 's2'}:
-            raise ValueError('Checkpoint fields do not match the declared contract')
-        cursor, last = state['cursor'], state['last']
-        if isinstance(cursor, bool) or not isinstance(cursor, int) or not 0 <= cursor <= el.CAPACITY:
-            raise ValueError('Checkpoint cursor outside the declared horizon')
-        if last is not None and (isinstance(last, bool) or not isinstance(last, int)
-                                 or abs(last) > el.VALUE_BOUND):
-            raise ValueError('Checkpoint latest value outside the declared domain')
-        if (cursor == 0) != (last is None):
-            raise ValueError('Checkpoint cursor and latest value disagree')
-        weight = el._parse_fraction(state['w'])
-        linear = el._parse_fraction(state['s1'])
-        square = el._parse_fraction(state['s2'])
-        if weight <= 0 or square < 0:
-            raise ValueError('Checkpoint statistics are not admissible evidence')
-        self._evidence = el.EvidenceFactor(weight, linear, square)
-        self._cursor, self._last = cursor, last
-
-    # -- actual uncertainty readback and feedback ------------------------------
     def observer_intervention(self):
-        stats = (self._evidence.weight, self._evidence.linear, self._evidence.square)
-        base = settle_stack(*stats, self.height)
-        if not base['converged']:
-            raise ValueError('Cannot intervene on an unqualified settled state')
-        wf, mean, scatter = el._stats(*stats)
-        lower = el.LowerBelief(wf, mean)
-        observer = el.PrecisionObserver(wf, scatter)
-        readback = el.Port('readback', lower, observer, 'moments', (mean, base['variance']))
-        feedback = el.Port('feedback', observer, lower, 'scalar', base['precision'])
-        variance, tau = base['variance'], base['precision']
-        rate_in = base['stages'].get(2, el.PRIOR_RATE)
-        recovered = settle_stack(*stats, self.height, start=(variance + 0.05, tau))
-        lesions = {}
-        for name in el.LESIONS:
-            result = settle_stack(*stats, self.height, lesion=name)
-            lesions[name] = {'converged': result['converged'],
-                             'full_residual': result['full_residual'],
-                             'stationarity': result['stationarity']}
-        inbox = {'readback': (mean, variance), 'meta_feedback': rate_in}
-        after = {'readback': (mean, variance + 0.05), 'meta_feedback': rate_in}
-        return {'observer_before': observer.emit(feedback, inbox),
-                'observer_after': observer.emit(feedback, after),
-                'lower_before': lower.emit(readback, {'feedback': tau})[1],
-                'lower_after': lower.emit(readback, {'feedback': tau + 0.1})[1],
-                'recovered_qualified': recovered['converged'],
-                'recovered_residual': recovered['full_residual'],
-                'recovered_stationarity': recovered['stationarity'],
-                'height': self.height, 'stages': base['stages'], 'lesions': lesions}
-
-    # -- exact separator-port federation ---------------------------------------
-    def solve_factors(self, factors, edges):
-        return el.solve_cluster_forest(factors, edges)
+        """Run readback, feedback and recovery diagnostics without memory changes."""
+        result = super().observer_intervention()
+        base = self._settle(self._evidence)
+        return {**result, "height": self.height, "stages": base["stages"]}

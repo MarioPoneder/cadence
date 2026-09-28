@@ -1,70 +1,123 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: self-reading cortical columns with local state, readback and repair" width="100%">
+</p>
+
 # Cadence
 
-Brains built from one element: the **cortical column**, a bounded
-self-reading settling patch - owned local state, typed boundary ports,
-live readback of its own uncertainty, feedback that enters the executed
-equations, transactional records, and one repair law that settles them.
-A **Cortex** is a trainable hierarchy of column banks: coarse levels are
-priors for fine levels, every level watches its own uncertainty, and
-learning admits each witnessed transition exactly once.
+[Website](https://floatingpragma.io/cadence/) · [Examples](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/) · [Documentation](https://github.com/muellerberndt/cadence/blob/main/docs/REFERENCE.md)
 
-Pure Python, zero dependencies. The games extra adds Atari.
+[![PyPI](https://img.shields.io/pypi/v/cadence-net)](https://pypi.org/project/cadence-net/)
+[![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
+
+**Research toward general intelligence through overlap consensus, equilibrium detuning and self-reflection.**
+
+Cadence's goal is a continuing learning system with the flexibility of animal
+and human problem solving: acquiring skills from experience, retaining useful
+knowledge, imagining alternatives and creating solutions across domains.
+The mission is to find the smallest persistent state and local update rule
+that can support these abilities. The building block stays as simple as possible,
+like in nature; every part of a brain answers with a settled state of that one
+rule; and where a choice appears, evolution across lives is preferred to design.
+General intelligence is the research goal; the current library establishes
+bounded learning, memory and control results.
+
+That building block has a name and a shape: the **cortical column**. Our columns
+are mathematical abstractions of the cortical
+columns found in the cerebral cortex of mammals - the human brain
+included - the repeating vertical motif in which stacked layers of
+neurons read and regulate one another's activity. What we take from
+biology is the architecture: a bounded unit with its own retained
+evidence, an observer stage that reads the unit's live uncertainty, and
+feedback that enters the same executed equations. What we do not take
+is biophysics: these are not validated models of biological neurons,
+and no result in this library rests on a neuroscience claim.
+
+Cadence builds online predictors from these **self-reading columns**: small
+stateful models with explicit observation ports, retained evidence and
+reciprocal feedback between a belief and an observer of its uncertainty. A
+`Cortex` combines columns into context-dependent predictors; an optional
+action-value interface adds reinforcement learning.
+
+The library is pure Python and uses only the standard library.
+
+## The roadmap
+
+We want to reach a point where we can effortlessly evolve a human-like brain,
+teach it first by imitation and then through its own life, and give it an
+experience identical to that of a human living in our world. Brains with
+capabilities far beyond ours are thinkable on the same path; human-level
+competence comes first, as a sensible milestone. The steps from the
+brains in this library to that milestone are tracked as issues in this repository,
+rung by rung, each with its task, its control and its falsifier.
+
+## Install
+
+From a checkout, with Python 3.11 or later:
 
 ```sh
-pip install -e .            # library (stdlib only)
-pip install -e '.[games]'   # + gymnasium/ALE for Atari
+python -m pip install -e .
 ```
 
-## Quickstart
+The optional `games` extra adds Gymnasium and ALE; neither is needed below.
+
+## Learn from a sensor
 
 ```python
-import ale_py, gymnasium as gym
-from cadence import Cortex
+from cadence import CorticalColumn
 
-gym.register_envs(ale_py)
-def env_factory():
-    return gym.make('ALE/Freeway-v5', obs_type='ram', frameskip=4,
-                    repeat_action_probability=0.0)
+column = CorticalColumn(decay=0.9)
+for reading in (0.2, 0.4, 0.3):
+    admitted = column.add(reading)
+    assert admitted["accepted"]
 
-cortex = Cortex.for_environment(env_factory, depth=2, width=1)
-
-env = env_factory()
-for episode in range(24):
-    observation, _ = env.reset(seed=episode)
-    done, total = False, 0.0
-    while not done:
-        action = cortex.act(observation)
-        observation_next, reward, terminated, truncated, _ = env.step(action)
-        cortex.learn(observation, action, float(reward), observation_next, terminated)
-        observation, total = observation_next, total + reward
-        done = terminated or truncated
-    cortex.end_episode()
-    print(episode, total)
+belief = column.query()
+assert belief["qualified"]
+print(belief["answer"], belief["variance"])
 ```
 
-No manual wiring: a calibration probe finds the bytes the body's own
-actions move and the bytes the world moves, and builds the level maps.
-Structure is configured like a small neural net - `depth` (hidden
-levels), `width` (bytes read by the finest level) and `height`
-(observer stages per column), or an explicit `ladder` - while dynamics (decay, discount, optimism, epsilon) are
-constructor keywords with documented defaults. On Freeway this learns
-its first road crossings within a handful of episodes and reaches
-15-20 crossings per two-minute episode by episode ~10, while random
-and frozen-memory controls stay at zero; on Pong, width-1 wiring is
-demonstrably too narrow - both results, with every control, live in
-the development receipts (docs/VARIANTS.md).
+The column retains discounted evidence, then jointly settles its belief and
+uncertainty observer. Querying does not add a new observation. Use explicit
+ordered event IDs with `observe` when delivery may be retried.
 
-## The pieces
+## Add context
 
-| Piece | What it is |
+```python
+from cadence import Cortex
+
+model = Cortex.from_dimensions(
+    n_inputs=2, n_outputs=1, bounds=(-1.0, 1.0), bins=8, depth=1,
+)
+context = (-0.5, 0.25)
+
+before = model.predict(context)[0]
+result = model.observe(context, -0.3)
+assert result["accepted"]
+after = model.predict(context)[0]
+print(before, after)
+
+saved = model.snapshot()
+restored = Cortex.from_snapshot(saved)
+assert restored.predict(context) == model.predict(context)
+```
+
+Here two normalized sensor values select a context, and the observed target
+teaches one scalar output. Built-in binning supplies the representation;
+Cadence learns the evidence within those contexts. Choose output count,
+context resolution and observer height explicitly, or use the defaults.
+
+Within a column, observer feedback is reciprocal. Between Cortex levels,
+coarser beliefs supply priors to finer ones; this directed hierarchy is a
+different structure. Additional levels or observer stages are choices to test,
+not a guaranteed improvement.
+
+| Start here | What it covers |
 | --- | --- |
-| `CorticalColumn(height=H)` | The element with a vertical dimension: H observer stages on one belief (height 1 is the qualified element exactly); witness admission, query, readback/feedback, exact Fraction inference on certified cluster forests. |
-| `Cortex` | Hierarchy of value-column banks over calibrated contexts; act / learn / end_episode / value / snapshot / restore. |
-| `calibrate` / `wire` | The probe and the layer builder (`depth`, `width`, `ladder`). |
-
-Docs: [REFERENCE](docs/REFERENCE.md) (API and every parameter),
-[VARIANTS](docs/VARIANTS.md) (flat, deep, wide - with the measured
-evidence), [ELEMENT](docs/ELEMENT.md) (the law, the equations, the
-qualification story and its limits).
+| [Quickstart](https://github.com/muellerberndt/cadence/blob/main/docs/QUICKSTART.md) | Sensors, multiple outputs, retries, checkpoints and optional actions. |
+| [Reference](https://github.com/muellerberndt/cadence/blob/main/docs/REFERENCE.md) | Public classes, methods, parameters, defaults and errors. |
+| [Element](https://github.com/muellerberndt/cadence/blob/main/docs/ELEMENT.md) | Evidence, executed equations, residuals and qualification. |
+| [Variants](https://github.com/muellerberndt/cadence/blob/main/docs/VARIANTS.md) | Context depth, width, observer height and evidence limits. |
+| [Specification](https://github.com/muellerberndt/cadence/blob/main/docs/SPECIFICATION.md) | What the API guarantees and what the application supplies. |
 
 MIT license.

@@ -1,4 +1,5 @@
 """The public CorticalColumn: height semantics and element identity."""
+
 import pytest
 
 from cadence import CorticalColumn
@@ -12,35 +13,31 @@ def test_height_validates():
 
 
 def test_height_one_is_the_element_exactly():
-    public, frozen = CorticalColumn(height=1), el.CorticalColumn()
+    public, scalar = CorticalColumn(height=1), el.CorticalColumn()
     for event, value in enumerate([-2, 2, -2, 0, 2], 1):
-        assert public.observe(event, value) == frozen.observe(event, value)
-    ours, theirs = public.query(), frozen.query()
-    assert ours['stages'] == {}
+        assert public.observe(event, value) == scalar.observe(event, value)
+    ours, theirs = public.query(), scalar.query()
+    assert ours["stages"] == {}
     assert {k: ours[k] for k in theirs} == theirs  # identical shared fields
-    ours_i, theirs_i = public.observer_intervention(), frozen.observer_intervention()
+    ours_i, theirs_i = public.observer_intervention(), scalar.observer_intervention()
     assert {k: ours_i[k] for k in theirs_i} == theirs_i
-    # An element (v1) checkpoint restores into a height-1 public column.
-    twin = CorticalColumn(height=1)
-    twin.restore(frozen.snapshot())
-    assert twin.query()['answer'] == theirs['answer']
 
 
 def test_taller_columns_settle_and_read_back():
     for height in (2, 3):
         column = CorticalColumn(height=height)
         for event, value in enumerate([-2, 2, -2], 1):
-            assert column.observe(event, value)['accepted'] is True
+            assert column.observe(event, value)["accepted"] is True
         answer = column.query()
-        assert answer['qualified'] is True
-        assert sorted(answer['stages']) == list(range(2, height + 1))
+        assert answer["qualified"] is True
+        assert sorted(answer["stages"]) == list(range(2, height + 1))
         result = column.observer_intervention()
-        assert abs(result['observer_after'] - result['observer_before']) > 1e-7
-        assert abs(result['lower_after'] - result['lower_before']) > 1e-7
-        assert result['recovered_qualified'] is True
-        assert result['recovered_residual'] <= 1e-10
-        for lesion in result['lesions'].values():
-            assert lesion['converged'] is True and lesion['full_residual'] > 1e-7
+        assert abs(result["observer_after"] - result["observer_before"]) > 1e-7
+        assert abs(result["lower_after"] - result["lower_before"]) > 1e-7
+        assert result["recovered_qualified"] is True
+        assert result["recovered_residual"] <= 1e-10
+        for lesion in result["lesions"].values():
+            assert lesion["converged"] is True and lesion["full_residual"] > 1e-7
 
 
 def test_height_changes_the_settled_state():
@@ -48,7 +45,7 @@ def test_height_changes_the_settled_state():
     for event, value in enumerate([-2, 2, -2], 1):
         short.observe(event, value)
         tall.observe(event, value)
-    assert short.query()['precision'] != tall.query()['precision']
+    assert short.query()["precision"] != tall.query()["precision"]
 
 
 def test_checkpoint_binds_height():
