@@ -24,6 +24,15 @@ Python, using only the standard library. Every processing and observer patch
 uses one local prediction relation. The compiled brain supports joint
 settlement, supervised witness learning, diagnostics and continuation.
 
+## Three pillars
+
+- **Minimalism:** one patch rule, a small public API, no runtime dependencies.
+- **User-friendliness:** explicit layouts, sensible defaults and runnable examples.
+- **Agent-friendliness:** exact contracts, inspectable state and explicit refusal.
+
+Every core change is reviewed against all three. The
+[contributor instructions](AGENTS.md) define the checks.
+
 ## Install
 
 Python 3.11 or later; no runtime dependencies:

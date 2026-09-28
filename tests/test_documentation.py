@@ -56,3 +56,36 @@ def test_constructor_reference_matches_api(name):
         assert documented[parameter_name].kind == parameter.kind
         assert documented[parameter_name].default == parameter.default
         assert f"`{parameter_name}`" in reference
+
+
+PUBLIC_METHODS = [
+    (owner, name)
+    for owner in (cadence.Cortex, cadence.Brain)
+    for name, member in inspect.getmembers(owner)
+    if not name.startswith("_")
+    and (inspect.isfunction(member) or inspect.ismethod(member))
+]
+
+
+@pytest.mark.parametrize(
+    ("owner", "name"),
+    PUBLIC_METHODS,
+    ids=[f"{c.__name__}.{n}" for c, n in PUBLIC_METHODS],
+)
+def test_public_method_reference_matches_api(owner, name):
+    """Examples alone cannot detect misleading optional/required parameters."""
+    reference = (ROOT / "docs" / "REFERENCE.md").read_text()
+    match = re.search(rf"`(?:Brain\.)?{name}(\([^`]*\))`", reference)
+    assert match, f"Missing exact {owner.__name__}.{name} signature"
+    namespace = {}
+    exec(f"def documented{match.group(1)}:\n    pass\n", namespace)
+    documented = inspect.signature(namespace["documented"]).parameters
+    actual = {
+        key: parameter
+        for key, parameter in inspect.signature(getattr(owner, name)).parameters.items()
+        if key != "self"
+    }
+    assert list(documented) == list(actual)
+    for key, parameter in actual.items():
+        assert documented[key].kind == parameter.kind
+        assert documented[key].default == parameter.default

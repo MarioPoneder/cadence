@@ -3,6 +3,23 @@
 Read [the guide](docs/DRSN.md), [API reference](docs/REFERENCE.md) and
 [specification](docs/SPECIFICATION.md) before changing semantics.
 
+## Three mandatory review gates
+
+**Minimalism, user-friendliness and agent-friendliness govern every change.**
+
+| Pillar | A change is ready only when |
+| --- | --- |
+| Minimalism | It uses the common patch/repair substrate, keeps the public API small, and adds no compatibility machinery, application-specific core rule or runtime dependency. A new abstraction must remove real duplication or enable a demonstrated general need. |
+| User-friendliness | A first-time user can construct, query, teach and save a brain from the quickstart. Names separate width, sensor shape and recursive observation. Configuration has validated defaults, errors explain the violated contract, and failure leaves continuation intact. |
+| Agent-friendliness | Public signatures, defaults, return fields, mutation rules and failure behavior match the reference. State and topology are inspectable; examples execute; checkpoint identity and retry semantics are explicit. No undocumented preprocessing or hidden fallback changes the task. |
+
+Before merging, explain how the change meets each applicable gate and run the
+checks below. Prefer improving an existing primitive to adding another. Do not
+add aliases or wrappers solely to make a second way to express the same thing.
+Performance or convenience must preserve qualification and witness custody.
+Tests enforce executable examples and signature/export parity; architectural
+simplicity and clarity still require review rather than a test-count claim.
+
 ## Architecture
 
 Import `Cortex` and `Brain` from `cadence`. `Cortex` declares populations;

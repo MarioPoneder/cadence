@@ -66,7 +66,7 @@ increase coverage cost even when `fan_in` is small.
 | --- | --- |
 | `input(name, *, shape)` | An `Input` boundary whose supplied values remain fixed for the complete solve. |
 | `column(name=None, *, patches, inputs=())` | A `Population` containing exactly `patches` processing patches, a positive integer. `inputs` accepts existing sensor or population references. |
-| `observer(name=None, *, patches, inputs=(), observes=...)` | The same patch primitive with at least one observed population. Reads its live states and exactly recomputed prediction errors; may also receive ordinary `inputs`. |
+| `observer(name=None, *, patches, inputs=(), observes)` | The same patch primitive with at least one observed population. Reads its live states and exactly recomputed prediction errors; may also receive ordinary `inputs`. |
 | `output(name, *, shape, reads, indices=None)` | An `Output` exposing selected coordinates of one population, with no separate output network. |
 | `build()` | A `Brain` with resolved sparse wiring. Requires at least one population and one output. A successful build freezes the layout; further construction or another build raises `ValueError`. |
 
