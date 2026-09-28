@@ -17,6 +17,10 @@ and docs/MIGRATION.md maps the old surface to the new one.
   exactly-once episodic admission, witness-mass weighting per level.
 - `calibrate` / `wire`: controllability/drive probe and torch-style
   structure configuration (`depth`, `width`, explicit `ladder`).
+- `height`: the vertical dimension on both classes - observer stages
+  per column, anchored so tall stacks stay proper at zero dispersion;
+  height 1 is bit-identical to the element, taller stacks are
+  mechanism-tested and marked learning-unproven.
 - Removed: the 0.19 package (37 modules, ~100 exports), old docs,
   benchmarks, Lean certificates and all runtime dependencies; the
   library is pure stdlib, with `games` and `dev` extras.

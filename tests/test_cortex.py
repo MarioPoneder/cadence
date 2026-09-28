@@ -131,6 +131,25 @@ def test_corridor_learning_beats_controls():
     assert learner.counters['rejected_updates'] == 0
 
 
+def test_height_two_cortex_runs_and_binds_custody():
+    # Mechanism and custody only: learning above height 1 is not yet a
+    # contract (corridor: 1 of 3 seeds learned at the declared constants;
+    # docs/VARIANTS.md records that as an open result, not a promise).
+    tall = Cortex(3, corridor_maps(), seed=7, height=2)
+    run_corridor(tall, episodes=8, seed=7)
+    belief = tall.value((4, 2), 1)
+    assert belief['qualified'] is True and belief['novelty'] > 0
+    assert tall.counters['rejected_updates'] == 0
+    saved = tall.snapshot()
+    with pytest.raises(ValueError):
+        Cortex(3, corridor_maps(), seed=7, height=1).restore(saved)
+    twin = Cortex(3, corridor_maps(), seed=7, height=2)
+    twin.restore(saved)
+    assert twin.snapshot() == saved
+    for action in range(3):
+        assert twin.value((4, 2), action) == tall.value((4, 2), action)
+
+
 def test_hierarchy_helps_early_generalization():
     deep = Cortex(3, corridor_maps(), seed=4)
     flat = Cortex(3, corridor_maps()[:1], seed=4)

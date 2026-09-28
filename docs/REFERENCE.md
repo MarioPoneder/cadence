@@ -8,7 +8,7 @@ Four public names: `CorticalColumn`, `Cortex`, `calibrate`, `wire`
 ```python
 Cortex(n_actions, feature_maps, *, decay=0.99, discount=0.97,
        optimism=0.5, epsilon=0.02, coupling=1.0, target_bound=8.0,
-       settle_budget=64, seed=0, learning_enabled=True)
+       settle_budget=256, seed=0, learning_enabled=True, height=1)
 
 Cortex.for_environment(env_factory, n_actions=None, *, depth=2, width=1,
                        calibration_steps=400, seed=0, **overrides)
@@ -31,9 +31,10 @@ calibrates, wires and constructs; the calibration lands on
 | `epsilon` | 0.02 | Residual random actions; novelty does the directed exploring. |
 | `coupling` | 1.0 | Coarse-as-prior strength (pseudo-evidence units); 0 severs the hierarchy. |
 | `target_bound` | 8.0 | Declared value scale; targets clip here. Not a knob. |
-| `settle_budget` | 64 | Sweeps per settle; unsettled states are rejected, never used. Raise only if `rejected_updates` appears. |
+| `settle_budget` | 256 | Sweeps per settle (the element's cap); unsettled states are rejected, never used. Tall columns with heavy evidence need the full cap. |
 | `seed` | 0 | Only randomness source (tie-breaks, epsilon). |
 | `learning_enabled` | True | False = frozen-memory control at the same interface. |
+| `height` | 1 | Observer stages per column (vertical microcircuit). Height 1 is the validated learner; taller stacks are mechanism-ready, learning-unproven (docs/VARIANTS.md). |
 
 Methods:
 
@@ -53,7 +54,17 @@ Controls come from the same class: uniform-random is
 `Cortex(..., learning_enabled=False, epsilon=1.0)`, frozen-memory is
 `Cortex(..., learning_enabled=False)`.
 
-## CorticalColumn (the element)
+## CorticalColumn
+
+```python
+CorticalColumn(height=1)
+```
+
+`height` = observer stages on the belief: 1 is the qualified element
+exactly (identical numbers, element checkpoints restore); 2 adds a
+rate hyper-observer reading the precision observer live; H chains
+further anchored rate observers. The frozen candidate class remains
+at `cadence.element.CorticalColumn`.
 
 - `observe(event, value, kind='witness', budget=256)` - ordered
   transactional admission; duplicates flagged, conflicts/out-of-order/

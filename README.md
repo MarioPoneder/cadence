@@ -45,8 +45,8 @@ for episode in range(24):
 No manual wiring: a calibration probe finds the bytes the body's own
 actions move and the bytes the world moves, and builds the level maps.
 Structure is configured like a small neural net - `depth` (hidden
-levels) and `width` (bytes read by the finest level), or an explicit
-`ladder` - while dynamics (decay, discount, optimism, epsilon) are
+levels), `width` (bytes read by the finest level) and `height`
+(observer stages per column), or an explicit `ladder` - while dynamics (decay, discount, optimism, epsilon) are
 constructor keywords with documented defaults. On Freeway this learns
 its first road crossings within a handful of episodes and reaches
 15-20 crossings per two-minute episode by episode ~10, while random
@@ -58,7 +58,7 @@ the development receipts (docs/VARIANTS.md).
 
 | Piece | What it is |
 | --- | --- |
-| `CorticalColumn` | The element: scalar witness admission, read-only query, observer readback/feedback, exact Fraction inference on certified cluster forests. |
+| `CorticalColumn(height=H)` | The element with a vertical dimension: H observer stages on one belief (height 1 is the qualified element exactly); witness admission, query, readback/feedback, exact Fraction inference on certified cluster forests. |
 | `Cortex` | Hierarchy of value-column banks over calibrated contexts; act / learn / end_episode / value / snapshot / restore. |
 | `calibrate` / `wire` | The probe and the layer builder (`depth`, `width`, `ladder`). |
 

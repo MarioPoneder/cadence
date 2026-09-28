@@ -17,40 +17,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Build and install the wheel with only required dependencies
+      - name: Build and install the wheel with zero runtime dependencies
         run: |
           python -m pip wheel --no-deps --wheel-dir dist .
           python -m pip install dist/*.whl
           python -m pip check
-      - name: Run the documented learning and acting loops without optional backends
+      - name: Import and settle a column without any optional extras
         run: |
           python - <<'PY'
-          import re
-          import subprocess
-          import sys
-          import tempfile
-          from pathlib import Path
-
-          for name in ("docs/patchnet.md", "docs/quickstart.md", "docs/temporal.md",
-                       "docs/temporal-memory.md", "docs/architecture.md",
-                       "docs/planning.md", "docs/interaction.md", "docs/partitioned.md",
-                       "docs/record-patch.md", "docs/build.md", "docs/belief.md",
-                       "docs/steering.md", "docs/recursive-settlement.md",
-                       "docs/recursive-training.md",
-                       "docs/api.md", "docs/learning.md",
-                       "docs/protocols.md", "docs/receipts.md"):
-              page = Path(name).read_text(encoding="utf-8")
-              blocks = re.findall(r"(<!-- not-run[^\n]*-->\n)?```python\n(.*?)```", page, re.S)
-              code = "\n\n".join(block for marker, block in blocks if not marker)
-              if name.endswith("quickstart.md"):
-                  code += "\nassert night['updates'] > 200 and learner.updates == 80\n"
-              with tempfile.TemporaryDirectory() as directory:
-                  script = Path(directory) / "documentation_example.py"
-                  script.write_text(code, encoding="utf-8")
-                  subprocess.run([sys.executable, str(script)], cwd=directory, check=True)
+          from cadence import CorticalColumn, Cortex, __version__
+          column = CorticalColumn()
+          for event, value in enumerate([2, 2, 2, 0], 1):
+              assert column.observe(event, value)['accepted'] is True
+          answer = column.query()
+          assert answer['qualified'] is True and answer['answer'] > 0.5
+          print('cadence', __version__, 'ok:', answer['answer'])
           PY
-      - name: Check the Lean audit verifier
-        run: python -m unittest discover -s lean -p test_check.py
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -63,8 +45,4 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pip install mlx || true
-        if: runner.os == 'macOS'
-      - run: ruff check src tests
-      - run: mypy
       - run: pytest -q

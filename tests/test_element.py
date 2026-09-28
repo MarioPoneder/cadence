@@ -1,10 +1,11 @@
-"""The element's contracts: admission custody, readback, exact federation."""
+"""The frozen element's contracts: admission custody, readback, federation."""
 from fractions import Fraction as F
 from itertools import product
 
 import pytest
 
-from cadence import CorticalColumn, solve_cluster_forest
+from cadence import solve_cluster_forest
+from cadence.element import CorticalColumn
 
 
 def factor(scope, rule):

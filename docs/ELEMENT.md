@@ -34,6 +34,21 @@ running-intersection property; cycles, non-certifiable structures and
 zero-support (contradictory) problems are rejected rather than
 approximated silently.
 
+## The public class and the frozen candidate
+
+`cadence.CorticalColumn(height=H)` is the element with a vertical
+dimension: H observer stages on one belief. At height 1 it produces
+numbers identical to the frozen candidate class (tested), and element
+checkpoints restore into it. Heights above 1 chain rate
+hyper-observers, each reading the stage below live and feeding its
+rate down; every stage's message carries the stage below's fixed
+prior rate as an anchor plus a live surplus, because the unanchored
+conjugate chain is degenerate at zero dispersion (the rate message
+drains toward zero and precision runs away - found, fixed and tested
+on heavy zero-scatter evidence). The frozen candidate itself stays
+untouched at `cadence.element.CorticalColumn`; qualification receipts
+bind to it.
+
 ## Recursion
 
 Stacking is composition, not new machinery: an observer of an observer

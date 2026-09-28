@@ -42,6 +42,7 @@ import random
 from typing import Any, Callable, Sequence
 
 from . import element as el
+from .column import stage_ports
 
 
 class LevelBelief:
@@ -82,7 +83,11 @@ class LevelObserver(el.PrecisionObserver):
         self.level = level
 
     def emit(self, port, inbox):
-        return super().emit(port, {'readback': inbox[f'readback{self.level}']})
+        translated = {'readback': inbox[f'readback{self.level}']}
+        meta = inbox.get(f'{self.level}:meta_feedback')
+        if meta is not None:
+            translated['meta_feedback'] = meta
+        return super().emit(port, translated)
 
 
 class ValueColumn:
@@ -148,12 +153,21 @@ class Cortex:
       rejected, never used.
     - ``seed`` (0): the only randomness (tie-breaks, epsilon).
     - ``learning_enabled`` (True): False is the frozen-memory control.
+    - ``height`` (1): observer stages per level - the column's vertical
+      microcircuit. Height 2 gives every level a rate hyper-observer
+      reading its precision observer live (the demonstrated recursive
+      readback); higher stages chain further rate observers. Structure
+      is depth x width x height, like sizing a small neural net.
     """
 
     def __init__(self, n_actions: int, feature_maps: Sequence[Callable[[Any], tuple]], *,
                  decay: float = 0.99, discount: float = 0.97, optimism: float = 0.5,
                  epsilon: float = 0.02, coupling: float = 1.0, target_bound: float = 8.0,
-                 settle_budget: int = 64, seed: int = 0, learning_enabled: bool = True):
+                 settle_budget: int = 256, seed: int = 0, learning_enabled: bool = True,
+                 height: int = 1):
+        if isinstance(height, bool) or not isinstance(height, int) or height < 1:
+            raise ValueError('height must be an integer of at least 1')
+        self.height = height
         if isinstance(n_actions, bool) or not isinstance(n_actions, int) or n_actions < 2:
             raise ValueError('n_actions must be an integer of at least 2')
         if not feature_maps or not all(callable(f) for f in feature_maps):
@@ -249,6 +263,9 @@ class Cortex:
                                  (mean, 1.0 / (wf * el.PRIOR_PRECISION))))
             ports.append(el.Port(f'feedback{level}', observer, belief, 'scalar',
                                  el.PRIOR_PRECISION))
+            if self.height > 1:
+                ports += stage_ports(observer, self.height, el.PRIOR_PRECISION,
+                                     prefix=f'{level}:')
         return ports
 
     def value(self, observation, action: int) -> dict:
@@ -343,7 +360,8 @@ class Cortex:
             for (context, action), column in table.items():
                 rows.append([level, list(context), action,
                              column.weight, column.linear, column.square])
-        return json.dumps({'schema': 'cortex-state/1', 'levels': self.levels,
+        return json.dumps({'schema': 'cortex-state/1', 'height': self.height,
+                           'levels': self.levels,
                            'n_actions': self.n_actions, 'rows': rows},
                           sort_keys=True, separators=(',', ':'))
 
@@ -351,7 +369,8 @@ class Cortex:
         state = json.loads(text)
         if state.get('schema') != 'cortex-state/1':
             raise ValueError('Unknown cortex checkpoint schema')
-        if state.get('levels') != self.levels or state.get('n_actions') != self.n_actions:
+        if (state.get('levels') != self.levels or state.get('n_actions') != self.n_actions
+                or state.get('height', 1) != self.height):
             raise ValueError('Checkpoint shape does not match this cortex')
         columns: list[dict] = [{} for _ in range(self.levels)]
         for level, context, action, weight, linear, square in state['rows']:
@@ -370,4 +389,4 @@ class Cortex:
         return {**self.counters,
                 'columns_per_level': [len(t) for t in self._columns],
                 'level_weights': list(self.level_weights),
-                'levels': self.levels}
+                'levels': self.levels, 'height': self.height}

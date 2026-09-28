@@ -13,11 +13,13 @@ the same element, the same settle law, the same admission custody.
 | Deep (h3) | `depth=3`: finest, 16-bin, 4-bin, global | More regional structure; helps when regions differ strongly. |
 | Custom depth | `ladder=(16, 8, 4)` etc. | Explicit intermediate bins over the primary controllable byte. |
 | Wide | `width=N`: finest level reads top-N controllable + top-N drive bytes | When one byte pair cannot express the task (see Pong below). |
+| Tall | `height=H`: H observer stages per column (belief + precision observer + rate hyper-observers) | Height 1 is the validated learner and the default. Heights 2-3 settle, couple reciprocally, bind custody and reject nothing (tested), but have not yet matched height 1's learning on the corridor fixture: the extra stage licenses higher settled precisions, weakening the novelty signal. Mechanism-ready, learning-unproven; needs receipts before use in anger. |
 
 Depth multiplies levels; width multiplies the finest level's context
-cells. Witness mass per level is automatic: a level with k-fold fewer
-cells than the finest admits each target at 1/k mass, so all levels
-share one evidence timescale.
+cells; height deepens each column's internal microcircuit. Witness
+mass per level is automatic: a level with k-fold fewer cells than the
+finest admits each target at 1/k mass, so all levels share one
+evidence timescale.
 
 ## Measured evidence (development receipts, 2026-09-28)
 
