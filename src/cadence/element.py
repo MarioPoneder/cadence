@@ -57,12 +57,19 @@ MAX_STATISTIC_BITS = 16384
 
 def _finite(value, name, *, positive=False):
     """Validate a real numeric scalar without accepting booleans or strings."""
-    if isinstance(value, bool) or not isinstance(value, (Real, Decimal)):
-        raise ValueError(f"{name} must be a finite real number")
-    try:
-        number = float(value)
-    except (OverflowError, ValueError) as error:
-        raise ValueError(f"{name} must be finite") from error
+    # Settlement produces builtin floats. Avoid numeric ABC dispatch for them
+    # while keeping the full conversion contract for external numeric types.
+    if type(value) is float:
+        number = value
+    else:
+        if type(value) is not int and (
+            isinstance(value, bool) or not isinstance(value, (Real, Decimal))
+        ):
+            raise ValueError(f"{name} must be a finite real number")
+        try:
+            number = float(value)
+        except (OverflowError, ValueError) as error:
+            raise ValueError(f"{name} must be finite") from error
     if not math.isfinite(number) or (positive and number <= 0):
         raise ValueError(
             "{} must be {}finite".format(name, "positive and " if positive else "")
@@ -216,8 +223,10 @@ def settle(
         incoming.setdefault(id(port.target), []).append(port)
 
     def inbox(patch, law, current):
+        # Initial, emitted and damped messages are already canonical. Scalars
+        # and moment tuples are immutable; table dictionaries need a local copy.
         box = {
-            p.name: _payload(p.family, current[p.name])
+            p.name: current[p.name].copy() if p.family == "table" else current[p.name]
             for p in incoming.get(id(patch), ())
         }
         return _apply_lesion(box, law, lesion_precision)

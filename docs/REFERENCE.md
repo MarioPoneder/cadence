@@ -339,6 +339,10 @@ within a solve. A source supplies `emit(port, inbox)`; the target owns the
 corresponding incoming message. `family` is `"scalar"`, `"moments"` or
 `"table"`; `message` is its initial payload; `meta` is optional metadata.
 Emitters must be deterministic and must not mutate hidden state while queried.
+Each call receives a fresh inbox dictionary. Initial messages and emitted
+proposals are validated and normalized; canonical floats and moment tuples can
+be shared safely, while table dictionaries are copied for each inbox. This
+avoids repeated validation of unchanged messages inside the repair loop.
 
 `budget` is a nonnegative integer. Scalar/moment damping lies in `(0, 1]`;
 table messages require one. `lesion=None` is normal operation; the built-in
