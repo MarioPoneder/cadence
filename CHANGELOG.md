@@ -6,6 +6,10 @@
   secant estimate. Keep the same energy, analytic gradient, Armijo acceptance,
   finite budget and final stationarity check. This reduces measured work on
   small learning tasks; it does not guarantee qualification or task accuracy.
+- Handle rounding at the end of a solve: a fully stationary proposal may finish
+  within eight energy ulps when strict decrease is numerically indistinguishable.
+  Ordinary steps retain Armijo decrease; the requested qualification tolerance
+  and fresh final check are unchanged. This fixes a Linux tight-tolerance stall.
 - **Default wiring change:** `fan_in=None` connects every declared source
   coordinate to each destination patch. Positive integers explicitly request
   sparse sampling. Aggregate coverage alone does not ensure a selected output

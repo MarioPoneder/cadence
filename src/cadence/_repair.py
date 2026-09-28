@@ -353,14 +353,16 @@ def settle(
     """Repair eligible coordinates and freshly qualify the complete final state.
 
     A sweep proposes one simultaneous projected-gradient update and uses up to
-    ``backtracks`` energy evaluations to satisfy Armijo decrease. ``budget``
+    ``backtracks`` energy evaluations under the acceptance rule below. ``budget``
     bounds accepted sweeps. A zero budget can qualify an already stationary
     initial state. All returned arrays are tuples; caller-owned data is untouched.
 
     ``step`` is the initial and fallback trial size. Accepted displacement and
     gradient change estimate the next size; unsafe curvature uses ``step``.
     Growth is capped so backtracking can reach the configured step within its
-    budget. This changes numerical work, not the energy or learning rule.
+    budget. A fully stationary proposal may finish within eight energy ulps of
+    the current energy when roundoff prevents sufficient decrease. Qualification
+    still uses the requested tolerance, independently recomputed at the end.
 
     ``clamps`` maps patch indices to witnessed fixed states. Inputs are always
     hard boundary values. Query solves freeze parameters; learning solves repair
@@ -489,7 +491,24 @@ def settle(
                     moved
                     and math.isfinite(slope)
                     and slope < 0
-                    and proposed["energy"] <= current["energy"] + 1e-4 * slope
+                    and (
+                        proposed["energy"] <= current["energy"] + 1e-4 * slope
+                        or (
+                            abs(proposed["energy"] - current["energy"])
+                            <= 8 * math.ulp(current["energy"])
+                            and _stationarity(
+                                next_state,
+                                next_weights,
+                                next_biases,
+                                proposed,
+                                fixed,
+                                learn,
+                                state_bound,
+                                parameter_bound,
+                            )
+                            <= tolerance
+                        )
+                    )
                 )
             except (ValueError, OverflowError):
                 accepted = False

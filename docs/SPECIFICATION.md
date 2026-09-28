@@ -35,13 +35,19 @@ The next trial uses the scalar secant estimate `dot(s,s) / dot(s,y)` when its
 curvature and result are positive and finite. Unchanged coordinates contribute
 nothing. Unsafe arithmetic falls back to `step`; growth is capped at
 `ldexp(step, min(backtracks - 1, 1023))`, with an overflowing cap also causing
-fallback. Every trial still projects onto the same boxes and must satisfy
-`E_new <= E_old + 1e-4 * dot(gradient_old, displacement)` with a negative slope.
-The final stationarity check remains independent of the chosen trial size.
+fallback. Every trial projects onto the same boxes and requires a finite,
+negative slope. Ordinary steps satisfy
+`E_new <= E_old + 1e-4 * dot(gradient_old, displacement)`.
+Near floating-point precision, a final proposal may instead qualify when its
+full projected residual meets the requested `tolerance` and
+`abs(E_new - E_old) <= 8 * ulp(E_old)`. This narrow finishing allowance avoids
+rejecting a stationary proposal because rounded energy appears a few ulps
+higher. It never admits an unqualified proposal or a larger energy increase.
+The final stationarity check is freshly recomputed in either case.
 Step adaptation resets on each solve; it is not additional learned memory.
 The estimate is the first Barzilai–Borwein step from
 [Two-Point Step Size Gradient Methods (1988)](https://doi.org/10.1093/imanum/8.1.141),
-used here inside bounded, monotone projected repair.
+used here inside bounded projected repair with the finishing allowance above.
 
 `prediction_residual` is a different quantity: the largest absolute local
 prediction error. Priors, bounds and competing constraints can leave this

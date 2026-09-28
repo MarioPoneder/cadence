@@ -117,8 +117,10 @@ defined, not a feed-forward execution of the brain.
 
 Repair uses the analytic derivatives of this energy with respect to eligible
 coordinates, projected into bounded boxes. Derivatives include the effects of
-observed errors on their observers. Backtracking accepts a step only when
-it decreases the declared energy sufficiently. There is one repair procedure
+observed errors on their observers. Backtracking requires sufficient energy
+decrease, with a bounded rounding allowance only for an already stationary
+final proposal ([exact rule](SPECIFICATION.md#repair-and-qualification)).
+There is one repair procedure
 for live-state queries and experience admission; admission also makes relation
 parameters eligible and adds the fixed anchoring term below.
 

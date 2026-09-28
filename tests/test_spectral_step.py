@@ -133,3 +133,158 @@ def test_growth_cap_keeps_configured_step_reachable(backtracks):
 
 def test_overflowing_growth_ceiling_preserves_configured_step():
     assert secant((0,), (1,), (0,), (2,), step=1e308) == 1e308
+
+
+@pytest.mark.parametrize("prior", [0.03, 0.1, 0.7])
+def test_libm_rounding_does_not_hide_a_qualified_scalar_optimum(monkeypatch, prior):
+    # This equivalent formula perturbs libm rounding without changing the
+    # mathematical relation. With strict floating-point Armijo comparison,
+    # prior=.03 stalled near 8.44e-10 instead of meeting 1e-10 on macOS.
+    from cadence import _repair
+
+    ordinary_tanh = math.tanh
+    monkeypatch.setattr(_repair.math, "tanh", lambda x: 2 / (1 + math.exp(-2 * x)) - 1)
+    graph = Graph(1, 1, (("input", 0, 0),))
+    result = settle(
+        graph,
+        (1.0,),
+        (0.0,),
+        (0.0,),
+        (0.0,),
+        learn=True,
+        clamps={0: 0.6},
+        parameter_prior=prior,
+        tolerance=1e-10,
+        budget=2048,
+    )
+    assert result["qualified"]
+    assert result["stationarity"] <= 1e-10
+    lo, hi = 0.0, math.atanh(0.6) / 2
+    for _ in range(80):
+        middle = (lo + hi) / 2
+        prediction = ordinary_tanh(2 * middle)
+        gradient = (prediction - 0.6) * (1 - prediction**2) + prior * middle
+        if gradient < 0:
+            lo = middle
+        else:
+            hi = middle
+    assert result["weights"] == pytest.approx(((lo + hi) / 2,), abs=1e-9)
+    assert result["biases"] == pytest.approx(result["weights"], abs=1e-15)
+    history = result["energy_history"]
+    for index, (before, after) in enumerate(pairwise(history)):
+        if after > before:
+            # An allowed roundoff increase can only finish an already
+            # qualified solve; it is not permission for uphill iteration.
+            assert after - before <= 8 * math.ulp(before)
+            assert index == len(history) - 2
+
+
+def roundoff_oracle(monkeypatch, *, increase_ulps, stationary, learn=False):
+    """Adversarial oracle isolates acceptance policy from a favorable graph."""
+    from cadence import _repair
+
+    original = _repair._evaluate
+    proposed_energy = 1.0
+    for _ in range(increase_ulps):
+        proposed_energy = math.nextafter(proposed_energy, math.inf)
+
+    def evaluate_proposal(graph, inputs, state, weights, biases, *args, **kwargs):
+        result = original(graph, inputs, state, weights, biases, *args, **kwargs)
+        moved = biases != (0.0,) if learn else state != (0.0,)
+        residual = 0.0 if stationary else 1e-5
+        gradient = residual if moved else 1.0
+        result["energy"] = proposed_energy if moved else 1.0
+        result["gradient_state"] = (0.0 if learn else gradient,)
+        result["gradient_biases"] = (gradient if learn else 0.0,)
+        return result
+
+    monkeypatch.setattr(_repair, "_evaluate", evaluate_proposal)
+    return settle(
+        Graph(0, 1, ()),
+        (),
+        (0.0,),
+        (),
+        (0.0,),
+        learn=learn,
+        clamps={0: 0.0} if learn else None,
+        step=0.25,
+        budget=1,
+        backtracks=4,
+        tolerance=1e-6,
+    )
+
+
+@pytest.mark.parametrize("increase_ulps", [1, 8])
+def test_roundoff_allowance_requires_an_actually_stationary_candidate(
+    monkeypatch, increase_ulps
+):
+    result = roundoff_oracle(monkeypatch, increase_ulps=increase_ulps, stationary=True)
+    assert result["qualified"]
+    assert result["stationarity"] == 0.0
+    assert result["sweeps"] == 1
+    before, after = result["energy_history"]
+    assert 0 < after - before <= 8 * math.ulp(before)
+
+
+@pytest.mark.parametrize("learn", [False, True])
+def test_roundoff_does_not_admit_nonstationary_states_or_parameters(monkeypatch, learn):
+    result = roundoff_oracle(
+        monkeypatch, increase_ulps=1, stationary=False, learn=learn
+    )
+    assert not result["qualified"]
+    assert result["reason"] == "line_search"
+    assert result["sweeps"] == 0
+    assert result["energy_history"] == (1.0,)
+    assert result["state"] == (0.0,)
+    assert result["biases"] == (0.0,)
+
+
+@pytest.mark.parametrize("increase_ulps", [9, 1024])
+def test_stationarity_cannot_excuse_a_genuine_energy_increase(
+    monkeypatch, increase_ulps
+):
+    result = roundoff_oracle(monkeypatch, increase_ulps=increase_ulps, stationary=True)
+    assert not result["qualified"]
+    assert result["reason"] == "line_search"
+    assert result["sweeps"] == 0
+    assert result["energy_history"] == (1.0,)
+
+
+def test_roundoff_finish_must_pass_a_fresh_check_before_admission(monkeypatch):
+    from cadence import _repair
+
+    cortex = Cortex(step=0.25)
+    sensor = cortex.input("input", shape=1)
+    population = cortex.column("patch", patches=1, inputs=sensor)
+    cortex.output("answer", shape=1, reads=population)
+    brain = cortex.build()
+    before = brain.snapshot()
+    original = _repair._evaluate
+    proposal_evaluations = 0
+
+    def changing_final_check(graph, inputs, state, weights, biases, *args, **kwargs):
+        nonlocal proposal_evaluations
+        result = original(graph, inputs, state, weights, biases, *args, **kwargs)
+        moved = biases != (0.0,)
+        if moved:
+            proposal_evaluations += 1
+        # The first evaluation qualifies the roundoff finish. A subsequent
+        # evaluation invalidates that certificate; admission must not trust
+        # the earlier cached result instead of checking the complete proposal.
+        gradient = 0.0 if proposal_evaluations == 1 else 1e-5
+        result["energy"] = math.nextafter(1.0, math.inf) if moved else 1.0
+        result["gradient_state"] = (0.0,)
+        result["gradient_weights"] = (0.0,)
+        result["gradient_biases"] = (gradient if moved else 1.0,)
+        return result
+
+    monkeypatch.setattr(_repair, "_evaluate", changing_final_check)
+    result = brain.observe({"input": [0.0]}, {"answer": [0.25]}, event_id=0, budget=1)
+    assert proposal_evaluations == 2
+    assert result["sweeps"] == 1
+    assert not result["qualified"]
+    assert not result["accepted"]
+    assert result["stationarity"] == 1e-5
+    assert brain.snapshot() == before
+    assert brain.inspect()["admissions"] == 0
+    assert brain.inspect()["last_event_id"] == -1

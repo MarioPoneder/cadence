@@ -62,7 +62,10 @@ a useful task or supplies a reward-learning algorithm.
 Each sweep computes analytic derivatives, projects a candidate into configured
 state/parameter bounds, then backtracks until a sufficient energy decrease is
 found. Accepted displacement and gradient change estimate the next scalar step;
-unsafe estimates use the configured initial step. All eligible coordinates share
+unsafe estimates use the configured initial step. A final proposal meeting the
+full stationarity threshold may finish within eight energy ulps when rounding
+prevents sufficient decrease; ordinary steps retain that decrease requirement.
+All eligible coordinates share
 this procedure. The implementation is a
 synchronized reference solver with a global energy check, not an asynchronous
 local-message protocol.

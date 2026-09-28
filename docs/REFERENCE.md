@@ -235,7 +235,9 @@ Query energy is `sum(e²)/2 + state_prior * sum(x²)/2`. Learning adds
 weights and biases eligible alongside unclamped live states.
 
 Repair is synchronized projected-gradient descent with a scalar secant step
-and Armijo backtracking. The energy, analytic gradient and acceptance test do
+and Armijo backtracking. A fully stationary final proposal may finish within
+eight energy ulps when rounding prevents sufficient decrease; the requested
+stationarity tolerance is unchanged. The energy and analytic gradient do
 not change when the step adapts. See the specification for the update formula.
 The residual is `z - clip(z - gradient, -bound, bound)` for each eligible
 coordinate. Clamped states and frozen query parameters are excluded.
