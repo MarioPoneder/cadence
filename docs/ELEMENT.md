@@ -59,7 +59,21 @@ and biases, adding a prior anchored to the pre-experience parameters:
 E_learning = E + parameter_prior/2 * ||parameters - anchor||²
 ```
 
-The anchor stays fixed for the whole experience. Retained parameters are the
+`observe_batch` uses the same relations for several witnessed experiences.
+Each row has private patch activity, initialized from the same retained live
+state, while weights and biases are shared:
+
+```text
+E_batch = mean_b(E_b) + parameter_prior/2 * ||parameters - anchor||²
+```
+
+The one anchor is fixed at the pre-batch parameters. All private states and
+shared parameters repair jointly. A successful batch retains parameters and
+one event identity while preserving live state; the private states are returned
+as diagnostics. Serial `observe` calls instead retain each solved state and
+reanchor after each witness, so batching changes the learning trajectory.
+
+The anchor stays fixed for the whole admission. Retained parameters are the
 memory used by later queries; warm live state is distinct from this durable
 learning. This engine does not claim that mere exposure to any stream discovers
 a useful task or supplies a reward-learning algorithm. During the live phase,
@@ -93,7 +107,10 @@ max_abs(z - P(z - grad(E))) <= tolerance
 
 The projection uses a unit step for this diagnostic, independent of the
 line-search `step`. Clamped coordinates are excluded. Learning includes the
-parameter coordinates; a query does not. Stationarity allows outward gradients
+parameter coordinates; a query does not. For batches, apply the state diagnostic
+to each row's energy before averaging, and the shared parameter diagnostic to
+the complete mean-plus-anchor objective. This keeps the tolerance independent
+of batch size. Stationarity allows outward gradients
 at a boundary and does not require zero prediction error. The nonlinear
 objective can have multiple stationary points. No uniqueness, global optimum,
 biological equivalence or advantage from extra observers follows from this

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from importlib.resources import files
 from types import MappingProxyType
 
@@ -76,7 +76,9 @@ class Brain:
     Construct with ``Cortex.build`` or ``Brain.from_snapshot``. Query methods
     freeze parameters; ``step`` can retain qualified live state. ``observe``
     jointly repairs live state and local relations under actual output witnesses,
-    then commits only a qualified complete proposal. This is supervised witness
+    then commits only a qualified complete proposal. ``observe_batch`` repairs
+    private experience states and shared parameters, preserving live activity.
+    This is supervised witness
     admission, not an implemented reward/temporal-credit algorithm.
     """
 
@@ -203,8 +205,11 @@ class Brain:
                     )
         return flat, clamps
 
-    def _solve(self, inputs, clamps, *, learn, budget):
+    def _solve(self, inputs, clamps, *, learn, budget, batch_size=1):
         config = self.config
+        budget = (
+            config["settle_budget"] if budget is None else integer(budget, "budget")
+        )
         if config["device"] != "python" and self._engine is None:
             from ._tensor import TensorEngine
 
@@ -212,14 +217,12 @@ class Brain:
         result = _repair.settle(
             self.graph,
             inputs,
-            self._state,
+            self._state * batch_size,
             self._weights,
             self._biases,
             clamps=clamps,
             learn=learn,
-            budget=config["settle_budget"]
-            if budget is None
-            else integer(budget, "budget"),
+            budget=budget,
             tolerance=config["tolerance"],
             state_prior=config["state_prior"],
             parameter_prior=config["parameter_prior"],
@@ -228,14 +231,9 @@ class Brain:
             step=config["step"],
             backtracks=config["backtracks"],
             _engine=self._engine,
+            _batch_size=batch_size,
         )
-        result["outputs"] = {
-            output.name: tuple(
-                result["state"][self._population_ranges[output.reads.name][i]]
-                for i in output.indices
-            )
-            for output in self._outputs
-        }
+        result["outputs"] = self._outputs_from(result["state"])
         return result
 
     def settle(self, inputs, *, targets=None, interventions=None, budget=None):
@@ -279,6 +277,101 @@ class Brain:
         if not isinstance(targets, Mapping) or not targets:
             raise ValueError("Observation requires at least one actual output target")
         flat, clamps = self._arguments(inputs, targets)
+        event_id, digest, duplicate = self._event(
+            [flat, sorted(clamps.items())], event_id
+        )
+        if duplicate:
+            return duplicate
+        result = self._solve(flat, clamps, learn=True, budget=budget)
+        if result["qualified"]:
+            self._state = tuple(result["state"])
+            self._admit(result, event_id, digest)
+        return {
+            **result,
+            "accepted": result["qualified"],
+            "duplicate": False,
+            "event_id": event_id,
+        }
+
+    def observe_batch(self, examples, *, event_id=None, budget=None):
+        """Jointly learn a batch with private activities and shared parameters.
+
+        ``examples`` is a nonempty finite sequence of ``(inputs, targets)``
+        pairs using the same boundaries as ``observe``. Every row starts from
+        the same retained activity; output targets clamp its private state.
+        Repair minimizes mean example energy plus one fixed parameter anchor
+        penalty. Shared parameters commit only when the whole batch qualifies.
+        The live activity is preserved; rows do not form a temporal sequence.
+
+        One batch owns one event ID. Latest-event retries must match all rows
+        in the same order. Invalid or refused batches change nothing. Returned
+        ``states``, ``outputs``, ``predictions`` and ``errors`` contain one entry
+        per example; other solve diagnostics describe the complete batch.
+        Batch grouping changes the learning objective versus serial admission.
+        """
+        if (
+            isinstance(examples, (str, bytes))
+            or not isinstance(examples, Sequence)
+            or not examples
+        ):
+            raise ValueError("examples must be a nonempty finite sequence of pairs")
+        records = []
+        for index, pair in enumerate(examples):
+            try:
+                if (
+                    isinstance(pair, (str, bytes))
+                    or not isinstance(pair, Sequence)
+                    or len(pair) != 2
+                ):
+                    raise ValueError("Each example must be an (inputs, targets) pair")
+                if not isinstance(pair[1], Mapping) or not pair[1]:
+                    raise ValueError("Supply at least one actual output target")
+                flat, clamps = self._arguments(*pair)
+                records.append((flat, sorted(clamps.items())))
+            except ValueError as error:
+                raise ValueError(f"examples[{index}]: {error}") from error
+        size, width = len(records), self.graph.n_patches
+        event_id, digest, duplicate = self._event(["batch", records], event_id)
+        if duplicate:
+            return {**duplicate, "batch_size": size}
+        inputs = tuple(v for flat, _ in records for v in flat)
+        clamps = {
+            row * width + i: value
+            for row, (_, fixed) in enumerate(records)
+            for i, value in fixed
+        }
+        result = self._solve(inputs, clamps, learn=True, budget=budget, batch_size=size)
+        for source, target in (
+            ("state", "states"),
+            ("predictions", "predictions"),
+            ("errors", "errors"),
+        ):
+            values = result.pop(source)
+            result[target] = tuple(
+                tuple(values[row * width : (row + 1) * width]) for row in range(size)
+            )
+        result["outputs"] = tuple(self._outputs_from(s) for s in result["states"])
+        if result["qualified"]:
+            self._admit(result, event_id, digest)
+        return {
+            **result,
+            "accepted": result["qualified"],
+            "duplicate": False,
+            "event_id": event_id,
+            "batch_size": size,
+        }
+
+    def _outputs_from(self, state):
+        return {
+            output.name: tuple(
+                state[self._population_ranges[output.reads.name][i]]
+                for i in output.indices
+            )
+            for output in self._outputs
+        }
+
+    def _event(self, payload, event_id):
+        """Validate an atomic event and identify a latest-event retry."""
         event_id = (
             self._event_id + 1 if event_id is None else integer(event_id, "event_id")
         )
@@ -288,33 +381,29 @@ class Brain:
             raise ValueError(
                 "event_id must be representable as a JSON integer"
             ) from error
-        digest = hashlib.sha256(
-            canonical([flat, sorted(clamps.items())]).encode()
-        ).hexdigest()
+        digest = hashlib.sha256(canonical(payload).encode()).hexdigest()
         if event_id <= self._event_id:
             if event_id == self._event_id and digest == self._event_digest:
-                return {
-                    "accepted": False,
-                    "qualified": True,
-                    "duplicate": True,
-                    "event_id": event_id,
-                }
+                return (
+                    event_id,
+                    digest,
+                    {
+                        "accepted": False,
+                        "qualified": True,
+                        "duplicate": True,
+                        "event_id": event_id,
+                    },
+                )
             raise ValueError(
                 "Event is older than, or conflicts with, the latest admitted event"
             )
-        result = self._solve(flat, clamps, learn=True, budget=budget)
-        if result["qualified"]:
-            self._state = tuple(result["state"])
-            self._weights = tuple(result["weights"])
-            self._biases = tuple(result["biases"])
-            self._event_id, self._event_digest = event_id, digest
-            self._admissions += 1
-        return {
-            **result,
-            "accepted": result["qualified"],
-            "duplicate": False,
-            "event_id": event_id,
-        }
+        return event_id, digest, None
+
+    def _admit(self, result, event_id, digest):
+        self._weights = tuple(result["weights"])
+        self._biases = tuple(result["biases"])
+        self._event_id, self._event_digest = event_id, digest
+        self._admissions += 1
 
     def inspect(self):
         """Return owned layout data, graph counts and potential input paths.

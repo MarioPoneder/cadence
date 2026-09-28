@@ -6,7 +6,7 @@ from .column import Population
 from .cortex import Cortex
 from .ports import Input, Output
 
-__version__ = "0.48.0"
+__version__ = "0.49.0"
 
 __all__ = [
     "Brain",

@@ -9,7 +9,7 @@
 [![PyPI](https://img.shields.io/pypi/v/cadence-net)](https://pypi.org/project/cadence-net/)
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
 
 **Build Deep Recursive Settlement Networks: processing populations and their
 observers, learning and settling together.**
@@ -49,7 +49,7 @@ Every core change is reviewed against all three. The
 Python 3.11 or later; the default engine has no runtime dependencies:
 
 ```sh
-python -m pip install --upgrade "cadence-net>=0.48.0"
+python -m pip install --upgrade "cadence-net>=0.49.0"
 ```
 
 If your package index has not listed a new release yet, its wheel is also
@@ -142,6 +142,21 @@ Queries hold learned parameters fixed; hypothetical clamps never become
 experience. Learning is evaluated on later unclamped predictions, as above.
 This example establishes a small acquired relation, not a benefit from depth.
 
+Use **batch bootstrapping** to jointly learn from groups of examples:
+
+```python
+batch_report = bootstrap(
+    learner, examples, checks=checks, max_error=0.2, batch_size=32,
+)
+assert batch_report["passed"], batch_report
+```
+
+Each batch jointly settles private example states and shared parameters;
+CPU/GPU tensors vectorize the examples. `brain.observe_batch(examples)` admits
+one batch directly. Batch commits preserve live activity and update parameters
+atomically. The default `batch_size=1` keeps ordered single-experience learning.
+See [batch bootstrapping](docs/BOOTSTRAP.md) for the objective and resource tradeoffs.
+
 ## Live phase
 
 ```python
@@ -183,4 +198,4 @@ depth require further controlled experiments. Follow the
 | [API reference](docs/REFERENCE.md) | Every public class, method and configuration parameter |
 | [Mathematical specification](docs/SPECIFICATION.md) | Guarantees, qualification and evidence boundaries |
 
-MIT license.
+GPL-3.0-or-later license.

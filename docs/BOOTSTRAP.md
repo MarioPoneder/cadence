@@ -51,10 +51,54 @@ helper stops, so they are development data. Reserve fresh cases for final
 evaluation. The report includes per-epoch errors, admitted presentations and
 all counted solve work; see the [exact helper contract](REFERENCE.md#bootstrap).
 
-The helper operates on the supplied brain. Each accepted witness persists;
-a later refusal does not undo earlier witnesses. Invalid examples are caught
+The helper operates on the supplied brain. Each accepted admission persists;
+a later refusal does not undo earlier admissions. Invalid examples are caught
 before the first admission. It does not normalize data, choose an architecture,
 change the repair rule or reinterpret rewards as desired outputs.
+
+## Choose individual or batch admissions
+
+`bootstrap(..., batch_size=1)` uses the usual ordered `observe` calls. To jointly
+learn a group of witnessed examples, choose a larger positive `batch_size`.
+Each epoch still shuffles the examples with the supplied seed, then groups
+that order into batches; the last may be shorter. All recall and readiness
+checks remain separate unclamped queries.
+
+A batch minimizes the **mean** example energy plus one shared parameter-anchor
+penalty. Each row has its own clamped outputs and private processing/observer
+states, initialized from the same pre-call live state. The shared parameters
+repair against all those experiences together. On success they are retained
+as one atomic admission; the live state stays unchanged. A refused batch
+admits none of its examples and stops the helper, leaving earlier successful
+admissions intact.
+
+The [quickstart](QUICKSTART.md#learn-several-experiences-together) gives a runnable
+batch example. For custom streams or retry identities, call
+`brain.observe_batch(examples, event_id=...)` directly. Keep the same ordered
+rows and method when retrying an event. Even a one-row `observe_batch` preserves
+live state; the helper's default `batch_size=1` deliberately continues to use
+`observe`, which retains its solved state.
+
+Count `presentations` and `accepted` as **examples**, and `updates` as accepted
+atomic calls. Four accepted rows in one batch mean four accepted examples and
+one update. `inspect()["admissions"]` also advances once per batch. A refused
+group contributes its full size to attempted presentations and zero accepted
+examples; the report identifies all original row indices in that group.
+
+Changing group size changes the number of anchors and updates per epoch;
+increasing epochs changes exposure too. A short final batch has its own mean
+and anchor, not a share of the preceding batch's objective. Calibrate batch
+size, `parameter_prior` and epoch allowance together on fixed development
+data, then check unclamped accuracy and older skills. Equal presentation counts
+do not imply equal repair work or an identical learning trajectory. Repeated
+rows change their frequency in the batch mean; replay remains supplied evidence,
+not new environment experience.
+
+Tensor devices can vectorize rows, with temporary memory growing with batch
+size. The Python engine supports the same objective. Use bounded batches and
+measure full acquisition time, refusals, validation and memory rather than
+assuming speedup. Rows do not acquire a temporal relationship by being placed
+in one batch; delayed credit and missing history still need their own design.
 
 ## Calibrate before increasing the task
 
@@ -69,8 +113,8 @@ Then calibrate **configuration** against a small fixed development set. Start
 with defaults, change one setting at a time, and build a fresh brain with the
 same seed and examples for each comparison. Record `report["passed"]`, errors
 and `report["work"]`; count failed configurations and search work too.
-`report["options"]` retains the requested error limit, epoch allowance, seed
-and resolved solve budget. Save the starting checkpoint and original data to
+`report["options"]` retains the requested error limit, epoch allowance, seed,
+batch size and resolved solve budget. Save the starting checkpoint and original data to
 reproduce calibration; save the final checkpoint to continue into the live phase. An
 epoch allowance is a work limit, not evidence that an ability was acquired.
 `epochs=0` runs the same unclamped checks without admitting any examples.
@@ -303,7 +347,7 @@ without improving a task already solved by a small model.
 
 Use `Cortex(device="mps")` or `Cortex(device="cuda")` with the optional
 `cadence-net[gpu]` installation to run repair proposals on a GPU. Use
-`device="cpu"` for tensor execution on CPU. `bootstrap`, `observe` and live
+`device="cpu"` for tensor execution on CPU. `bootstrap`, `observe_batch`, `observe` and live
 queries keep their existing interfaces and witness rules. Admission always
 uses the original float64 objective and requested tolerance, including when
 tensor proposals use float32. See [the acceleration guide](ACCELERATION.md).
@@ -317,11 +361,18 @@ before admitting the measured outcomes during its live phase:
 python examples/parallel_bootstrap.py --lives 4 --workers 2
 ```
 
-A single brain's experiences remain ordered: each witness is anchored to the
-parameters retained by the preceding one. Collecting data concurrently does
-not justify concurrent mutation or averaging independently learned brains.
-For one brain, queue simulator witnesses with explicit event identities and
-admit them serially. Count simulator steps, distinct witnesses, replayed
+A single brain's admission calls remain ordered: each individual witness or
+joint batch is anchored to the parameters retained by the preceding call.
+Within a batch, examples settle in parallel with shared parameters. Collecting
+data concurrently does not justify concurrent mutation or averaging independently
+learned brains. For one brain, queue witnesses or batches with explicit event
+identities and admit those calls serially. Count simulator steps, distinct witnesses, replayed
 presentations, refused solves and total wall time separately. GPU execution
 and faster simulation do not provide missing information or guarantee that
 added observers improve acquisition.
+
+`bootstrap` validates and copies the entire supplied dataset before starting;
+`batch_size` bounds the joint solve, not that dataset allocation. For recordings
+too large to hold in memory, load bounded lists of examples and pass each list
+to `observe_batch`. Keep a separate held-out evaluation stream and checkpoint
+your data position alongside the brain snapshot.

@@ -49,7 +49,9 @@ def _pairs(brain, examples, name):
     return tuple(records)
 
 
-def bootstrap(brain, examples, *, checks, max_error, epochs=20, seed=0, budget=None):
+def bootstrap(
+    brain, examples, *, checks, max_error, epochs=20, seed=0, budget=None, batch_size=1
+):
     """Replay supervised witnesses until target-free readiness checks pass.
 
     ``examples`` and ``checks`` are nonempty finite sequences of
@@ -64,16 +66,25 @@ def bootstrap(brain, examples, *, checks, max_error, epochs=20, seed=0, budget=N
     units. ``epochs=0`` only assesses readiness. No inputs or targets are scaled.
 
     Any refusal stops the helper with ``passed=False``. Earlier accepted
-    witnesses remain committed; this is not a batch transaction. The report
+    witnesses remain committed; the whole bootstrap call is not one transaction.
+    Each minibatch is atomic. The report
     retains work, presentation counts, validation history and failure details.
     Replays are counted as presentations, not newly collected experiences.
     The same brain continues into the live phase without a mode change.
+
+    ``batch_size=1`` uses ordered ``observe`` calls. Larger positive sizes group
+    each shuffled epoch into atomic ``observe_batch`` calls (including a shorter
+    last batch), preserving live activity. ``presentations`` and ``accepted``
+    count examples; ``updates`` counts committed calls. Batching minimizes mean
+    example energy with one parameter anchor per batch, so it changes the
+    learning trajectory rather than emulating sequential admissions.
     """
     if not isinstance(brain, Brain):
         raise ValueError("brain must be a Brain")
     epochs = integer(epochs, "epochs")
     seed = integer(seed, "seed")
     budget = None if budget is None else integer(budget, "budget")
+    batch_size = integer(batch_size, "batch_size", 1)
     max_error = number(max_error, "max_error")
     if max_error < 0:
         raise ValueError("max_error must be nonnegative")
@@ -85,12 +96,14 @@ def bootstrap(brain, examples, *, checks, max_error, epochs=20, seed=0, budget=N
             "epochs": epochs,
             "seed": seed,
             "budget": brain.config["settle_budget"] if budget is None else budget,
+            "batch_size": batch_size,
         },
         "passed": False,
         "reason": "epochs",
         "epochs": 0,
         "presentations": 0,
         "accepted": 0,
+        "updates": 0,
         "examples": len(examples),
         "checks": len(checks),
         "history": [],
@@ -149,15 +162,28 @@ def bootstrap(brain, examples, *, checks, max_error, epochs=20, seed=0, budget=N
     for epoch in range(1, epochs + 1):
         order = list(range(len(examples)))
         rng.shuffle(order)
-        for index in order:
-            inputs, targets, _ = examples[index]
-            result = brain.observe(inputs, targets, budget=budget)
+        for start in range(0, len(order), batch_size):
+            indices = order[start : start + batch_size]
+            if batch_size == 1:
+                inputs, targets, _ = examples[indices[0]]
+                result = brain.observe(inputs, targets, budget=budget)
+            else:
+                result = brain.observe_batch(
+                    [(examples[i][0], examples[i][1]) for i in indices], budget=budget
+                )
             work.update(result["work"])
-            report["presentations"] += 1
+            report["presentations"] += len(indices)
             if not result["accepted"]:
-                refusal("observe", index, result)
+                refusal(
+                    "observe" if batch_size == 1 else "observe_batch",
+                    indices[0],
+                    result,
+                )
+                if batch_size > 1:
+                    report["failure"]["indices"] = tuple(indices)
                 return finish("refused")
-            report["accepted"] += 1
+            report["accepted"] += len(indices)
+            report["updates"] += 1
         report["epochs"] = epoch
         if ready(epoch):
             return finish("passed")

@@ -66,8 +66,11 @@ fit. Neither wiring choice supplies learned visual features by itself.
 budget counts accepted repair sweeps; work also includes initial evaluations,
 rejected line-search proposals and final qualification. Defaults are starting
 points for small models, not a guarantee of interactive speed at arbitrary
-width or sensor resolution. This pure-Python implementation does not execute
-branches on parallel accelerators.
+width or sensor resolution. Optional tensor execution can parallelize patch
+arithmetic and private experience rows in `observe_batch`; it does not change
+population width or observation depth. Batch size is a separate learning and
+memory-cost choice, not additional brain capacity. See
+[batch execution](ACCELERATION.md#batch-experience-on-one-device).
 
 To test the value of recursion, compare a nested layout with shallow and
 ordinary-composition controls, match information and capacity, and account for

@@ -44,6 +44,10 @@ no autograd optimizer or separate learning rule. Final tensor proposals are
 qualified against the original float64 objective by the reference engine.
 `bootstrap.py` supplies bounded replay and unclamped readiness checks through
 those existing brain methods. It owns orchestration, not a second learning rule.
+`observe_batch` uses private per-example activity with shared parameters under
+mean example energy plus one pre-batch parameter anchor. It commits parameters
+and one event identity, preserving live state. Tensor execution vectorizes rows;
+it does not average separately learned checkpoints or introduce another solver.
 
 ## Changes and verification
 
@@ -63,6 +67,10 @@ Constructor signatures and package exports must match the reference. Add
 independent mathematical or adversarial tests for changes to derivatives,
 qualification, witness custody or serialization. Preserve bounded construction
 and refuse malformed shapes before expensive materialization.
+Batch tests must check shared-parameter derivatives, unaveraged per-row
+qualification, all-or-nothing admission, order-sensitive retry identity,
+preserved live state and separate example/update counters. Check both one-row
+equivalence of parameter solves and the distinct live-state commitment rules.
 
 ## Application rules
 
@@ -74,6 +82,12 @@ and refuse malformed shapes before expensive materialization.
   credit or a complete biological learning mechanism.
 - `settle` and `predict` are pure queries. `step` retains qualified live state;
   `observe` also repairs parameters from actual output witnesses.
+- `observe_batch` repairs private row states and shared parameters, retaining
+  parameters only. One batch owns one admission/event. Rows share no implicit
+  temporal state; batching does not provide delayed credit or sequence memory.
+  `bootstrap(batch_size=1)` keeps ordered `observe`; larger sizes change the
+  learning trajectory. Count `presentations`/`accepted` as examples and
+  `updates` as atomic admissions, and measure accuracy as well as throughput.
 - Check `qualified`/`accepted`. Refused or capped outputs are diagnostics,
   not admitted actions. `predict` raises `SettlementError` on refusal.
 - Evaluate learning on subsequent **unclamped** predictions. A witnessed output

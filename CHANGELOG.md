@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.49.0 — 2026-09-29
+
+- License this release under GPL-3.0-or-later; update the license text, package
+  metadata and README consistently.
+
+- Add `Brain.observe_batch(examples)`: jointly settle independent example
+  activities with shared parameters under mean example energy and one fixed
+  parameter anchor penalty. Qualified batches commit parameters atomically,
+  preserve live activity and own one retry-safe event identity.
+- Add `bootstrap(..., batch_size=...)` with reproducible minibatches, short-tail
+  handling, example and update counts, and unchanged unclamped readiness checks.
+  The default remains ordered single-experience admission.
+- Vectorize batch rows on optional CPU/MPS/CUDA tensor backends, including
+  recursive prediction-error feedback. Qualify every private state and the
+  shared parameters against the original float64 objective. Batch size does
+  not dilute per-example stationarity tolerance.
+- Test exact derivatives, shared compromise, batch-size-one equivalence,
+  duplication/permutation, atomic refusal, retries, continuation, acquisition
+  and actual CPU/MPS execution. Document how batch grouping changes learning
+  and how to measure speed and readiness together. Checkpoints remain bound
+  to exact implementation sources.
+
 ## 0.48.0 — 2026-09-28
 
 - Add optional vectorized CPU, Apple Metal and NVIDIA CUDA execution with

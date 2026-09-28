@@ -3,8 +3,10 @@
 Cadence can accelerate repair with CPU or GPU tensors and run independent
 simulated lives in separate processes. The brain's interface stays the same:
 `settle` queries, `step` retains qualified activity, and `observe` admits an
-actual witness through joint state/parameter repair. `bootstrap` replays those
-witnesses and checks unclamped predictions.
+actual witness through joint state/parameter repair. `observe_batch` admits a
+group of witnessed examples with shared parameters and private experience
+states. `bootstrap` replays witnesses, optionally in batches, and checks
+unclamped predictions.
 
 More width or recursive depth increases capacity and cost. Whether it improves
 a task must be tested; adding layers does not guarantee successful learning.
@@ -61,6 +63,53 @@ hardware raises `ValueError`. Cadence does not silently choose another device.
 CPU float64 and Apple MPS float32 have been exercised through bootstrapping,
 held-out predictions and live continuation. The CUDA path is implemented, but
 this release has not been validated on NVIDIA hardware.
+
+## Batch experience on one device
+
+`brain.observe_batch(examples)` and `bootstrap(..., batch_size=...)` use one
+brain's shared parameters with a private state for each example. CPU, MPS and
+CUDA tensor execution vectorizes the row dimension as well as eligible patch
+arithmetic. Observed and observing populations within every row still settle
+together; the shared parameters repair against the mean row objective with
+one fixed pre-batch anchor.
+
+A complete batch must qualify against the original float64 objective. Each
+row's state residual is tested **without** the averaging factor, so batch size
+never weakens its tolerance. A successful batch commits shared parameters and
+one event identity, preserving the pre-call live state. The same operation
+runs on the Python reference engine without optional dependencies.
+
+Start with a bounded size such as 4 or 8, then measure your actual workload.
+These are trial sizes, not universally optimal defaults. Temporary state and
+activation memory grows with the number of rows. Group size also changes the
+learning trajectory compared with ordered single-example admissions, so measure
+held-out accuracy and retention along with throughput. Count example
+presentations, atomic `updates`, refused solves and all checking/refinement work.
+
+This is one-device batching, not distributed multi-GPU learning, averaging
+checkpoints or concurrent calls to one brain. Continue to serialize admissions.
+Independent lives can still use separate processes. Neither batching nor
+parallel simulation supplies a missing memory or temporal-credit mechanism.
+
+The [batch bootstrap example](../examples/batch_bootstrap.py) measures a small
+supervised relation with 32 teaching rows, eight readiness checks and 16 fresh
+test rows. Its 12 processing patches and four observing patches receive eight
+numeric sensors and expose two outputs. From the repository root:
+
+```sh
+python -m pip install -e ".[gpu]"
+python examples/batch_bootstrap.py --devices python cpu mps --batch-size 8 --repeats 3 --threads 1
+```
+
+List only devices available on your machine; unavailable devices fail explicitly.
+Omit `--devices` for a Python-only run without tensor dependencies. The JSON
+separates construction/first-solve warmup, full bootstrapping (including every
+readiness check), and unclamped fresh-test times. Process startup and imports
+are outside those timers. Compare their sum for complete case work and inspect
+`passed`, errors, presentations, updates and repair work alongside speed.
+The fixed fixtures and readiness criterion are shared across devices; this is
+neither a game benchmark nor evidence of a depth advantage. Changing batch size
+changes the learning path and needs its own acquisition check.
 
 ## Keep admission precise
 
@@ -171,6 +220,9 @@ Changing `tolerance` changes what gets admitted and must not be hidden inside
 a speed comparison.
 
 ## Measured starting points
+
+The measurements below use individual witness admissions. They are not batch
+benchmarks and do not predict a speedup from changing `batch_size`.
 
 On an Apple M4 with Python 3.13 and PyTorch 2.14, a bounded comparison used
 64 inputs, four output coordinates, three seeds, two repetitions and tolerance

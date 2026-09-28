@@ -11,7 +11,8 @@ The energy is ``sum(e**2)/2 + state_prior*sum(x**2)/2``, plus a fixed proximal
 parameter prior during an admitted learning solve. One projected-gradient
 repair with a scalar secant step and Armijo backtracking updates the eligible
 coordinates. A query freezes parameters; a learning solve repairs state and
-parameters together.
+parameters together. Batch repair gives each example private states and shares
+one parameter set. It averages row energies and adds the parameter prior once.
 This module does not admit evidence or mutate a caller's durable memory.
 
 On the bounded boxes the energy is smooth. Ordinary accepted repairs decrease
@@ -30,6 +31,7 @@ import math
 from collections import deque
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from fractions import Fraction
 
 from ._validation import integer, number
 
@@ -114,11 +116,22 @@ class Graph:
         object.__setattr__(self, "incoming", tuple(tuple(row) for row in incoming))
 
 
-def _arguments(graph, inputs, state, weights, biases, anchor_weights, anchor_biases):
+def _arguments(
+    graph,
+    inputs,
+    state,
+    weights,
+    biases,
+    anchor_weights,
+    anchor_biases,
+    *,
+    batch_size=1,
+):
     if not isinstance(graph, Graph):
         raise ValueError("graph must be a Graph")
-    inputs = _vector(inputs, graph.n_inputs, "inputs")
-    state = _vector(state, graph.n_patches, "state")
+    batch_size = integer(batch_size, "batch_size", 1)
+    inputs = _vector(inputs, batch_size * graph.n_inputs, "inputs")
+    state = _vector(state, batch_size * graph.n_patches, "state")
     weights = _vector(weights, len(graph.edges), "weights")
     biases = _vector(biases, graph.n_patches, "biases")
     if (anchor_weights is None) != (anchor_biases is None):
@@ -273,6 +286,114 @@ def evaluate(
     )
 
 
+def _mean(values):
+    """Average finite values without underflowing each term or overflowing sums."""
+    values = tuple(values)
+    try:
+        return math.fsum(values) / len(values)
+    except OverflowError:
+        # Rare extreme-scale cancellation needs the exact sum before division.
+        # Scaling each term first can silently discard a small real gradient.
+        return float(sum(map(Fraction, values)) / len(values))
+
+
+def _evaluate_batch(
+    graph,
+    inputs,
+    state,
+    weights,
+    biases,
+    state_prior,
+    anchor_weights,
+    anchor_biases,
+    parameter_prior,
+    visits=None,
+    *,
+    parameter_gradients=True,
+    batch_size=None,
+):
+    """Mean row energy with private states and one shared parameter anchor.
+
+    State, prediction and error arrays are flattened in example order. State
+    derivatives belong to the mean objective (and therefore contain ``1/B``);
+    original row derivatives are retained for activity moves and qualification,
+    so averaging cannot hide a subnormal private-state residual.
+    """
+    if batch_size is None:
+        batch_size = len(state) // graph.n_patches
+    batch_size = integer(batch_size, "batch_size", 1)
+    if (
+        len(state) != batch_size * graph.n_patches
+        or len(inputs) != batch_size * graph.n_inputs
+    ):
+        raise ValueError("Batch inputs and states must match the declared row count")
+    rows = [
+        _evaluate(
+            graph,
+            inputs[row * graph.n_inputs : (row + 1) * graph.n_inputs],
+            state[row * graph.n_patches : (row + 1) * graph.n_patches],
+            weights,
+            biases,
+            state_prior,
+            None,
+            None,
+            parameter_prior,
+            visits,
+            parameter_gradients=parameter_gradients,
+        )
+        for row in range(batch_size)
+    ]
+    result = {
+        key: tuple(value for row in rows for value in row[key])
+        for key in ("predictions", "errors", "signals")
+    }
+    try:
+        result["energy"] = _mean(row["energy"] for row in rows)
+        result["gradient_state_unscaled"] = tuple(
+            value for row in rows for value in row["gradient_state"]
+        )
+        result["gradient_state"] = tuple(
+            value / batch_size for value in result["gradient_state_unscaled"]
+        )
+        for key, values, anchors in (
+            ("gradient_weights", weights, anchor_weights),
+            ("gradient_biases", biases, anchor_biases),
+        ):
+            gradient = (
+                [_mean(row[key][i] for row in rows) for i in range(len(values))]
+                if parameter_gradients
+                else []
+            )
+            if anchors is not None:
+                differences = [x - a for x, a in zip(values, anchors, strict=True)]
+                result["energy"] += (
+                    0.5
+                    * parameter_prior
+                    * math.fsum(delta * delta for delta in differences)
+                )
+                if parameter_gradients:
+                    gradient = [
+                        g + parameter_prior * delta
+                        for g, delta in zip(gradient, differences, strict=True)
+                    ]
+            result[key] = tuple(gradient)
+        if not all(
+            math.isfinite(value)
+            for value in (
+                result["energy"],
+                *result["gradient_state"],
+                *result["gradient_weights"],
+                *result["gradient_biases"],
+            )
+        ):
+            raise ValueError("Energy or gradient exceeds the finite numeric range")
+    except (ArithmeticError, OverflowError) as error:
+        raise ValueError(
+            "Energy or gradient exceeds the finite numeric range"
+        ) from error
+    return result
+
+
 def _clip(value, bound):
     return min(bound, max(-bound, value))
 
@@ -284,13 +405,26 @@ def _projected_component(value, gradient, bound):
     )
 
 
-def _stationarity(state, weights, biases, evaluated, clamps, learn, state_bound, bound):
+def _stationarity(
+    state,
+    weights,
+    biases,
+    evaluated,
+    clamps,
+    learn,
+    state_bound,
+    bound,
+    *,
+    state_scale=1,
+):
+    state_gradient = evaluated.get(
+        "gradient_state_unscaled",
+        (state_scale * g for g in evaluated["gradient_state"]),
+    )
     residual = max(
         (
             abs(_projected_component(x, g, state_bound))
-            for i, (x, g) in enumerate(
-                zip(state, evaluated["gradient_state"], strict=True)
-            )
+            for i, (x, g) in enumerate(zip(state, state_gradient, strict=True))
             if i not in clamps
         ),
         default=0.0,
@@ -310,19 +444,19 @@ def _stationarity(state, weights, biases, evaluated, clamps, learn, state_bound,
     return residual
 
 
-def _next_step(groups, current, proposed, step, backtracks):
+def _next_step(groups, current, proposed, step, backtracks, *, state_scale=1):
     """Use observed curvature, falling back to the configured step if unsafe."""
     try:
         changes = [
-            (new - old, new_g - old_g)
+            (new - old, new_g - old_g, state_scale if key == "gradient_state" else 1)
             for old_values, new_values, key in groups
             for old, new, old_g, new_g in zip(
                 old_values, new_values, current[key], proposed[key], strict=True
             )
             if new != old
         ]
-        distance = math.fsum(s * s for s, _ in changes)
-        curvature = math.fsum(s * y for s, y in changes)
+        distance = math.fsum(s * s / scale for s, _, scale in changes)
+        curvature = math.fsum(s * y for s, y, _ in changes)
         if curvature > 0:
             estimate = distance / curvature
             # The configured step remains reachable within the line-search budget.
@@ -354,6 +488,7 @@ def settle(
     anchor_weights=None,
     anchor_biases=None,
     _engine=None,
+    _batch_size=1,
 ):
     """Repair eligible coordinates and freshly qualify the complete final state.
 
@@ -377,9 +512,22 @@ def settle(
     This is numerical qualification, not evidence admission or task success.
     Work counts include rejected proposals and final qualification; edge/patch
     visits count prediction-error traversal, not every Python operation.
+
+    ``_batch_size`` flattens independent example states and inputs in row order,
+    with one shared parameter set and fixed anchors. The objective is the mean
+    row energy plus one prior. State moves and projected stationarity use each
+    row's unaveraged gradient; the secant metric accounts for this scaling.
     """
+    _batch_size = integer(_batch_size, "batch_size", 1)
     args = _arguments(
-        graph, inputs, state, weights, biases, anchor_weights, anchor_biases
+        graph,
+        inputs,
+        state,
+        weights,
+        biases,
+        anchor_weights,
+        anchor_biases,
+        batch_size=_batch_size,
     )
     inputs, state, weights, biases, anchor_weights, anchor_biases = args
     if type(learn) is not bool:
@@ -412,7 +560,7 @@ def settle(
     for index, value in clamps.items():
         index = integer(index, "clamp index")
         value = number(value, "clamp value")
-        if index >= graph.n_patches or abs(value) > state_bound:
+        if index >= len(state) or abs(value) > state_bound:
             raise ValueError("Clamp index or value is outside its declared bounds")
         fixed[index] = value
     state = tuple(fixed.get(i, x) for i, x in enumerate(state))
@@ -434,6 +582,7 @@ def settle(
             backtracks=backtracks,
             anchor_weights=anchor_weights,
             anchor_biases=anchor_biases,
+            **({"_batch_size": _batch_size} if _batch_size > 1 else {}),
         )
     evaluations, proposals, rejected = 0, 0, 0
     visits = {"edge_visits": 0, "patch_visits": 0}
@@ -441,7 +590,8 @@ def settle(
     def compute(x, w, b):
         nonlocal evaluations
         evaluations += 1
-        return _evaluate(
+        evaluator = _evaluate if _batch_size == 1 else _evaluate_batch
+        return evaluator(
             graph,
             inputs,
             x,
@@ -453,6 +603,7 @@ def settle(
             parameter_prior,
             visits,
             parameter_gradients=learn,
+            **({"batch_size": _batch_size} if _batch_size > 1 else {}),
         )
 
     current = compute(state, weights, biases)
@@ -470,6 +621,7 @@ def settle(
                 learn,
                 state_bound,
                 parameter_bound,
+                state_scale=_batch_size,
             )
             <= tolerance
         ):
@@ -478,11 +630,12 @@ def settle(
         trial_step, accepted = next_step, False
         for _attempt in range(backtracks):
             proposals += 1
+            state_gradient = current.get(
+                "gradient_state_unscaled", current["gradient_state"]
+            )
             next_state = tuple(
                 fixed.get(i, _clip(x - trial_step * g, state_bound))
-                for i, (x, g) in enumerate(
-                    zip(state, current["gradient_state"], strict=True)
-                )
+                for i, (x, g) in enumerate(zip(state, state_gradient, strict=True))
             )
             next_weights, next_biases = weights, biases
             if learn:
@@ -532,6 +685,7 @@ def settle(
                                 learn,
                                 state_bound,
                                 parameter_bound,
+                                state_scale=_batch_size,
                             )
                             <= tolerance
                         )
@@ -546,6 +700,7 @@ def settle(
                     proposed,
                     step,
                     backtracks,
+                    state_scale=_batch_size,
                 )
                 state, weights, biases = next_state, next_weights, next_biases
                 current = proposed
@@ -559,7 +714,15 @@ def settle(
             break
     final = compute(state, weights, biases)
     residual = _stationarity(
-        state, weights, biases, final, fixed, learn, state_bound, parameter_bound
+        state,
+        weights,
+        biases,
+        final,
+        fixed,
+        learn,
+        state_bound,
+        parameter_bound,
+        state_scale=_batch_size,
     )
     qualified = math.isfinite(residual) and residual <= tolerance
     if qualified:

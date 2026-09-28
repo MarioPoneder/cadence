@@ -57,7 +57,7 @@ for small numerical and learning examples, not universal task settings.
 | `settle_budget` | Nonnegative maximum accepted repair sweeps per solve. Zero can qualify an already stationary state. A sweep may evaluate several rejected proposals. |
 | `tolerance` | Positive maximum complete projected-gradient residual for qualification. An absolute numerical threshold, not prediction accuracy. |
 | `state_prior` | Positive coefficient of the quadratic activity penalty. Changes preferred states and returning influence in free layered queries, not merely solver speed. Zero is unsupported. |
-| `parameter_prior` | Positive coefficient anchoring weights and biases to their pre-experience values during `observe`. This anchor stays fixed throughout the experience solve. |
+| `parameter_prior` | Positive coefficient anchoring weights and biases to their pre-call values during `observe` or `observe_batch`. The anchor stays fixed throughout the solve; a batch applies this penalty once to shared parameters. |
 | `state_bound` | Positive absolute bound on processing-patch states and output/intervention clamps. Sensor values are not clipped to it. |
 | `parameter_bound` | Positive absolute bound on weights and biases; repair projects eligible parameter coordinates into this box. |
 | `step` | Positive initial and fallback projected-gradient step. Subsequent trials estimate a scalar step from the previous accepted displacement and gradient change. Unsafe estimates fall back to this value; growth is bounded by the available backtracking budget. |
@@ -143,6 +143,7 @@ are all-or-nothing under serial access, not concurrent database transactions.
 | `predict(inputs, *, budget=None)` | Pure query returning an output-name-to-flat-tuple mapping. Raises `SettlementError` if the solve does not qualify. |
 | `step(inputs, *, budget=None)` | Repair activity with parameters frozen. Retain proposed state only if qualified. Returns the full result plus `accepted`. |
 | `observe(inputs, targets, *, event_id=None, budget=None)` | Jointly repair state, weights and biases under at least one actual output witness. A qualified solve atomically retains state, parameters and event ownership; a refusal retains none of the proposal. |
+| `observe_batch(examples, *, event_id=None, budget=None)` | Jointly repair private experience states and shared parameters under a batch of actual witnesses. A qualified solve atomically retains parameters and one event identity, preserving the pre-call live state. A refusal commits nothing. |
 | `inspect()` | Owned layout description, resolved graph counts, topology, observation roles and continuation metadata. |
 | `snapshot()` | Complete continuation as a JSON string, limited to 32 MiB of UTF-8 text. |
 | `Brain.from_snapshot(text, *, device=None, dtype=None)` | Class method validating the complete original snapshot before constructing a new brain. Optional execution overrides retain arrays and witness identity while changing configuration/fingerprint. See [checkpoints](#checkpoints). |
@@ -186,6 +187,43 @@ performing no solve or second admission. Reusing it with different content, or
 supplying an older identifier, raises `ValueError`. Refused proposals consume
 no inferred identifier and retain no event content.
 
+### Batch experience
+
+`observe_batch` accepts a nonempty finite sequence of `(inputs, targets)` pairs.
+Each pair follows the same boundary, shape and nonempty-target rules as
+`observe`. Generators are not accepted. All rows are validated before solving;
+an invalid row leaves continuation unchanged. Different rows may clamp
+different outputs or supply different values for the same output: they describe
+separate experiences, not conflicting clamps on one state.
+
+A batch of size `B` has `B` private patch-state vectors, each initialized from
+the **same pre-call live state**. Weights and biases are shared. Its objective
+is the mean of the existing per-row residual-plus-state-prior energies, plus
+one parameter-prior penalty anchored to the pre-batch parameters. Every row's
+observed and observing patches participate in the joint solve. The rows
+interact through shared parameters, not through temporal connections.
+
+Qualification tests each row's **unaveraged** state gradient and the shared
+mean parameter gradient plus its anchor term. Increasing batch size does not
+divide a row's qualification tolerance. A qualified batch commits its shared
+parameters and one admission, leaving `brain.state` unchanged. Its private
+solved states remain diagnostics; no last row or average row becomes the
+present live state. Even a one-row batch preserves live state, although its
+parameter solve matches `observe` from the same starting continuation and
+execution settings.
+
+One ordered batch owns one `event_id`, in the same event sequence as `observe`.
+Its digest includes every row's sensory inputs and physical clamps, in order.
+An identical latest batch retry performs no solve or second admission. Changing
+row order, values or batch membership under that ID conflicts. Individual and
+batch calls have distinct event payloads: retry through the same method,
+including for a one-row batch. Serial calls and one joint batch generally
+produce different parameters: serial learning
+reanchors after each admission; a batch has one fixed anchor. Batch grouping
+is a learning choice, not an execution-only optimization.
+Choose a bounded batch size: graph construction caps do not cap the extra
+private row-state and temporary arithmetic storage needed by a batch.
+
 ### Read-only properties
 
 | Property | Value |
@@ -228,6 +266,24 @@ not a separately stored reverse edge.
 returns only `accepted=False`, `qualified=True`, `duplicate=True` and `event_id`.
 Its qualification refers to the prior admission; it is not a fresh prediction
 or qualification of live state after intervening calls.
+
+A newly attempted `observe_batch` returns the same common diagnostics and
+admission fields, with `batch_size` and these per-example fields:
+
+| Key | Batch meaning |
+| --- | --- |
+| `states` | Tuple of proposed patch-state tuples, in example order. There is no singular `state` field. These states are not committed to `brain.state`. |
+| `predictions`, `errors` | Tuples of per-row patch vectors, in example order. |
+| `outputs` | Tuple of output-name-to-state-tuple mappings, in example order. Supplied targets are clamped, so these are not acquisition scores. |
+| `weights`, `biases` | One shared proposed parameter vector of each kind. |
+| `energy` | Mean row energy plus one shared parameter-anchor penalty. |
+| `stationarity` | Maximum of all unaveraged row-state projected residuals and the shared parameter projected residual. |
+| `prediction_residual` | Maximum absolute patch prediction error across every row. |
+| `batch_size` | Number of examples in this atomic admission. |
+
+An identical latest batch retry returns `accepted=False`, `qualified=True`,
+`duplicate=True`, `event_id` and `batch_size`, without new solve diagnostics.
+Returned batch arrays belong to the result, not the retained continuation.
 
 `work` contains `evaluations`, `patch_visits`, `edge_visits`, `proposals` and
 `backtracks`. Evaluations count attempted energy/gradient computations,
@@ -275,6 +331,10 @@ Each patch computes `p = tanh(b + sum(weight * signal))` and error `e = x - p`.
 Query energy is `sum(e²)/2 + state_prior * sum(x²)/2`. Learning adds
 `parameter_prior * sum((parameter - pre_experience_parameter)²)/2`, making
 weights and biases eligible alongside unclamped live states.
+For `observe_batch`, the residual and state-prior energy is averaged over
+private row states; the parameter penalty is applied once. Its state projection
+diagnostic uses the gradient of each row's energy before averaging, while the
+parameter diagnostic uses the gradient of the complete batch objective.
 
 Repair is synchronized projected-gradient descent with a scalar secant step
 and Armijo backtracking. A fully stationary final proposal may finish within
@@ -312,6 +372,7 @@ bootstrap(
     epochs=20,
     seed=0,
     budget=None,
+    batch_size=1,
 )
 ```
 
@@ -329,6 +390,7 @@ These are application phases; no solver mode changes at the boundary.
 | `epochs` | Nonnegative maximum complete replay passes, default 20. Zero evaluates the current brain without learning. |
 | `seed` | Nonnegative integer for a private RNG that shuffles example indices each epoch. Does not alter Python's global random state. |
 | `budget` | Nonnegative solve-budget override applied to every admission and check; `None` uses the brain's configured ceiling. |
+| `batch_size` | Positive integer, default 1. One preserves ordered `observe` admissions. Larger values group the shuffled examples into `observe_batch` calls; the last group may be smaller. |
 
 All options, examples and checks are validated and samples copied before any
 solve or admission. Inputs and targets are not normalized automatically.
@@ -343,24 +405,32 @@ count once within a pair. Every query must qualify and both maximum errors must
 meet `max_error` to pass. An already satisfactory brain returns without replay.
 A refusal stops immediately; unqualified outputs never contribute a score.
 
-Each admitted presentation uses the ordinary `observe` rule and a fresh automatic
-event ID. Replay is repeated supervised experience, not new environmental data.
-The helper is not a batch transaction: a later refusal keeps earlier admitted
-examples. Starting a new helper call starts a new shuffle sequence and report;
+With `batch_size=1`, each presentation uses `observe` and a fresh automatic
+event ID. With a larger size, the helper shuffles the same example indices,
+groups them into minibatches and gives each group one fresh ID. Every batch
+starts from the retained live state, and successful batches preserve that state.
+The final short group still uses its own mean objective and one shared anchor;
+its size can affect the learning trajectory.
+
+Replay is repeated supervised experience, not new environmental data. Only
+each admission is atomic: a later refusal keeps earlier committed examples or
+batches. Starting a new helper call starts a new shuffle sequence and report;
 it does not resume an interrupted helper cursor. For external retry identities,
-streaming data or custom environment metrics, use `observe` and `settle` directly.
+streaming data or custom environment metrics, use `observe`, `observe_batch`
+and `settle` directly.
 
 | Report field | Meaning |
 | --- | --- |
-| `options` | Requested `max_error`, epoch allowance and shuffle `seed`, plus the resolved integer solve `budget`. Reuse these with the same starting checkpoint and data to repeat the call. |
+| `options` | Requested `max_error`, epoch allowance, shuffle `seed` and `batch_size`, plus the resolved integer solve `budget`. Reuse these with the same starting checkpoint and data to repeat the call. |
 | `passed` | All current recall/check queries qualified and both errors met the declared limit. Applies only to the supplied cases. |
 | `reason` | `"passed"`, `"epochs"` (allowance exhausted), or `"refused"`. |
 | `epochs` | Number of fully admitted replay passes; excludes a partly completed pass. |
 | `presentations`, `accepted` | Attempted and admitted example presentations in this call, including replay. |
+| `updates` | Successful atomic admissions. A committed batch counts once here and by its number of rows in `accepted`; with `batch_size=1`, `updates == accepted`. |
 | `examples`, `checks` | Counts of supplied rows, not deduplicated experiences. |
 | `history` | Epoch-zero assessment and an assessment after each complete epoch. Each entry has `epoch`, `recall` and `checks`. |
 | `work` | Summed solver work counters over admissions and all checks, including refused solves. Does not count Python preprocessing/bookkeeping. |
-| `failure` | `None`, or `stage` (`"observe"`, `"recall"`, `"checks"`), original row `index`, solver `reason`, and `stationarity`. |
+| `failure` | `None`, or `stage` (`"observe"`, `"observe_batch"`, `"recall"`, `"checks"`), original row `index`, solver `reason`, and `stationarity`. For a refused batch, `index` is its first original example index and `indices` is the tuple of all original indices in batch order. |
 
 Each assessment metric contains `evaluated`, `qualified` and `max_error`.
 A refused query sets that collection's `max_error` to `None`, never a score

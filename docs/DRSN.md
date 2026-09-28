@@ -173,6 +173,15 @@ nothing. This is native supervised witness learning. Reward-driven temporal
 credit, episodic retrieval, imagination policies and learned structural growth
 are further capabilities, not implied by this method.
 
+`observe_batch` groups witnessed experiences under one shared set of parameters.
+Every example has private activity initialized from the same retained live
+state. Its processing and observing populations remain in the joint repair;
+the objective averages example energies and charges the parameter anchor once.
+A qualified batch retains shared parameters and one event identity, preserving
+live state. Grouping changes learning compared with serial admissions and
+creates no implicit temporal connections. Use `bootstrap(..., batch_size=...)`
+for bounded replay through this interface; see [batch experience](REFERENCE.md#batch-experience).
+
 ```python
 teacher_layout = Cortex(seed=2)
 signal = teacher_layout.input("signal", shape=(1,))
@@ -236,6 +245,8 @@ live state with parameters frozen. `brain.observe(inputs, targets)` also permits
 relation changes from witnessed outputs. Check `qualified` or `accepted` before
 using a result. `brain.predict(inputs)` raises `SettlementError` on refusal.
 Serialize calls to each brain; there is no concurrent mutation contract.
+`observe_batch` is one atomic admission, not permission to mutate the same brain
+concurrently. Tensor execution can parallelize its private experience rows.
 
 ## Continuation and tests
 

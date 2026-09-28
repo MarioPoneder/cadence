@@ -84,6 +84,7 @@ def test_shuffling_is_private_deterministic_and_checkpoint_continuable():
         "epochs": 3,
         "seed": 29,
         "budget": original.config["settle_budget"],
+        "batch_size": 1,
     }
     assert not first["passed"] and first["reason"] == "epochs"
     assert first["epochs"] == 3 and first["presentations"] == 6

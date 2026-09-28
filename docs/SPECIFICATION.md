@@ -26,6 +26,25 @@ are in [the API reference](REFERENCE.md).
 - Bounds apply to live state, weights, biases and clamps. Sensory samples need
   only be finite; applications choose normalization appropriate to their task.
 
+## Batch experience objective
+
+`observe_batch` groups `B` witnessed input/output pairs under one shared
+parameter vector `theta`. Each row has private activity `x_b`, its own fixed
+sensory values and its own output clamps. All rows start from the same retained
+pre-call live state. With `E_b` denoting the existing residual-plus-state-prior
+energy for row `b`, batch repair minimizes
+
+```text
+F_batch = (1/B) * sum_b E_b(x_b, theta)
+          + parameter_prior/2 * ||theta - theta_before_batch||²
+```
+
+The anchor is fixed for the complete solve and charged once. Shared parameters
+couple the private experiences while every row's processing and observing
+populations remain part of that joint problem. Rows have no implicit temporal
+connections. Grouping witnessed transitions does not provide delayed credit
+or learn missing sequence memory.
+
 ## Repair and qualification
 
 The solver minimizes the stated nonlinear energy by projected analytic-gradient
@@ -33,6 +52,20 @@ steps with sufficient-decrease backtracking. Observed error derivatives include
 all transitive dependencies. A solve qualifies only when the full projected
 stationarity residual is at most `tolerance` over every eligible coordinate.
 Output clamps are excluded; learned parameters are included during admission.
+
+Batch state gradients in the mean objective have a factor `1/B`. Repair scales
+their state-coordinate moves and qualification residuals by `B`; shared
+parameter gradients remain the mean row gradient plus the single anchor
+gradient. Thus the complete batch residual is
+
+```text
+max(max_b ||x_b - clip(x_b - grad_x E_b)||_infinity,
+    ||theta - clip(theta - grad_theta F_batch)||_infinity)
+```
+
+Clamped coordinates are excluded in every row. This criterion prevents larger
+batches from admitting individually unresolved rows merely through averaging.
+The objective used for descent and reported energy remains `F_batch`.
 
 Query solves omit derivatives of frozen parameters and exclude those coordinates
 from line-search and secant calculations. State derivatives still include every
@@ -62,6 +95,13 @@ The estimate is the first Barzilai–Borwein step from
 [Two-Point Step Size Gradient Methods (1988)](https://doi.org/10.1093/imanum/8.1.141),
 used here inside bounded projected repair with the finishing allowance above.
 
+For a batch, the scaled state moves use the corresponding diagonal metric:
+state-coordinate contributions to the secant numerator are `s_x²/B`, while
+parameter-coordinate contributions remain `s_theta²`. The denominator and
+Armijo slope use the actual mean-objective gradient. This preserves the same
+objective while avoiding an artificial slowdown of each row's state repair as
+the batch grows.
+
 `prediction_residual` is a different quantity: the largest absolute local
 prediction error. Priors, bounds and competing constraints can leave this
 nonzero at a qualified point. Qualification establishes constrained numerical
@@ -83,7 +123,10 @@ and analytic derivatives with PyTorch tensors; `"cuda"` selects `"cuda:0"`.
 MPS uses float32. CPU/CUDA default to float64 and also accept float32.
 No autograd optimizer or separate learning rule is introduced. Tensor code
 parallelizes arithmetic within residual-dependency levels and retains returning
-influence through every level.
+influence through every level. Batch execution also vectorizes over private
+row states, sharing one parameter vector. Reference qualification checks the
+complete batch, including every unaveraged row-state residual. There is no
+distributed multi-GPU solve or checkpoint-averaging step.
 
 Device arithmetic is a proposal mechanism. Final diagnostics and admission
 are recomputed by the reference engine with the original sensory values,
@@ -125,6 +168,7 @@ freeze. The same repair law and the following per-call contracts apply in both.
 | `settle` with hypothetical clamps | Unchanged | Unchanged | Unchanged |
 | Qualified `step` | Commit solved state | Unchanged | Unchanged |
 | Qualified `observe` | Commit solved state | Commit solved relations | Advance once |
+| Qualified `observe_batch` | Unchanged | Commit shared solved relations | Advance once for the batch |
 | Refused operation | Unchanged | Unchanged | Unchanged |
 
 `observe` requires at least one output witness. It fixes these values throughout
@@ -132,12 +176,25 @@ joint state/parameter repair and anchors parameters to their pre-experience
 values. The entire proposal qualifies before admission. There are no partial
 parameter commits and no event ID consumption on refusal.
 
+`observe_batch` requires a finite nonempty sequence of such witnesses, validated
+before solving. A successful batch commits only shared parameters and event
+ownership. The row states are returned, not retained: selecting the last or mean
+experience as the present live state would be arbitrary. A one-row batch has
+the same parameter solve as `observe` but still preserves live state. A batch
+can differ from serial admissions because serial calls reanchor after each row.
+
 Explicit nonnegative event IDs are monotonically increasing. Retrying the latest
 admitted ID with identical sensory samples and physical clamps is idempotent;
 it returns `duplicate=True` without solving or committing. Changed or older IDs
 are rejected. This is latest-event deduplication, not a history of all events.
 Omitting an ID allocates the next identity on acceptance, so applications that
 need retry safety must retain their external IDs.
+
+Both learning methods use the same ordered event sequence. Batch identity
+includes its ordered input/clamp rows; reordering an otherwise identical batch
+under the same event ID is a conflict. Checkpoints retain the resulting
+parameters and admission identity, not the batch's private states or a pending
+minibatch cursor.
 
 ## Checkpoint contract
 

@@ -1,9 +1,9 @@
 # Quickstart
 
-Install Python 3.11+ and `python -m pip install --upgrade "cadence-net>=0.46.0"`.
+Install Python 3.11+ and `python -m pip install --upgrade "cadence-net>=0.49.0"`.
 The [release wheel](https://github.com/muellerberndt/cadence/releases/latest)
 is also available when a package index has not listed the new version yet. Cadence has no
-runtime dependencies. A `Cortex` declares a layout; `build()` returns its
+mandatory runtime dependencies. A `Cortex` declares a layout; `build()` returns its
 persistent `Brain`.
 
 ## Connect populations
@@ -94,6 +94,56 @@ same inputs and physical output clamps. An identical latest retry reports
 `duplicate=True`, `accepted=False` and performs no learning. Older or changed
 identities are rejected. If IDs are omitted, the next ID is allocated on
 acceptance; automatic IDs do not identify a retried external event.
+
+## Learn several experiences together
+
+Use `batch_size` when bootstrapping independent witnessed examples. This small
+scalar relation uses one directly sensing output patch:
+
+```python
+batch_layout = Cortex(seed=7)
+batch_signal = batch_layout.input("signal", shape=1)
+batch_response = batch_layout.column("response", patches=1, inputs=batch_signal)
+batch_layout.output("answer", shape=1, reads=batch_response)
+batch_brain = batch_layout.build()
+
+batch_examples = [
+    ({"signal": [x]}, {"answer": [0.6 * x]})
+    for x in (-0.8, -0.4, 0.4, 0.8)
+]
+batch_checks = [
+    ({"signal": [x]}, {"answer": [0.6 * x]}) for x in (-0.6, 0.6)
+]
+live_state = batch_brain.state
+batch_report = bootstrap(
+    batch_brain, batch_examples, checks=batch_checks,
+    max_error=0.1, batch_size=4,
+)
+assert batch_report["passed"], batch_report
+assert batch_report["accepted"] == 4 * batch_report["updates"]
+assert batch_brain.state == live_state
+assert abs(batch_brain.predict({"signal": [0.5]})["answer"][0] - 0.3) < 0.1
+
+# Direct batch admission uses the same pairs and one event identity.
+batch_update = batch_brain.observe_batch(batch_examples)
+assert batch_update["accepted"]
+assert len(batch_update["states"]) == 4
+assert batch_brain.state == live_state
+```
+
+Each row gets private activity initialized from the same live state. The rows
+jointly repair one set of shared parameters under a mean-example objective
+with one pre-batch parameter anchor. An accepted batch is one update/event;
+`presentations` and `accepted` count examples. Its private solved states are
+returned for inspection, while live state is preserved. Query or `step` the
+current input when you want current activity under the updated relations.
+
+The default `batch_size=1` retains ordinary ordered `observe` calls. Larger
+batches change the learning trajectory, so recheck acquisition and retention;
+they are not equivalent to parallel serial updates. Batching supplies neither
+temporal credit nor implicit sequence memory. Tensor execution can parallelize
+the batch; [measure the complete workload](ACCELERATION.md) before claiming a
+speedup.
 
 ## Live phase
 

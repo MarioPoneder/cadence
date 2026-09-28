@@ -53,6 +53,14 @@ jobs:
           assert restored.snapshot() == saved
           assert restored.predict({"signal": [0.4]}) == brain.predict({"signal": [0.4]})
           assert restored.observe({"signal": [0.3]}, {"answer": [0.3]})["accepted"]
+          activity = restored.state
+          batch = restored.observe_batch(examples, event_id=1000)
+          assert batch["accepted"] and batch["batch_size"] == 2
+          assert restored.state == activity
+          batch_saved = restored.snapshot()
+          resumed = Brain.from_snapshot(batch_saved)
+          assert resumed.observe_batch(examples, event_id=1000)["duplicate"]
+          assert resumed.snapshot() == batch_saved
           print("cadence", __version__, "population learning and continuation passed")
           PY
 
