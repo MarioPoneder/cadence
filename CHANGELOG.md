@@ -1,13 +1,27 @@
 # Changelog
 
-## Unreleased
+## 0.20.0 — 2026-09-28
 
-- mypy strict checks `cadence.record_ports` as a whole: its private scan,
-  adjoint and interface checks carry types, and its file-level ignore, the
-  last one in the package, is gone. `Settled.paths` is typed
-  `list[RecordPath]`, and `build(groups=...)` takes one sequence of group
-  sizes per cortex, as `RecordPatchNet` reads it. Contributed by
-  @bastitva0-blip (#48).
+The cortical-column reset. The library is rebuilt around one element
+and one composition; the pre-reset tree is tagged `legacy-0.19-final`
+and docs/MIGRATION.md maps the old surface to the new one.
+
+- `CorticalColumn`: the qualified candidate element, vendored with
+  identical executed code (origin sha256 `44654b3d…e3f07`): one settle
+  law over typed ports; transactional ordered witness admission; live
+  observer readback and feedback with declared lesions; exact Fraction
+  inference on certified cluster forests; validated JSON checkpoints.
+- `Cortex`: a trainable hierarchy of value-column banks - coarse
+  levels as dispersion-floored priors, per-level observer loops,
+  novelty-guided action with mean-grounded bootstraps, backward
+  exactly-once episodic admission, witness-mass weighting per level.
+- `calibrate` / `wire`: controllability/drive probe and torch-style
+  structure configuration (`depth`, `width`, explicit `ladder`).
+- Removed: the 0.19 package (37 modules, ~100 exports), old docs,
+  benchmarks, Lean certificates and all runtime dependencies; the
+  library is pure stdlib, with `games` and `dev` extras.
+- The pre-0.20 "Unreleased" entry (typed `record_ports`, #48) ships in
+  the legacy line only; the module it describes was removed here.
 
 ## 0.19.0 — 2026-09-28
 

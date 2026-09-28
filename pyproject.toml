@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cadence-net"
-version = "0.19.0"
-description = "Research toward general intelligence through local repair, equilibrium detuning and self-reflection."
+version = "0.20.0"
+description = "Brains built from one element: the cortical column, a bounded self-reading settling patch with one repair law."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Bernhard Mueller" }]
-keywords = ["brain", "neurons", "synapses", "connectome", "equilibrium propagation", "local learning", "dopamine"]
+keywords = ["cortical column", "settling", "local learning", "observer", "uncertainty", "reinforcement learning"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
@@ -21,48 +21,11 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = ["numpy>=1.26"]
+dependencies = []
 
 [project.optional-dependencies]
-accel = ["torch>=2.2"]
-apple = ["mlx>=0.20"]
-fast = ["numba>=0.60", "scipy>=1.10"]
-dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.5", "mypy>=1.10", "torch>=2.2", "numba>=0.60", "scipy>=1.10"]
-
-
-[project.urls]
-Homepage = "https://github.com/muellerberndt/cadence"
-Paper = "https://philpapers.org/rec/MUECAP-2"
-Documentation = "https://github.com/muellerberndt/cadence/blob/main/docs/index.md"
-Issues = "https://github.com/muellerberndt/cadence/issues"
+games = ["gymnasium[atari]>=1.0", "ale-py>=0.10"]
+dev = ["pytest>=8", "ruff>=0.5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cadence"]
-
-[tool.hatch.build.targets.sdist]
-only-include = ["src", "tests", "docs", "lean", "benchmarks", "README.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE", "pyproject.toml"]
-exclude = ["**/.lake/**", "*.olean", "*.ilean", "*.olean.private", "*.olean.server"]
-
-[tool.pytest.ini_options]
-addopts = "-ra"
-testpaths = ["tests"]
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["E501"]
-"src/cadence/record_ports.py" = ["E501"]
-
-[tool.mypy]
-strict = true
-packages = ["cadence"]
-mypy_path = "src"
-
-[[tool.mypy.overrides]]
-module = ["torch", "torch.*", "numba", "numba.*", "mlx", "mlx.*"]
-ignore_missing_imports = true
