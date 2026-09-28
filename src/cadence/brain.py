@@ -7,6 +7,7 @@ not a unique equilibrium, zero prediction error or a demonstrated depth benefit.
 from __future__ import annotations
 
 import hashlib
+import json
 from collections.abc import Mapping
 from importlib.resources import files
 from types import MappingProxyType
@@ -46,15 +47,12 @@ class Brain:
     admission, not an implemented reward/temporal-credit algorithm.
     """
 
-    def __init__(
-        self, builder, graph, weights, input_ranges, population_ranges, layout
-    ):
+    def __init__(self, builder, graph, weights, population_ranges, layout):
         self._config = MappingProxyType(dict(builder.config))
         self._graph = graph
         self._inputs = tuple(builder._inputs)
         self._populations = tuple(builder._populations)
         self._outputs = tuple(builder._outputs)
-        self._input_ranges = input_ranges
         self._population_ranges = population_ranges
         self._layout = canonical(layout)
         self._weights = tuple(weights)
@@ -257,8 +255,6 @@ class Brain:
 
     def inspect(self):
         """Return owned layout data, actual graph counts and readback roles."""
-        import json
-
         layout = json.loads(self._layout)
         for population in layout["populations"]:
             population["role"] = "observer" if population["observes"] else "processing"
@@ -281,8 +277,6 @@ class Brain:
 
     def snapshot(self):
         """Serialize the entire layout and continuation state as validated JSON."""
-        import json
-
         result = canonical(
             {
                 "schema": SCHEMA,
@@ -384,7 +378,7 @@ class Brain:
                 ("biases", brain.graph.n_patches, brain.config["parameter_bound"]),
             ):
                 raw = data[key]
-                if not isinstance(raw, list) or len(raw) != length:
+                if len(raw) != length:
                     raise ValueError(f"Invalid {key} length")
                 values = tuple(number(v, key) for v in raw)
                 if any(abs(v) > bound for v in values):

@@ -28,34 +28,15 @@ import math
 from collections import deque
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from decimal import Decimal
-from numbers import Integral, Real
 
-
-def _integer(value, name, minimum=0):
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
-        raise ValueError(f"{name} must be an integer >= {minimum}")
-    return int(value)
-
-
-def _number(value, name, *, positive=False):
-    if isinstance(value, bool) or not isinstance(value, (Real, Decimal)):
-        raise ValueError(f"{name} must be a finite real number")
-    try:
-        result = float(value)
-    except (ValueError, OverflowError) as error:
-        raise ValueError(f"{name} must be a finite real number") from error
-    if not math.isfinite(result) or (positive and result <= 0):
-        qualifier = "positive finite" if positive else "finite"
-        raise ValueError(f"{name} must be a {qualifier} real number")
-    return result
+from ._validation import integer, number
 
 
 def _vector(values, length, name):
     if isinstance(values, (str, bytes, Mapping)):
         raise ValueError(f"{name} must contain {length} finite numbers")
     try:
-        result = tuple(_number(v, name) for v in values)
+        result = tuple(number(v, name) for v in values)
     except TypeError as error:
         raise ValueError(f"{name} must contain {length} finite numbers") from error
     if len(result) != length:
@@ -80,8 +61,8 @@ class Graph:
     incoming: tuple[tuple[int, ...], ...] = field(init=False, repr=False)
 
     def __post_init__(self):
-        n_inputs = _integer(self.n_inputs, "n_inputs")
-        n_patches = _integer(self.n_patches, "n_patches", 1)
+        n_inputs = integer(self.n_inputs, "n_inputs")
+        n_patches = integer(self.n_patches, "n_patches", 1)
         if isinstance(self.edges, (str, bytes, Mapping)):
             raise ValueError("edges must contain (kind, source, target) triples")
         try:
@@ -98,8 +79,8 @@ class Graph:
             kind, source, target = item
             if not isinstance(kind, str) or kind not in {"input", "state", "residual"}:
                 raise ValueError("Edge kind must be input, state or residual")
-            source = _integer(source, "edge source")
-            target = _integer(target, "edge target")
+            source = integer(source, "edge source")
+            target = integer(target, "edge target")
             if source >= (n_inputs if kind == "input" else n_patches):
                 raise ValueError("Edge source is outside its declared population")
             if target >= n_patches:
@@ -272,8 +253,8 @@ def evaluate(
         graph, inputs, state, weights, biases, anchor_weights, anchor_biases
     )
     inputs, state, weights, biases, anchor_weights, anchor_biases = args
-    state_prior = _number(state_prior, "state_prior", positive=True)
-    parameter_prior = _number(parameter_prior, "parameter_prior", positive=True)
+    state_prior = number(state_prior, "state_prior", positive=True)
+    parameter_prior = number(parameter_prior, "parameter_prior", positive=True)
     return _evaluate(
         graph,
         inputs,
@@ -366,14 +347,14 @@ def settle(
     inputs, state, weights, biases, anchor_weights, anchor_biases = args
     if type(learn) is not bool:
         raise ValueError("learn must be a boolean")
-    budget = _integer(budget, "budget")
-    backtracks = _integer(backtracks, "backtracks", 1)
-    tolerance = _number(tolerance, "tolerance", positive=True)
-    state_prior = _number(state_prior, "state_prior", positive=True)
-    parameter_prior = _number(parameter_prior, "parameter_prior", positive=True)
-    state_bound = _number(state_bound, "state_bound", positive=True)
-    parameter_bound = _number(parameter_bound, "parameter_bound", positive=True)
-    step = _number(step, "step", positive=True)
+    budget = integer(budget, "budget")
+    backtracks = integer(backtracks, "backtracks", 1)
+    tolerance = number(tolerance, "tolerance", positive=True)
+    state_prior = number(state_prior, "state_prior", positive=True)
+    parameter_prior = number(parameter_prior, "parameter_prior", positive=True)
+    state_bound = number(state_bound, "state_bound", positive=True)
+    parameter_bound = number(parameter_bound, "parameter_bound", positive=True)
+    step = number(step, "step", positive=True)
     if any(abs(x) > state_bound for x in state):
         raise ValueError("Initial state exceeds state_bound")
     if any(abs(x) > parameter_bound for x in (*weights, *biases)):
@@ -392,8 +373,8 @@ def settle(
         raise ValueError("clamps must map patch indices to fixed values")
     fixed = {}
     for index, value in clamps.items():
-        index = _integer(index, "clamp index")
-        value = _number(value, "clamp value")
+        index = integer(index, "clamp index")
+        value = number(value, "clamp value")
         if index >= graph.n_patches or abs(value) > state_bound:
             raise ValueError("Clamp index or value is outside its declared bounds")
         fixed[index] = value

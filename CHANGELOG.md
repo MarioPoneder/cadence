@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Share numeric validation across construction and repair; remove unused
+  ownership tokens, runtime input ranges and redundant compiler bookkeeping.
+  Ownership still requires the exact handle registered with its cortex.
 - Separate runtime (`brain.py`), construction (`cortex.py`), population definitions
   (`column.py`) and sensory/output boundaries (`ports.py`). Top-level imports
   remain `from cadence import Cortex, Brain`; module imports use those focused

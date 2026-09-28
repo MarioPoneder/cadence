@@ -14,15 +14,16 @@ def integer(value, name: str, minimum: int = 0) -> int:
     return int(value)
 
 
-def number(value, name: str) -> float:
+def number(value, name: str, *, positive: bool = False) -> float:
     if isinstance(value, bool) or not isinstance(value, (Real, Decimal)):
         raise ValueError(f"{name} must be a finite real number")
     try:
         result = float(value)
     except (ValueError, OverflowError) as error:
         raise ValueError(f"{name} must be a finite real number") from error
-    if not math.isfinite(result):
-        raise ValueError(f"{name} must be a finite real number")
+    if not math.isfinite(result) or (positive and result <= 0):
+        qualifier = "positive finite" if positive else "finite"
+        raise ValueError(f"{name} must be a {qualifier} real number")
     return result
 
 

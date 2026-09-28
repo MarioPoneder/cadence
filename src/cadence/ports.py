@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from ._validation import integer, number
 from .column import Population
@@ -15,7 +15,6 @@ class Input:
 
     name: str
     shape: tuple[int, ...]
-    _owner: object = field(repr=False)
 
     @property
     def size(self):
@@ -31,7 +30,6 @@ class Output:
     shape: tuple[int, ...]
     reads: Population
     indices: tuple[int, ...]
-    _owner: object = field(repr=False)
 
 
 def _shape(shape):

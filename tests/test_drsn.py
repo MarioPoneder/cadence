@@ -3,6 +3,8 @@
 import hashlib
 import json
 import math
+from decimal import Decimal
+from fractions import Fraction
 from importlib.resources import files
 
 import pytest
@@ -62,6 +64,47 @@ def test_initialization_is_seeded_without_global_random_state():
     assert first.snapshot() == second.snapshot()
     other = small_brain(seed=12)
     assert first.weights != other.weights or first.biases != other.biases
+
+
+@pytest.mark.parametrize("fan_in,connections", [(1, 18), (2, 24), (10, 37)])
+def test_reading_and_observing_the_same_population_keeps_one_state_port(
+    fan_in, connections
+):
+    def layout(limit):
+        cortex = Cortex(fan_in=fan_in, max_connections=limit)
+        sensor = cortex.input("sensor", shape=5)
+        base = cortex.column("base", patches=2, inputs=sensor)
+        observer = cortex.observer(
+            "observer", patches=3, inputs=(base, sensor), observes=base
+        )
+        cortex.output("answer", shape=1, reads=observer)
+        return cortex
+
+    brain = layout(connections).build()
+    assert len(brain.graph.edges) == len(set(brain.graph.edges)) == connections
+    assert brain.inspect()["sensor_coverage"] == 5
+    for kind in ("state", "residual"):
+        assert {s for k, s, _ in brain.graph.edges if k == kind} == {0, 1}
+    with pytest.raises(ValueError, match="Connection budget"):
+        layout(connections - 1).build()
+
+
+@pytest.mark.parametrize("value", [1, 0.5, Decimal("0.25"), Fraction(1, 8)])
+def test_builder_and_repair_accept_real_numeric_types(value):
+    cortex = Cortex(tolerance=value)
+    assert cortex.config["tolerance"] == float(value)
+    assert settle(Graph(0, 1, ()), [], [0], [], [0], tolerance=value)["qualified"]
+
+
+@pytest.mark.parametrize(
+    "value",
+    [True, None, "0.2", 0.2j, math.inf, math.nan, -1, 0, Decimal("sNaN"), 10**1000],
+)
+def test_builder_and_repair_reject_invalid_positive_options(value):
+    with pytest.raises(ValueError, match="tolerance"):
+        Cortex(tolerance=value)
+    with pytest.raises(ValueError, match="tolerance"):
+        settle(Graph(0, 1, ()), [], [0], [], [0], tolerance=value)
 
 
 def test_flat_and_nested_sensor_values_are_identical_and_outputs_are_state_views():
@@ -762,7 +805,7 @@ def test_malformed_foreign_reference_names_raise_validation_errors():
     assert brain.snapshot() == before
     cortex = Cortex()
     cortex.input("sensor", shape=1)
-    forged = Input([], (1,), object())
+    forged = Input([], (1,))
     with pytest.raises(ValueError, match="existing nodes"):
         cortex.column("invalid", patches=1, inputs=(forged,))
 

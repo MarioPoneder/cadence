@@ -76,13 +76,10 @@ class Cortex:
             ("parameter_bound", parameter_bound),
             ("step", step),
         ):
-            config[name] = number(value, name)
-            if config[name] <= 0:
-                raise ValueError(f"{name} must be positive")
+            config[name] = number(value, name, positive=True)
         if config["initial_scale"] > config["parameter_bound"]:
             raise ValueError("initial_scale must not exceed parameter_bound")
         self._config = MappingProxyType(config)
-        self._owner = object()
         self._nodes = {}
         self._inputs = []
         self._populations = []
@@ -142,7 +139,7 @@ class Cortex:
             > self.config["max_inputs"]
         ):
             raise ValueError("Input sample budget exceeded")
-        node = Input(name, shape, self._owner)
+        node = Input(name, shape)
         self._inputs.append(node)
         self._nodes[name] = node
         return node
@@ -154,7 +151,7 @@ class Cortex:
             > self.config["max_patches"]
         ):
             raise ValueError("Processing patch budget exceeded")
-        node = Population(name, patches, inputs, observes, self._owner)
+        node = Population(name, patches, inputs, observes)
         self._populations.append(node)
         self._nodes[name] = node
         return node
@@ -201,7 +198,7 @@ class Cortex:
             raise ValueError("Output indices do not match shape/source")
         if len(set(indices)) != len(indices):
             raise ValueError("Output indices must be distinct")
-        node = Output(name, shape, reads, indices, self._owner)
+        node = Output(name, shape, reads, indices)
         self._outputs.append(node)
         self._nodes[name] = node
         return node
@@ -226,23 +223,21 @@ class Cortex:
                 n_patches, n_patches + population.patches
             )
             n_patches += population.patches
-        edges, seen = [], set()
+        edges = []
         for population in self._populations:
             sources = [
-                ("input" if isinstance(s, Input) else "state", s)
+                ("input" if isinstance(s, Input) else "state", s.name)
                 for s in population.inputs
             ]
             sources += [
-                (kind, s) for s in population.observes for kind in ("state", "residual")
+                (kind, s.name)
+                for s in population.observes
+                for kind in ("state", "residual")
             ]
             targets = population_ranges[population.name]
-            source_ports = set()
-            for kind, source in sources:
-                if (kind, source.name) in source_ports:
-                    continue
-                source_ports.add((kind, source.name))
+            for kind, name in dict.fromkeys(sources):
                 ranges = input_ranges if kind == "input" else population_ranges
-                indices = ranges[source.name]
+                indices = ranges[name]
                 fan_in = min(
                     len(indices),
                     max(self.config["fan_in"], math.ceil(len(indices) / len(targets))),
@@ -256,17 +251,11 @@ class Cortex:
                         source_index = indices[
                             (local_target * fan_in + slot) % len(indices)
                         ]
-                        edge = (kind, source_index, target)
-                        if edge not in seen:
-                            seen.add(edge)
-                            edges.append(edge)
+                        edges.append((kind, source_index, target))
         graph = _repair.Graph(n_inputs, n_patches, tuple(edges))
-        fan_counts = [0] * n_patches
-        for _, _, target in edges:
-            fan_counts[target] += 1
         scale = self.config["initial_scale"]
         weights = tuple(
-            rng.uniform(-1.0, 1.0) * scale / math.sqrt(fan_counts[t])
+            rng.uniform(-1.0, 1.0) * scale / math.sqrt(len(graph.incoming[t]))
             for _, _, t in edges
         )
         layout = {
@@ -290,6 +279,6 @@ class Cortex:
                 for o in self._outputs
             ],
         }
-        brain = Brain(self, graph, weights, input_ranges, population_ranges, layout)
+        brain = Brain(self, graph, weights, population_ranges, layout)
         self._built = True
         return brain

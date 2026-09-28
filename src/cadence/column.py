@@ -6,7 +6,7 @@ state/error observation connections determine its role in the joint solve.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -17,7 +17,6 @@ class Population:
     patches: int
     inputs: tuple
     observes: tuple
-    _owner: object = field(repr=False)
 
     def __repr__(self):
         inputs = tuple(source.name for source in self.inputs)
