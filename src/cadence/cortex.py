@@ -204,6 +204,9 @@ class Cortex:
             "max_pending",
             "max_checkpoint_bytes",
             "wiring_id",
+            "self_observation",
+            "reflect_rate",
+            "reflect_threshold",
         }
     )
 
@@ -243,6 +246,9 @@ class Cortex:
         max_pending: int = 10000,
         max_checkpoint_bytes: int = 8388608,
         wiring_id: str | None = None,
+        self_observation: bool = False,
+        reflect_rate: float = 0.2,
+        reflect_threshold: float = 2.0,
     ):
         self.n_outputs = integer(n_outputs, "n_outputs", 1)
         maps = (IdentityFeatures(),) if feature_maps is None else tuple(feature_maps)
@@ -354,6 +360,16 @@ class Cortex:
             raise ValueError(
                 "level_weights must contain one positive finite mass per level"
             )
+        self.self_observation = boolean(self_observation, "self_observation")
+        self.reflect_rate = number(reflect_rate, "reflect_rate")
+        self.reflect_threshold = number(reflect_threshold, "reflect_threshold")
+        if not 0 < self.reflect_rate <= 1 or self.reflect_threshold <= 1:
+            raise ValueError("reflect_rate must be in (0,1] and reflect_threshold > 1")
+        # Recursive self-observation: with height > 1 the column watches its own
+        # prediction error and, on sustained surprise, re-evaluates which of
+        # ``height`` internal modes explains the latest evidence best. The mode
+        # is part of every context, so height changes answers, not only variance.
+        self._reflect = {"mode": 0, "fast": 0.0, "slow": 0.0, "seen": 0, "switches": 0}
         self.learning_enabled = learning_enabled
         self.prior_ports_cut = False
         self._rng = random.Random(self.seed)
@@ -459,8 +475,51 @@ class Cortex:
         cortex.calibration = calibration
         return cortex
 
-    def _contexts(self, observation):
-        return tuple(context_key(f(observation)) for f in self.feature_maps)
+    @property
+    def reflective(self) -> bool:
+        """Whether recursive self-observation drives contexts (needs height > 1)."""
+        return self.self_observation and self.height > 1
+
+    @property
+    def mode(self) -> int:
+        """The self-selected hypothesis mode currently gating contexts."""
+        return self._reflect["mode"]
+
+    def _contexts(self, observation, mode=None):
+        if not self.reflective:
+            return tuple(context_key(f(observation)) for f in self.feature_maps)
+        mode = self._reflect["mode"] if mode is None else mode
+        return tuple(
+            context_key(["mode", mode, f(observation)]) for f in self.feature_maps
+        )
+
+    def _mode_error(self, observation, values, mode):
+        contexts = self._contexts(observation, mode)
+        return sum(
+            abs(self._value(contexts, k)["mean"] - v) for k, v in values.items()
+        ) / len(values)
+
+    def _reflect_step(self, observation, values):
+        """Observe own surprise; on a sustained spike, retrospectively pick a mode."""
+        r = self._reflect
+        error = self._mode_error(observation, values, r["mode"])
+        a = self.reflect_rate
+        r["fast"] = (1 - a) * r["fast"] + a * error
+        r["slow"] = (1 - a / 10) * r["slow"] + (a / 10) * error
+        r["seen"] += 1
+        if r["seen"] > 10 and r["fast"] > self.reflect_threshold * r["slow"] + 1e-12:
+            errors = [
+                (self._mode_error(observation, values, m), m)
+                for m in range(self.height)
+            ]
+            best = min(errors)[1]
+            if best == r["mode"]:
+                # Nobody explains it yet: recruit the least-used fresh mode.
+                best = (r["mode"] + 1) % self.height
+            if best != r["mode"]:
+                r["mode"], r["switches"] = best, r["switches"] + 1
+            r["fast"] = r["slow"]
+        return self._contexts(observation)
 
     def _output(self, output):
         output = integer(output, "output")
@@ -685,7 +744,6 @@ class Cortex:
         allocate the next ID and cannot identify application-level retries.
         Flush pending RL experience before mixing in direct observations.
         """
-        contexts = self._contexts(observation)
         weight = number(weight, "weight")
         if weight <= 0:
             raise ValueError("weight must be positive")
@@ -705,14 +763,25 @@ class Cortex:
             values = {i: number(v, "target") for i, v in enumerate(sequence)}
         if not values:
             raise ValueError("At least one target is required")
+        contexts = self._contexts(observation)
+        if self.reflective and self.learning_enabled and not self._episode:
+            saved = dict(self._reflect)
+            contexts = self._reflect_step(observation, values)
         record = {
             "kind": "targets",
             "contexts": contexts,
             "targets": sorted(values.items()),
             "weight": weight,
         }
-        event, encoded, duplicate = self._event(event, record)
+        try:
+            event, encoded, duplicate = self._event(event, record)
+        except ValueError:
+            if self.reflective and self.learning_enabled and not self._episode:
+                self._reflect = saved
+            raise
         if duplicate:
+            if self.reflective and self.learning_enabled and not self._episode:
+                self._reflect = saved
             return {
                 "accepted": False,
                 "qualified": True,
@@ -969,6 +1038,7 @@ class Cortex:
                 "learning_enabled": self.learning_enabled,
                 "prior_ports_cut": self.prior_ports_cut,
                 "counters": self.counters,
+                **({"reflection": dict(self._reflect)} if self.reflective else {}),
             }
         )
         if len(text.encode("utf-8")) > self.max_checkpoint_bytes:
@@ -996,6 +1066,8 @@ class Cortex:
             "prior_ports_cut",
             "counters",
         }
+        if self.reflective:
+            fields = fields | {"reflection"}
         if (
             type(state) is not dict
             or set(state) != fields
@@ -1105,6 +1177,20 @@ class Cortex:
             raise ValueError("A cortex without events cannot contain retained evidence")
         enabled = boolean(state["learning_enabled"], "learning_enabled")
         cut = boolean(state["prior_ports_cut"], "prior_ports_cut")
+        reflect = dict(self._reflect)
+        if self.reflective:
+            data = state["reflection"]
+            if type(data) is not dict or set(data) != set(reflect):
+                raise ValueError("Malformed reflection state")
+            reflect = {
+                "mode": integer(data["mode"], "mode"),
+                "fast": number(data["fast"], "fast"),
+                "slow": number(data["slow"], "slow"),
+                "seen": integer(data["seen"], "seen"),
+                "switches": integer(data["switches"], "switches"),
+            }
+            if reflect["mode"] >= self.height:
+                raise ValueError("Reflection mode outside height")
         self._columns, self._episode, self._rng = columns, pending, rng
         self._cursor, self._last_record = cursor, last_record
         self.counters, self.learning_enabled, self.prior_ports_cut = (
@@ -1112,6 +1198,7 @@ class Cortex:
             enabled,
             cut,
         )
+        self._reflect = reflect
         self._cache.clear()
 
     @classmethod
@@ -1177,4 +1264,9 @@ class Cortex:
             "pending": len(self._episode),
             "cursor": self._cursor,
             "cache_entries": len(self._cache),
+            **(
+                {"mode": self._reflect["mode"], "mode_switches": self._reflect["switches"]}
+                if self.reflective
+                else {}
+            ),
         }
