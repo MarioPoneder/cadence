@@ -33,6 +33,9 @@ decision = layout.observer("decision", patches=1, observes=representation)
 layout.output("choice", shape=1, reads=decision)
 brain = layout.build()
 assert brain.inspect()["patches"] == 5
+# Every decision coordinate must have a path to both cue coordinates here.
+assert brain.inspect()["outputs"][0]["sensor_coverage_by_coordinate"] == (2,)
+assert brain.inspect()["output_connected_patches"] == 5
 ```
 
 The two nondefault values above are a tested candidate for small nonlinear
@@ -58,8 +61,9 @@ experience or reward-only discovery.
 1. Include the information needed to distinguish different answers. A position
    alone cannot identify velocity. A numeric-array interface does not provide
    learned vision or recover discarded observations.
-2. Scale inputs consistently and use targets comfortably inside `state_bound`,
-   such as `-0.6` and `0.6`. Fit preprocessing on training data only. Centering
+2. Scale inputs consistently and use targets comfortably inside both the
+   `tanh` prediction range and `state_bound`, such as `-0.6` and `0.6` with
+   the default bounds. Fit preprocessing on training data only. Centering
    or standardization can help; strongly correlated inputs may require an
    explicitly fitted whitening transform. Whitening is external preprocessing,
    not a representation learned by Cadence.
@@ -73,8 +77,36 @@ experience or reward-only discovery.
 
 The default `fan_in=None` gives each patch every coordinate of each declared
 source. Opting into sparse `fan_in` changes the information available to each
-patch. `sensor_coverage` means connected **somewhere**, not necessarily usable
-by your chosen output. See [layout variants](VARIANTS.md).
+patch. `sensor_coverage` means connected **somewhere**.
+Each inspected output's `sensor_coverage_by_coordinate` counts the sensor
+coordinates connected to each selected state through the jointly coupled graph.
+`output_connected_patches` counts patches connected to at least one output;
+extra disconnected width cannot supply a hidden representation to those outputs.
+These are structural
+checks, not measured causal effects or accuracy. Zero weights and saturation
+can still suppress influence. Parallel branches may deliberately use different
+sensors. See [layout variants](VARIANTS.md).
+
+Increasing `state_bound` permits larger clamps; it does **not** rescale `tanh`.
+For an output patch that no other patch reads or observes, unconstrained free
+settlement gives `x = tanh(drive) / (1 + state_prior)`, so its magnitude stays
+below `1 / (1 + state_prior)` even when the bound is larger. A target of `2`
+with `state_bound=4` can qualify during teaching and still be impossible to
+recall. Encode regression targets into a suitable range and decode predictions
+back into application units. Bounds are not a substitute for that transform.
+For classification, expose one score per class and decode the largest score;
+these values are not normalized probabilities. Integer class IDs are labels,
+not suitable scalar regression targets by default. For multiple named controls
+from one population, select different `indices` explicitly: scalar outputs both
+default to patch zero when no indices are supplied.
+
+Before a long run, teach a small representative set, then query **every example
+without targets** after replay. Compare against the untrained model, check that
+changing relevant inputs changes answers, and save/restore the result. Track
+the worst seed as well as averages. If training recall fails, stop and diagnose
+that failure before spending work on a larger task. The core's small learning
+tests exercise this sequence for flat, composed and observing populations;
+they do not establish that every task is learnable with the defaults.
 
 ## Test control in the environment
 
@@ -90,6 +122,12 @@ This follows the dataset-aggregation approach studied by
 it is a training procedure, not an additional Cadence primitive.
 
 ## Diagnose before scaling
+
+The default ceiling is 2,048 accepted repair sweeps per solve; qualification
+stops work early. Small nine-patch recursive acquisition tests needed up to
+777 sweeps, so a 512-sweep ceiling refused some otherwise successful examples.
+This is numerical headroom, not extra training examples or a guarantee that
+every layout settles within the budget.
 
 If solves refuse, inspect `stationarity`, `reason` and `work`, then test a larger
 budget from the unchanged continuation. The solver adapts a scalar step while

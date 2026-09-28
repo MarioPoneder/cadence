@@ -33,6 +33,38 @@ IMPLEMENTATION = MappingProxyType(
 )
 
 
+def _coverage(graph, output_indices):
+    """Count potential sensor paths through coupled patch components.
+
+    State/error contacts carry returning energy influence. Fixed input samples
+    attach to components but never join otherwise independent patches.
+    """
+    parents = list(range(graph.n_patches))
+    sizes = [1] * graph.n_patches
+
+    def root(index):
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    for kind, source, target in graph.edges:
+        if kind != "input":
+            left, right = root(source), root(target)
+            if left != right:
+                if sizes[left] < sizes[right]:
+                    left, right = right, left
+                parents[right] = left
+                sizes[left] += sizes[right]
+    sensors = {}
+    for kind, source, target in graph.edges:
+        if kind == "input":
+            sensors.setdefault(root(target), set()).add(source)
+    coverage = tuple(len(sensors.get(root(i), ())) for i in range(graph.n_patches))
+    connected = sum(sizes[i] for i in {root(i) for i in output_indices})
+    return coverage, connected
+
+
 class SettlementError(RuntimeError):
     """A population solve did not meet its full stationarity threshold."""
 
@@ -104,12 +136,18 @@ class Brain:
                 or name not in expected
                 or (not isinstance(key, str) and key is not expected[name])
             ):
-                raise ValueError("Unknown or foreign layout reference")
+                raise ValueError(
+                    f"Unknown or foreign layout reference {name!r}; "
+                    f"expected names: {', '.join(expected) or '(none)'}"
+                )
             if name in result:
-                raise ValueError("Duplicate named values")
+                raise ValueError(f"Duplicate values for {name!r}")
             result[name] = value
         if not partial and result.keys() != expected.keys():
-            raise ValueError("Supply every declared sensor exactly once")
+            missing = ", ".join(name for name in expected if name not in result)
+            raise ValueError(
+                f"Supply every declared sensor exactly once; missing: {missing}"
+            )
         return result
 
     def _arguments(self, inputs, targets=None, interventions=None):
@@ -121,13 +159,17 @@ class Brain:
         )
         clamps = {}
 
-        def add(indices, values):
+        def add(indices, values, name):
             for index, value in zip(indices, values, strict=True):
                 if abs(value) > self.config["state_bound"]:
-                    raise ValueError("Clamp exceeds state_bound")
+                    raise ValueError(
+                        f"{name!r} clamp {value} exceeds state_bound="
+                        f"{self.config['state_bound']}; scale targets/interventions "
+                        "to the model's state range"
+                    )
                 if index in clamps and clamps[index] != value:
                     raise ValueError(
-                        "Conflicting clamps alias the same processing patch"
+                        f"{name!r} conflicts with another clamp on patch {index}"
                     )
                 clamps[index] = value
 
@@ -142,6 +184,7 @@ class Brain:
                     add(
                         indices,
                         _values(supplied[output.name], output.shape, output.name),
+                        output.name,
                     )
         if interventions is not None:
             supplied = self._mapping(interventions, self._populations, partial=True)
@@ -154,6 +197,7 @@ class Brain:
                             (population.patches,),
                             population.name,
                         ),
+                        population.name,
                     )
         return flat, clamps
 
@@ -201,7 +245,13 @@ class Brain:
         """Return qualified output values without admitting experience."""
         result = self.settle(inputs, budget=budget)
         if not result["qualified"]:
-            raise SettlementError(f"Population solve refused: {result['reason']}")
+            raise SettlementError(
+                f"Population solve refused: {result['reason']}; "
+                f"stationarity={result['stationarity']:.6g}, "
+                f"tolerance={self.config['tolerance']:.6g}, "
+                f"sweeps={result['sweeps']}. "
+                "Use settle() to inspect work and diagnostic outputs."
+            )
         return result["outputs"]
 
     def step(self, inputs, *, budget=None):
@@ -225,6 +275,12 @@ class Brain:
         event_id = (
             self._event_id + 1 if event_id is None else integer(event_id, "event_id")
         )
+        try:
+            canonical(event_id)
+        except ValueError as error:
+            raise ValueError(
+                "event_id must be representable as a JSON integer"
+            ) from error
         digest = hashlib.sha256(
             canonical([flat, sorted(clamps.items())]).encode()
         ).hexdigest()
@@ -254,12 +310,25 @@ class Brain:
         }
 
     def inspect(self):
-        """Return owned layout data, actual graph counts and readback roles."""
+        """Return owned layout data, graph counts and potential input paths.
+
+        Each output's ``sensor_coverage_by_coordinate`` counts input samples
+        in its coupled patch component. ``output_connected_patches`` counts
+        patches in any output component. These are structural possibilities,
+        not measured influence: weights or saturation can suppress a path.
+        """
         layout = json.loads(self._layout)
         for population in layout["populations"]:
             population["role"] = "observer" if population["observes"] else "processing"
             population["indices"] = tuple(self._population_ranges[population["name"]])
         used = {source for kind, source, _ in self.graph.edges if kind == "input"}
+        indices = [
+            tuple(self._population_ranges[o["reads"]][i] for i in o["indices"])
+            for o in layout["outputs"]
+        ]
+        coverage, connected = _coverage(self.graph, {i for row in indices for i in row})
+        for output, row in zip(layout["outputs"], indices, strict=True):
+            output["sensor_coverage_by_coordinate"] = tuple(coverage[i] for i in row)
         return {
             **layout,
             "config": dict(self.config),
@@ -269,6 +338,7 @@ class Brain:
             "edges": self.graph.edges,
             "observed_fields": ("state", "prediction_error"),
             "sensor_coverage": len(used),
+            "output_connected_patches": connected,
             "fingerprint": self._fingerprint,
             "implementation": dict(IMPLEMENTATION),
             "admissions": self._admissions,

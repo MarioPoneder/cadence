@@ -39,8 +39,11 @@ Every core change is reviewed against all three. The
 Python 3.11 or later; no runtime dependencies:
 
 ```sh
-python -m pip install cadence-net
+python -m pip install --upgrade "cadence-net>=0.45.0"
 ```
+
+If your package index has not listed a new release yet, its wheel is also
+available from [GitHub Releases](https://github.com/muellerberndt/cadence/releases/latest).
 
 ## Declare the brain
 
@@ -80,6 +83,8 @@ Every patch reads all coordinates of its declared sources by default; explicit
 `fan_in` opts into sparse sampling. This is a layout example, not a pretrained
 vision/audio model. For a first learning task, start smaller using the
 [training guide](docs/TRAINING.md).
+Inspection also reports sensor coverage for each output coordinate, so you can
+check the decision's connections before training.
 
 ## Learn a small relation
 

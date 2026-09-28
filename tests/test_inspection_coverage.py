@@ -1,0 +1,156 @@
+"""Expose structural input gaps without forbidding intentional constant branches."""
+
+import pytest
+
+from cadence import Brain, Cortex
+
+
+def output_coverage(brain, name="answer"):
+    return next(
+        output["sensor_coverage_by_coordinate"]
+        for output in brain.inspect()["outputs"]
+        if output["name"] == name
+    )
+
+
+def test_disconnected_output_is_reported_even_when_all_sensors_are_used():
+    cortex = Cortex()
+    sensor = cortex.input("sensor", shape=2)
+    cortex.column("perception", patches=3, inputs=sensor)
+    constant = cortex.column("constant", patches=1)
+    cortex.output("answer", shape=1, reads=constant)
+    brain = cortex.build()
+    assert brain.inspect()["sensor_coverage"] == 2
+    assert output_coverage(brain) == (0,)
+    assert brain.inspect()["output_connected_patches"] == 1
+    assert brain.predict({"sensor": [-0.8, 0.2]}) == brain.predict(
+        {"sensor": [0.9, -0.6]}
+    )
+
+
+def test_shared_fixed_input_does_not_bridge_independent_patch_components():
+    cortex = Cortex(seed=7, fan_in=1)
+    sensor = cortex.input("sensor", shape=3)
+    processing = cortex.column("processing", patches=2, inputs=sensor)
+    cortex.output("answer", shape=1, reads=processing)
+    brain = cortex.build()
+    sources = [
+        {s for kind, s, t in brain.graph.edges if kind == "input" and t == target}
+        for target in range(2)
+    ]
+    # Each patch sees two samples, sharing one with its sibling. Treating
+    # the shared clamped input as a freely settling node would wrongly add
+    # its sibling's third sample to the output's possible dependencies.
+    assert len(sources[0] & sources[1]) == 1
+    assert brain.inspect()["sensor_coverage"] == 3
+    assert output_coverage(brain) == (2,)
+    assert brain.inspect()["output_connected_patches"] == 1
+    missing = (sources[1] - sources[0]).pop()
+    answers = []
+    for value in (-0.8, 0.8):
+        data = [0.0] * 3
+        data[missing] = value
+        answers.append(brain.predict({"sensor": data})["answer"][0])
+    assert answers == [0.0, 0.0]
+
+
+@pytest.mark.parametrize("join", [None, "column", "observer"])
+def test_shared_downstream_population_returns_influence_to_upstream_output(join):
+    cortex = Cortex(seed=7, initial_scale=1.5, tolerance=1e-9, settle_budget=2048)
+    first = cortex.input("first", shape=1)
+    second = cortex.input("second", shape=1)
+    left = cortex.column("left", patches=1, inputs=first)
+    right = cortex.column("right", patches=1, inputs=second)
+    if join == "column":
+        cortex.column("joint", patches=1, inputs=(left, right))
+    elif join == "observer":
+        cortex.observer("joint", patches=1, observes=(left, right))
+    cortex.output("answer", shape=1, reads=left)
+    brain = cortex.build()
+    before = brain.snapshot()
+    answers = [
+        brain.predict({"first": [0.0], "second": [value]})["answer"][0]
+        for value in (-0.8, 0.8)
+    ]
+    if join is None:
+        assert output_coverage(brain) == (1,)
+        assert brain.inspect()["output_connected_patches"] == 1
+        assert answers == [0.0, 0.0]
+    else:
+        # No forward read path runs from second to left. The joint energy
+        # nevertheless couples them through the shared downstream population.
+        assert output_coverage(brain) == (2,)
+        assert brain.inspect()["output_connected_patches"] == 3
+        assert abs(answers[0] - answers[1]) > 1e-5
+    assert brain.snapshot() == before
+
+
+def test_output_aliases_and_selected_indices_do_not_count_unused_flat_width():
+    cortex = Cortex()
+    sensor = cortex.input("sensor", shape=2)
+    processing = cortex.column("processing", patches=4, inputs=sensor)
+    cortex.output("pair", shape=(1, 2), reads=processing, indices=(3, 1))
+    cortex.output("alias", shape=(), reads=processing, indices=(1,))
+    brain = cortex.build()
+    assert output_coverage(brain, "pair") == (2, 2)
+    assert output_coverage(brain, "alias") == (2,)
+    assert brain.inspect()["output_connected_patches"] == 2
+
+
+@pytest.mark.parametrize(
+    "indices,coverage,connected",
+    [((0,), (2,), 4), ((1, 0, 2), (1, 2, 2), 6)],
+)
+def test_sparse_error_contacts_extend_coverage_beyond_state_contacts(
+    indices, coverage, connected
+):
+    cortex = Cortex(seed=0, fan_in=1)
+    sensor = cortex.input("sensor", shape=3)
+    base = cortex.column("base", patches=3, inputs=sensor)
+    cortex.observer("observer", patches=3, observes=base)
+    cortex.output("answer", shape=len(indices), reads=base, indices=indices)
+    brain = cortex.build()
+    # State contacts alone form three separate pairs. Error readback joins
+    # base 0 and 2 through observers 3 and 5; the middle pair stays separate.
+    assert {e for e in brain.graph.edges if e[0] == "state"} == {
+        ("state", 2, 3),
+        ("state", 1, 4),
+        ("state", 0, 5),
+    }
+    assert {e for e in brain.graph.edges if e[0] == "residual"} == {
+        ("residual", 0, 3),
+        ("residual", 1, 4),
+        ("residual", 2, 5),
+    }
+    assert output_coverage(brain) == coverage
+    assert brain.inspect()["output_connected_patches"] == connected
+
+
+def test_constant_brain_has_valid_zero_coverage_and_inspection_is_owned():
+    cortex = Cortex()
+    constant = cortex.column("constant", patches=2)
+    cortex.output("answer", shape=1, reads=constant)
+    brain = cortex.build()
+    original = brain.inspect()
+    assert output_coverage(brain) == (0,)
+    assert original["sensor_coverage"] == 0
+    assert original["output_connected_patches"] == 1
+    changed = brain.inspect()
+    changed["outputs"][0]["sensor_coverage_by_coordinate"] = (999,)
+    changed["output_connected_patches"] = 999
+    assert brain.inspect() == original
+    assert Brain.from_snapshot(brain.snapshot()).inspect() == original
+
+
+def test_nested_observers_include_all_unique_sensor_coordinates():
+    cortex = Cortex(seed=2)
+    eyes = cortex.input("eyes", shape=3)
+    ears = cortex.input("ears", shape=2)
+    visual = cortex.column("visual", patches=2, inputs=eyes)
+    auditory = cortex.column("auditory", patches=2, inputs=ears)
+    observer = cortex.observer("observer", patches=2, observes=(visual, auditory))
+    cortex.observer("meta", patches=1, observes=observer, inputs=eyes)
+    cortex.output("answer", shape=2, reads=visual)
+    brain = cortex.build()
+    assert output_coverage(brain) == (5, 5)
+    assert brain.inspect()["output_connected_patches"] == 7

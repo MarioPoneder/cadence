@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.45.0 — 2026-09-28
+
+- Raise the default repair ceiling from 512 to 2,048 sweeps. Small recursive
+  teaching examples exhausted the old ceiling; six tested initializations
+  acquire independent relations with the larger allowance. Already qualified
+  solves still stop early. The equations and qualification threshold are unchanged.
+- Report structural sensor coverage per output coordinate and the number of
+  patches connected to any output. Shared fixed inputs do not falsely join
+  otherwise independent populations. These diagnostics expose disconnected
+  decisions and unused width without rejecting deliberate constant branches.
+- Reject event IDs that cannot be JSON-encoded before solving or admitting
+  them, preserving checkpointability and atomic retries.
+- Make missing inputs, invalid targets and numerical refusals explain the
+  affected names, bounds or qualification measurements. Accept scalar integer
+  shapes consistently with integer dimensions from array libraries.
+- Add fast acquisition gates across flat, composed and recursive layouts:
+  multiple seeds, independent inputs/outputs, unclamped answers, replay,
+  input ablation and checkpoint continuation. Clarify target scaling,
+  classification scores and output aliases in the training guide.
+- Exact source-bound checkpoints from earlier implementations remain incompatible.
+
 ## 0.44.0 — 2026-09-28
 
 - Adapt the projected repair step to observed curvature using a guarded scalar

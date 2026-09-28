@@ -24,7 +24,7 @@ Cortex(
     seed=0,
     fan_in=None,
     initial_scale=0.3,
-    settle_budget=512,
+    settle_budget=2048,
     tolerance=1e-6,
     state_prior=0.01,
     parameter_prior=0.1,
@@ -91,12 +91,16 @@ not learned interpretation. Output size cannot exceed `reads.patches`.
 `indices` selects distinct zero-based local coordinates from `reads`, in output
 order, with length equal to output size. The default is `range(size)`.
 Different outputs may alias the same patch.
+Two scalar outputs reading the same population both default to index zero.
+Use explicit `indices=(0,)` and `indices=(1,)` for independent named controls,
+or one vector output with `shape=2`.
 
 With default full connectivity, each destination patch reads every coordinate
 of every source it declares. Explicit sparse wiring guarantees only aggregate
 coverage across the population. A selected output can miss information read by
 other, unconnected patches. A sensor with no connections remains unobserved.
-`inspect()` reports actual edges and aggregate coverage.
+`inspect()` reports actual edges, aggregate coverage and structural sensor
+coverage for each output coordinate.
 Normalization, features and motor interpretation are supplied by the application.
 
 ### Immutable layout handles
@@ -159,7 +163,9 @@ actual witness; it has no intervention argument. The application supplies
 witness provenance. Training outputs equal their clamps, so measure learning
 using subsequent predictions without those clamps.
 
-`event_id` is an ordered nonnegative integer. Omission selects the latest
+`event_id` is an ordered nonnegative integer that must be serializable by the
+runtime's JSON integer encoder. Excessive digit counts raise `ValueError`
+before solving or admitting experience. Omission selects the latest
 admitted identifier plus one; initially this is `0`. Gaps are allowed. The
 latest accepted identifier may be retried with identical inputs and clamps,
 performing no solve or second admission. Reusing it with different content, or
@@ -220,11 +226,17 @@ complete memory/latency measurements.
 
 `inspect()` returns layout `inputs`, `populations` and `outputs`, plus `config`,
 `patches`, `input_samples`, `connections`, `edges`, `observed_fields`,
-`sensor_coverage`, `fingerprint`, `implementation`, `admissions` and
+`sensor_coverage`, `output_connected_patches`, `fingerprint`, `implementation`, `admissions` and
 `last_event_id`. Population records add `role` and global patch `indices`.
 `observed_fields` is `("state", "prediction_error")`. `sensor_coverage` counts
 unique input coordinates attached anywhere; it does not certify their influence
-on a selected output. `last_event_id` is `-1`
+on a selected output. Each output record adds `sensor_coverage_by_coordinate`,
+a flat tuple of distinct reachable sensor-coordinate counts in output order.
+`output_connected_patches` counts processing patches in any output's coupled
+component. State and residual connections join components in both directions;
+shared fixed inputs do not join otherwise independent patches. These are
+structural possibilities, not guarantees of causal influence: zero weights,
+saturation or learned cancellation can suppress a path. `last_event_id` is `-1`
 before any admission. Editing inspector copies does not modify the brain.
 
 ## Numerical and learning contract
@@ -250,7 +262,8 @@ a unique normal form, a global optimum or asynchronous confluence. Nonconvex
 energy can retain different stationary points. Budget or line-search exhaustion
 is a numerical refusal. Invalid arguments and nonrepresentable initial numeric
 quantities raise `ValueError`. `SettlementError` is a `RuntimeError` used by
-`predict` for a valid but unqualified solve.
+`predict` for a valid but unqualified solve. Its message includes the refusal
+reason, stationarity, tolerance and sweep count; use `settle` for full diagnostics.
 
 The learning operation is supervised witness admission. Reward credit assignment,
 automatic episodic retrieval, planning policies and learned structural growth

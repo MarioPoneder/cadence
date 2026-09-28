@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from numbers import Integral
 
 from ._validation import integer, number
 from .column import Population
@@ -33,7 +34,7 @@ class Output:
 
 
 def _shape(shape):
-    if isinstance(shape, int):
+    if isinstance(shape, Integral):
         shape = (shape,)
     if not isinstance(shape, (tuple, list)) or len(shape) > 8:
         raise ValueError("shape must have at most eight positive dimensions")

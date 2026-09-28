@@ -50,6 +50,10 @@ python -m ruff format --check src tests
 ```
 
 Tests execute Python examples in the README and every documentation page.
+Basic learning tests must also pass: multiple seeds, independently varied inputs,
+unclamped recall after replay, and saved continuation across flat, composed and
+observing populations. Keep these gates small enough to run in ordinary CI.
+Numerical qualification alone cannot pass an acquisition test.
 Constructor signatures and package exports must match the reference. Add
 independent mathematical or adversarial tests for changes to derivatives,
 qualification, witness custody or serialization. Preserve bounded construction

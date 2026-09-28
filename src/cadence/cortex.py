@@ -44,7 +44,7 @@ class Cortex:
         seed=0,
         fan_in=None,
         initial_scale=0.3,
-        settle_budget=512,
+        settle_budget=2048,
         tolerance=1e-6,
         state_prior=0.01,
         parameter_prior=0.1,

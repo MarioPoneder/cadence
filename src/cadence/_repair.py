@@ -14,7 +14,8 @@ coordinates. A query freezes parameters; a learning solve repairs state and
 parameters together.
 This module does not admit evidence or mutate a caller's durable memory.
 
-On the bounded boxes the energy is smooth. Accepted repairs decrease it;
+On the bounded boxes the energy is smooth. Ordinary accepted repairs decrease
+it, with the bounded stationary finishing allowance documented below;
 the usual projected-descent stationarity argument requires adequate line
 search and continued iteration. Nonconvexity permits different stationary
 points. Finite budgets can refuse, and neither uniqueness nor global optimality
@@ -339,7 +340,7 @@ def settle(
     *,
     clamps=None,
     learn=False,
-    budget=512,
+    budget=2048,
     tolerance=1e-6,
     state_prior=0.01,
     parameter_prior=0.1,
