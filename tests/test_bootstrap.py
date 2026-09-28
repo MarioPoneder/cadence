@@ -205,34 +205,37 @@ def test_post_epoch_evaluation_refusal_stops_without_discarding_learning(monkeyp
     assert brain.inspect()["admissions"] == 2
 
 
-def test_admission_refusal_preserves_previous_successful_witnesses():
-    cortex = Cortex(seed=2)
-    left = cortex.input("left", shape=1)
-    right = cortex.input("right", shape=1)
-    base = cortex.column("base", patches=4, inputs=(left, right))
-    hidden = cortex.column("hidden", patches=3, inputs=base)
-    observer = cortex.observer("observer", patches=2, observes=(base, hidden))
-    cortex.output("horizontal", shape=1, reads=observer, indices=(0,))
-    cortex.output("vertical", shape=1, reads=observer, indices=(1,))
-    brain = cortex.build()
+def test_admission_refusal_preserves_previous_successful_witnesses(monkeypatch):
+    brain = learner(seed=2)
     shadow = Brain.from_snapshot(brain.snapshot())
-    examples = [
-        (
-            {"left": [-0.8], "right": [value]},
-            {"horizontal": [-0.8], "vertical": [-value]},
-        )
-        for value in (-0.8, 0.8)
-    ]
-    checks = [({"left": [0.4], "right": [0.4]}, {"horizontal": [0.4]})]
-    report = bootstrap(
-        brain, examples, checks=checks, max_error=0.01, seed=0, budget=512
-    )
+    initial_parameters = brain.weights, brain.biases
+    examples = [({"signal": [0.8]}, {"answer": [value]}) for value in (-0.8, 0.8)]
+    observe = brain.observe
+    attempts = 0
+
+    def exhaust_second_attempt(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 2:
+            # Use a real solver refusal without depending on a platform's
+            # sweep count: the opposite witness gets no repair allowance.
+            kwargs["budget"] = 0
+        return observe(*args, **kwargs)
+
+    monkeypatch.setattr(brain, "observe", exhaust_second_attempt)
+    report = bootstrap(brain, examples, checks=cases((0.4,)), max_error=0.01, seed=0)
     assert not report["passed"] and report["reason"] == "refused"
     assert report["failure"]["stage"] == "observe"
     assert report["failure"]["index"] == 1
+    assert report["failure"]["reason"] == "budget"
+    assert report["failure"]["stationarity"] > brain.config["tolerance"]
     assert report["presentations"] == 2 and report["accepted"] == 1
+    assert attempts == 2
     assert report["epochs"] == 0
-    assert shadow.observe(*examples[0], budget=512)["accepted"]
+    assert shadow.observe(*examples[0])["accepted"]
+    assert (brain.weights, brain.biases) != initial_parameters
+    assert brain.inspect()["admissions"] == 1
+    assert brain.inspect()["last_event_id"] == 0
     assert brain.snapshot() == shadow.snapshot()
 
 
