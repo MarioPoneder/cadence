@@ -84,7 +84,8 @@ Cortex(n_outputs=1, feature_maps=None, *,
        prior_weight=1.0, prior_shape=1.0, prior_rate=1.0,
        meta_shape=4.0, meta_rate=4.0, level_weights=None,
        max_columns=100000, max_cache=4096, max_pending=10000,
-       max_checkpoint_bytes=8388608, wiring_id=None)
+       max_checkpoint_bytes=8388608, wiring_id=None,
+       self_observation=False, reflect_rate=0.2, reflect_threshold=2.0)
 ```
 
 A default Cortex has one output and uses the complete observation as its
@@ -117,6 +118,9 @@ limited to 4,096 items, 32 nesting levels and 16,384 characters per string.
 | `max_pending` | Positive integer bound on buffered RL transitions. |
 | `max_checkpoint_bytes` | Positive integer UTF-8 byte limit for checkpoint serialization/parsing; default 8 MiB. |
 | `wiring_id` | Nonempty string up to 1,024 characters, or `None`. Custom feature functions require this identity for checkpointing. |
+| `self_observation` | Boolean. With `height > 1`, the cortex watches its own prediction error and gates every context by one of `height` self-selected modes. On a sustained error spike it re-scores each mode against the latest evidence and switches to the best (or recruits a fresh one). Height then changes predictions, not only variance. Applies to `observe`; RL transitions keep the current mode. |
+| `reflect_rate` | In (0, 1]. Fast surprise trace rate; the slow baseline uses a tenth of it. |
+| `reflect_threshold` | Greater than 1. Fast/slow surprise ratio that triggers re-evaluation. |
 
 With `level_weights=None`, when every feature map declares a positive integer `cells`, level `l` receives
 mass `min(1, cells_l / cells_finest)` per unit witness. Otherwise every level
