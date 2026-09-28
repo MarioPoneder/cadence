@@ -22,7 +22,7 @@ See the [quickstart](QUICKSTART.md) for a first example and the
 Cortex(
     *,
     seed=0,
-    fan_in=8,
+    fan_in=None,
     initial_scale=0.3,
     settle_budget=512,
     tolerance=1e-6,
@@ -38,14 +38,15 @@ Cortex(
 )
 ```
 
-All arguments are keyword-only. Integer parameters reject booleans; real
-parameters must be finite and strictly positive. Defaults are starting points
+All arguments are keyword-only. Integer parameters reject booleans; `fan_in`
+also accepts `None` for full connectivity. Real parameters must be finite and
+strictly positive. Defaults are starting points
 for small numerical and learning examples, not universal task settings.
 
 | Parameter | Contract |
 | --- | --- |
-| `seed` | Nonnegative integer controlling sparse wiring and initial relation coefficients. Reproduction also requires the same layout, configuration and implementation. |
-| `fan_in` | Positive minimum source-coordinate sample count per destination patch, capped at source size and raised when necessary to cover the complete source across that destination population. Applies separately to each source and signal kind. |
+| `seed` | Nonnegative integer controlling sampled wiring and initial relation coefficients. Reproduction also requires the same layout, configuration and implementation. |
+| `fan_in` | `None` (default) connects every coordinate of each declared source to every destination patch. A positive integer requests sparse sampling: a minimum count per destination, capped at source size and raised to cover the complete source across the population. Applies separately to each source and signal kind. |
 | `initial_scale` | Positive initial weight scale, no greater than `parameter_bound`. Each weight is sampled uniformly in `[-initial_scale, initial_scale]` and divided by the square root of its target's total incoming connection count. Biases and live state start at zero. |
 | `settle_budget` | Nonnegative maximum accepted repair sweeps per solve. Zero can qualify an already stationary state. A sweep may evaluate several rejected proposals. |
 | `tolerance` | Positive maximum complete projected-gradient residual for qualification. An absolute numerical threshold, not prediction accuracy. |
@@ -53,7 +54,7 @@ for small numerical and learning examples, not universal task settings.
 | `parameter_prior` | Positive coefficient anchoring weights and biases to their pre-experience values during `observe`. This anchor stays fixed throughout the experience solve. |
 | `state_bound` | Positive absolute bound on processing-patch states and output/intervention clamps. Sensor values are not clipped to it. |
 | `parameter_bound` | Positive absolute bound on weights and biases; repair projects eligible parameter coordinates into this box. |
-| `step` | Positive initial projected-gradient step tried anew each sweep. |
+| `step` | Positive initial and fallback projected-gradient step. Subsequent trials estimate a scalar step from the previous accepted displacement and gradient change. Unsafe estimates fall back to this value; growth is bounded by the available backtracking budget. |
 | `backtracks` | Positive maximum line-search proposals per sweep. Rejection halves the proposed step. |
 | `max_patches` | Positive integer cap on processing patches across all populations. Sensor samples and output aliases do not consume this count. |
 | `max_connections` | Positive integer cap on compiled directed input, state and error-readback connections. |
@@ -91,9 +92,11 @@ not learned interpretation. Output size cannot exceed `reads.patches`.
 order, with length equal to output size. The default is `range(size)`.
 Different outputs may alias the same patch.
 
-Every coordinate of a connected source is covered across its destination
-population; each destination patch need not read every coordinate. A sensor
-with no connections remains unobserved. `inspect()` reports actual coverage.
+With default full connectivity, each destination patch reads every coordinate
+of every source it declares. Explicit sparse wiring guarantees only aggregate
+coverage across the population. A selected output can miss information read by
+other, unconnected patches. A sensor with no connections remains unobserved.
+`inspect()` reports actual edges and aggregate coverage.
 Normalization, features and motor interpretation are supplied by the application.
 
 ### Immutable layout handles
@@ -220,7 +223,8 @@ complete memory/latency measurements.
 `sensor_coverage`, `fingerprint`, `implementation`, `admissions` and
 `last_event_id`. Population records add `role` and global patch `indices`.
 `observed_fields` is `("state", "prediction_error")`. `sensor_coverage` counts
-unique input coordinates with a compiled connection. `last_event_id` is `-1`
+unique input coordinates attached anywhere; it does not certify their influence
+on a selected output. `last_event_id` is `-1`
 before any admission. Editing inspector copies does not modify the brain.
 
 ## Numerical and learning contract
@@ -230,7 +234,9 @@ Query energy is `sum(e²)/2 + state_prior * sum(x²)/2`. Learning adds
 `parameter_prior * sum((parameter - pre_experience_parameter)²)/2`, making
 weights and biases eligible alongside unclamped live states.
 
-Repair is synchronized projected-gradient descent with Armijo backtracking.
+Repair is synchronized projected-gradient descent with a scalar secant step
+and Armijo backtracking. The energy, analytic gradient and acceptance test do
+not change when the step adapts. See the specification for the update formula.
 The residual is `z - clip(z - gradient, -bound, bound)` for each eligible
 coordinate. Clamped states and frozen query parameters are excluded.
 Derivatives include transitive error-readback influence. Observers and observed

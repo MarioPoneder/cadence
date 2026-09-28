@@ -21,9 +21,10 @@ from .ports import Input, Output, _shape
 class Cortex:
     """Declare a population graph and compile it with :meth:`build`.
 
-    ``seed`` fixes sparse wiring and initial relations. ``fan_in`` is the
-    minimum sample count per source per target patch, raised when necessary
-    to cover every source coordinate across the destination population.
+    ``seed`` fixes sampled wiring and initial relations. ``fan_in=None``
+    connects every coordinate of each declared source to each target patch.
+    A positive ``fan_in`` opts into sparse sampling, raised when necessary to
+    cover every source coordinate across the destination population.
     ``initial_scale`` bounds random weights before fan-in normalization.
 
     ``settle_budget``, ``tolerance``, ``step`` and ``backtracks`` configure the
@@ -41,7 +42,7 @@ class Cortex:
         self,
         *,
         seed=0,
-        fan_in=8,
+        fan_in=None,
         initial_scale=0.3,
         settle_budget=512,
         tolerance=1e-6,
@@ -58,9 +59,9 @@ class Cortex:
         config = {
             "seed": integer(seed, "seed"),
             "settle_budget": integer(settle_budget, "settle_budget"),
+            "fan_in": None if fan_in is None else integer(fan_in, "fan_in", 1),
         }
         for name, value in (
-            ("fan_in", fan_in),
             ("backtracks", backtracks),
             ("max_patches", max_patches),
             ("max_connections", max_connections),
@@ -204,7 +205,7 @@ class Cortex:
         return node
 
     def build(self):
-        """Resolve sparse wiring once and construct one jointly settling brain."""
+        """Resolve declared wiring once and construct one jointly settling brain."""
         return self._compile(self.config["max_connections"])
 
     def _compile(self, edge_limit):
@@ -238,12 +239,20 @@ class Cortex:
             for kind, name in dict.fromkeys(sources):
                 ranges = input_ranges if kind == "input" else population_ranges
                 indices = ranges[name]
-                fan_in = min(
-                    len(indices),
-                    max(self.config["fan_in"], math.ceil(len(indices) / len(targets))),
-                )
+                fan_in = len(indices)
+                if self.config["fan_in"] is not None:
+                    fan_in = min(
+                        fan_in,
+                        max(
+                            self.config["fan_in"],
+                            math.ceil(len(indices) / len(targets)),
+                        ),
+                    )
                 if len(edges) + len(targets) * fan_in > edge_limit:
-                    raise ValueError("Connection budget exceeded")
+                    raise ValueError(
+                        "Connection budget exceeded; use smaller populations, "
+                        "an explicit sparse fan_in, or a higher max_connections"
+                    )
                 indices = list(indices)
                 rng.shuffle(indices)
                 for local_target, target in enumerate(targets):

@@ -61,7 +61,9 @@ a useful task or supplies a reward-learning algorithm.
 
 Each sweep computes analytic derivatives, projects a candidate into configured
 state/parameter bounds, then backtracks until a sufficient energy decrease is
-found. All eligible coordinates share this procedure. The implementation is a
+found. Accepted displacement and gradient change estimate the next scalar step;
+unsafe estimates use the configured initial step. All eligible coordinates share
+this procedure. The implementation is a
 synchronized reference solver with a global energy check, not an asynchronous
 local-message protocol.
 

@@ -9,7 +9,7 @@ persistent `Brain`.
 ```python
 from cadence import Brain, Cortex
 
-layout = Cortex(seed=2, settle_budget=1200, tolerance=1e-5)
+layout = Cortex(seed=2)
 signal = layout.input("signal", shape=(1,))
 base = layout.column("perception", patches=4, inputs=signal)
 observer = layout.observer(
@@ -25,6 +25,12 @@ or other populations' states. `observes` additionally reads live prediction
 errors. Observer feedback participates in the same solve as the populations it
 observes. Increase width with `patches`; add recursive depth by observing an
 observer. These are separate choices.
+
+Default wiring reads every coordinate of each declared source. For a scalar
+control or regression problem, start with one output patch reading the sensors;
+the six-patch layout above illustrates observation. A nonlinear hidden
+representation needs a connected second population, not unused patches beside
+an output. See [training and size](TRAINING.md) for starting ranges and setup.
 
 ## Query and continue activity
 
@@ -65,6 +71,12 @@ supervised learning; provide the actual outcome you intend to teach, not a
 reward disguised as a desired motor value. Reward-to-action temporal credit is
 not supplied by this API. Accuracy must be evaluated later without target
 clamps, since a clamped training output equals its target by construction.
+
+Use consistently scaled inputs and targets comfortably inside the state bounds.
+Fit any centering, scaling or whitening on training data only. Shuffle or replay
+representative experiences when learning a reusable relation. In control tasks,
+check performance in the actual environment: high agreement on demonstration
+states can still fail on states the learned policy visits.
 
 For an interrupted admission, retry with the same explicit `event_id` and the
 same inputs and physical output clamps. An identical latest retry reports

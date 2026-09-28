@@ -7,7 +7,9 @@ are in [the API reference](REFERENCE.md).
 ## Layout and state
 
 - `Cortex` is a declaration builder. `build()` requires at least one population
-  and output, resolves deterministic sparse wiring, and freezes declarations.
+  and output, resolves deterministic wiring, and freezes declarations. Every
+  declared source coordinate is connected by default. Positive `fan_in` requests
+  sparse wiring; connection-budget overflow raises instead of dropping inputs.
 - `Input`, `Population` and `Output` are immutable identity handles owned by a
   layout. Their counts and shapes are validated before compilation.
 - `inputs` connects samples or live population states. `observes` connects live
@@ -26,6 +28,20 @@ steps with sufficient-decrease backtracking. Observed error derivatives include
 all transitive dependencies. A solve qualifies only when the full projected
 stationarity residual is at most `tolerance` over every eligible coordinate.
 Output clamps are excluded; learned parameters are included during admission.
+
+The first trial uses `step`. After acceptance, let `s` be the change in eligible
+coordinates and `y` the change in their exact gradient under the same objective.
+The next trial uses the scalar secant estimate `dot(s,s) / dot(s,y)` when its
+curvature and result are positive and finite. Unchanged coordinates contribute
+nothing. Unsafe arithmetic falls back to `step`; growth is capped at
+`ldexp(step, min(backtracks - 1, 1023))`, with an overflowing cap also causing
+fallback. Every trial still projects onto the same boxes and must satisfy
+`E_new <= E_old + 1e-4 * dot(gradient_old, displacement)` with a negative slope.
+The final stationarity check remains independent of the chosen trial size.
+Step adaptation resets on each solve; it is not additional learned memory.
+The estimate is the first Barzilai–Borwein step from
+[Two-Point Step Size Gradient Methods (1988)](https://doi.org/10.1093/imanum/8.1.141),
+used here inside bounded, monotone projected repair.
 
 `prediction_residual` is a different quantity: the largest absolute local
 prediction error. Priors, bounds and competing constraints can leave this

@@ -67,6 +67,9 @@ and refuse malformed shapes before expensive materialization.
   temporal-credit design; do not label reward-as-target as reinforcement learning.
 - Check input sufficiency before interpreting failure. Sparse coverage does
   not provide learned visual/audio features or recover omitted information.
+- Start with [the training guide](docs/TRAINING.md). Default wiring includes
+  every declared source coordinate; sparse `fan_in` is an explicit choice.
+  An unused flat patch does not provide hidden capacity to a separate output.
 - Serialize calls to a brain. Checkpoints bind exact implementation sources;
   source hashes are compatibility checks, not authenticated witness evidence.
 

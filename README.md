@@ -53,17 +53,17 @@ ears = cortex.input("ears", shape=(2, 16))
 body = cortex.input("sensory_nerves", shape=(8,))
 senses = (eyes, ears, body)
 
-c1 = cortex.column("perception", patches=256, inputs=senses)
+c1 = cortex.column("perception", patches=16, inputs=senses)
 c2 = cortex.observer(
-    "integration", patches=256, inputs=senses, observes=(c1,),
+    "integration", patches=8, inputs=senses, observes=(c1,),
 )
 c3 = cortex.observer(
-    "reflection", patches=256, inputs=senses, observes=(c1, c2),
+    "reflection", patches=8, inputs=senses, observes=(c1, c2),
 )
 cortex.output("motor_nerves", shape=(8,), reads=c3)
 brain = cortex.build()
 
-assert brain.inspect()["patches"] == 768
+assert brain.inspect()["patches"] == 32
 assert brain.inspect()["sensor_coverage"] == 104
 ```
 
@@ -76,6 +76,10 @@ Population size counts processing patches. Sensor shape counts input samples;
 a larger camera shape does not supply trained visual understanding. The eight
 outputs expose eight settled patch values, without a separate policy network.
 The guide also shows parallel sensory branches and inspection of actual wiring.
+Every patch reads all coordinates of its declared sources by default; explicit
+`fan_in` opts into sparse sampling. This is a layout example, not a pretrained
+vision/audio model. For a first learning task, start smaller using the
+[training guide](docs/TRAINING.md).
 
 ## Learn a small relation
 
@@ -83,7 +87,7 @@ This inexpensive example teaches a small brain a signed input/output relation.
 It uses the same population primitive, with fewer patches for a quick run.
 
 ```python
-teacher_layout = Cortex(seed=2, settle_budget=1200, tolerance=1e-5)
+teacher_layout = Cortex(seed=2)
 signal = teacher_layout.input("signal", shape=(1,))
 base = teacher_layout.column("base", patches=4, inputs=signal)
 reflection = teacher_layout.observer(
@@ -130,6 +134,7 @@ depth require further controlled experiments. Follow the
 | --- | --- |
 | [DRSN guide](docs/DRSN.md) | Population layouts, equations, learning, all configuration, diagnostics and checkpoints |
 | [Quickstart](docs/QUICKSTART.md) | Inputs, settlement, learning and saved continuation |
+| [Training and size](docs/TRAINING.md) | Small starting layouts, data conditioning, teaching and validation |
 | [API reference](docs/REFERENCE.md) | Every public class, method and configuration parameter |
 | [Mathematical specification](docs/SPECIFICATION.md) | Guarantees, qualification and evidence boundaries |
 

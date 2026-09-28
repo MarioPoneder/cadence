@@ -6,6 +6,7 @@ recursive observers. All populations participate in one joint repair process.
 | Read | Purpose |
 | --- | --- |
 | [Quickstart](QUICKSTART.md) | Build, query, learn and save a small brain |
+| [Training and size](TRAINING.md) | Starting configurations, representative experience and task checks |
 | [DRSN guide](DRSN.md) | Multimodal layouts and how recursive observation works |
 | [Layout variants](VARIANTS.md) | Width, parallel branches, depth and connection cost |
 | [Processing patch](ELEMENT.md) | Local state, prediction errors, repair and retained relations |

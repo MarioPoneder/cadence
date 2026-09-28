@@ -9,8 +9,9 @@ feedback graph. Observers use the same relation as other processing patches.
 
 The energy is ``sum(e**2)/2 + state_prior*sum(x**2)/2``, plus a fixed proximal
 parameter prior during an admitted learning solve. One projected-gradient
-repair with Armijo backtracking updates the eligible coordinates. A query
-freezes parameters; a learning solve repairs state and parameters together.
+repair with a scalar secant step and Armijo backtracking updates the eligible
+coordinates. A query freezes parameters; a learning solve repairs state and
+parameters together.
 This module does not admit evidence or mutate a caller's durable memory.
 
 On the bounded boxes the energy is smooth. Accepted repairs decrease it;
@@ -305,6 +306,30 @@ def _stationarity(state, weights, biases, evaluated, clamps, learn, state_bound,
     return residual
 
 
+def _next_step(groups, current, proposed, step, backtracks):
+    """Use observed curvature, falling back to the configured step if unsafe."""
+    try:
+        changes = [
+            (new - old, new_g - old_g)
+            for old_values, new_values, key in groups
+            for old, new, old_g, new_g in zip(
+                old_values, new_values, current[key], proposed[key], strict=True
+            )
+            if new != old
+        ]
+        distance = math.fsum(s * s for s, _ in changes)
+        curvature = math.fsum(s * y for s, y in changes)
+        if curvature > 0:
+            estimate = distance / curvature
+            # The configured step remains reachable within the line-search budget.
+            ceiling = math.ldexp(step, min(backtracks - 1, 1023))
+            if math.isfinite(estimate) and estimate > 0:
+                return min(estimate, ceiling)
+    except (ArithmeticError, ValueError):
+        pass
+    return step
+
+
 def settle(
     graph,
     inputs,
@@ -331,6 +356,11 @@ def settle(
     ``backtracks`` energy evaluations to satisfy Armijo decrease. ``budget``
     bounds accepted sweeps. A zero budget can qualify an already stationary
     initial state. All returned arrays are tuples; caller-owned data is untouched.
+
+    ``step`` is the initial and fallback trial size. Accepted displacement and
+    gradient change estimate the next size; unsafe curvature uses ``step``.
+    Growth is capped so backtracking can reach the configured step within its
+    budget. This changes numerical work, not the energy or learning rule.
 
     ``clamps`` maps patch indices to witnessed fixed states. Inputs are always
     hard boundary values. Query solves freeze parameters; learning solves repair
@@ -401,6 +431,7 @@ def settle(
     current = compute(state, weights, biases)
     history = [current["energy"]]
     sweeps, reason = 0, "budget"
+    next_step = step
     for _ in range(budget):
         if (
             _stationarity(
@@ -417,7 +448,7 @@ def settle(
         ):
             reason = "qualified"
             break
-        trial_step, accepted = step, False
+        trial_step, accepted = next_step, False
         for _attempt in range(backtracks):
             proposals += 1
             next_state = tuple(
@@ -463,6 +494,17 @@ def settle(
             except (ValueError, OverflowError):
                 accepted = False
             if accepted:
+                next_step = _next_step(
+                    (
+                        (state, next_state, "gradient_state"),
+                        (weights, next_weights, "gradient_weights"),
+                        (biases, next_biases, "gradient_biases"),
+                    ),
+                    current,
+                    proposed,
+                    step,
+                    backtracks,
+                )
                 state, weights, biases = next_state, next_weights, next_biases
                 current = proposed
                 history.append(current["energy"])

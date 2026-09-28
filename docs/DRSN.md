@@ -18,25 +18,27 @@ ears = cortex.input("ears", shape=(2, 16))
 body = cortex.input("sensory_nerves", shape=(8,))
 senses = (eyes, ears, body)
 
-c1 = cortex.column("perception", patches=256, inputs=senses)
+c1 = cortex.column("perception", patches=16, inputs=senses)
 c2 = cortex.observer(
-    "integration", patches=256, inputs=senses, observes=(c1,),
+    "integration", patches=8, inputs=senses, observes=(c1,),
 )
 c3 = cortex.observer(
-    "reflection", patches=256, inputs=senses, observes=(c1, c2),
+    "reflection", patches=8, inputs=senses, observes=(c1, c2),
 )
 motors = cortex.output("motor_nerves", shape=(8,), reads=c3)
 brain = cortex.build()
 
 layout = brain.inspect()
-assert layout["patches"] == 768
+assert layout["patches"] == 32
 assert layout["input_samples"] == 104
 assert layout["sensor_coverage"] == 104
 ```
 
-The small sensor shapes keep this example inexpensive. A camera can declare
-`shape=(240, 320, 3)` instead; larger inputs increase connection count and
-work. Shape does not provide a trained visual interpretation, and pixel
+The small shapes and populations bound this layout example. A camera can declare
+`shape=(240, 320, 3)`, but dense connections then exceed the default connection
+budget. Choose a representation and wiring budget explicitly; see
+[connectivity and cost](VARIANTS.md#connectivity-and-cost).
+Shape does not provide a trained visual interpretation, and pixel
 samples are not processing patches. Eight output values expose eight selected
 patch states. There is no separate policy network after settlement.
 
@@ -149,7 +151,7 @@ credit, episodic retrieval, imagination policies and learned structural growth
 are further capabilities, not implied by this method.
 
 ```python
-teacher_layout = Cortex(seed=2, settle_budget=1200, tolerance=1e-5)
+teacher_layout = Cortex(seed=2)
 signal = teacher_layout.input("signal", shape=(1,))
 base = teacher_layout.column("base", patches=4, inputs=signal)
 reflection = teacher_layout.observer(
@@ -182,7 +184,7 @@ The [API reference](REFERENCE.md) documents every constructor parameter, method,
 result field and shape rule. `brain.inspect()` reports exact patch, input and
 connection counts, sensor coverage and observation roles. `brain.config` is
 read-only. Width, depth and sparse wiring all change resource cost; see
-[layout variants](VARIANTS.md).
+[layout variants](VARIANTS.md) and [training and size](TRAINING.md).
 
 `brain.settle(inputs)` is a pure query; `brain.step(inputs)` retains qualified
 live state with parameters frozen. `brain.observe(inputs, targets)` also permits
