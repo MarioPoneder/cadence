@@ -189,6 +189,25 @@ or sensory access.
 This tiny example demonstrates acquisition of an input-dependent relation;
 it is not evidence that the observer improves it over a simpler model.
 
+## Recursive depth and future time
+
+An observer reads the current joint state and prediction errors. Nesting another
+observer increases observation depth; it does not automatically add another
+future time step. For imagination, first bootstrap relations between a current
+situation, an action and its consequences. Querying those relations with
+alternative actions can then predict possible outcomes. `settle` supports pure
+hypothetical clamps, so these queries need not change the live brain or admit
+imagined events as experience.
+
+Planning additionally needs a goal and a way to compare or jointly constrain
+possible action sequences. A loop that searches alternatives outside the brain
+is an application planner. A candidate for planning inside one equilibrium must
+represent actions and future states within that equilibrium, with any observers
+reading and influencing those same states. Both require behavioral tests:
+successful settlement and a greater observer count do not establish useful
+future prediction or planning. Keep horizon, recursive depth, width and total
+repair work separate in comparisons.
+
 ## Configure and inspect
 
 The [API reference](REFERENCE.md) documents every constructor parameter, method,

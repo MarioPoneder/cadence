@@ -19,6 +19,10 @@ relations that repairs its state as experience arrives. An observer reads
 what other patches are doing and influences them while remaining part of the
 same equilibrium. Another observer can read that enlarged system in turn.
 
+The aim is a straightforward replacement for legacy deep neural networks,
+including transformers, built around persistent recursive settlement.
+Performance comparisons are ongoing.
+
 Cadence implements this population architecture in pure
 Python, using only the standard library. Every processing and observer patch
 uses one local prediction relation. The compiled brain supports joint
