@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.46.0 — 2026-09-28
+
+- Add `bootstrap(brain, examples, checks=..., max_error=...)`: one standard-library
+  helper for validated example replay and unclamped recall/readiness checks.
+  It shuffles reproducibly, reports work and error history, and stops on the
+  declared limit, exhausted epochs or numerical refusal. Checks never teach
+  the brain; earlier admitted examples persist if a later solve refuses.
+- Use **bootstrapping phase** and **live phase** throughout current guides and
+  quickstarts. Both use the same brain and repair rule; actual new witnesses
+  can continue learning during the live phase.
+- Rename the preparation guide to `docs/BOOTSTRAP.md`, with runnable bootstrap,
+  calibration and live-handoff examples plus staged perception/body-control
+  curricula. These are generic procedures, not supplied learned abilities.
+- Add tests for acquisition, check custody, deterministic replay, refusal,
+  prevalidation, sample ownership, shapes/aliases and complete solve accounting.
+  Minimal-install CI bootstraps and continues learning without optional packages.
+- The six checkpoint-bound engine modules and the repair equations are unchanged
+  from 0.45.0; orchestration reports and application preprocessing remain separate
+  from brain snapshots.
+
 ## 0.45.0 — 2026-09-28
 
 - Raise the default repair ceiling from 512 to 2,048 sweeps. Small recursive

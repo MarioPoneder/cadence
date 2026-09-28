@@ -46,6 +46,10 @@ structured declaration graph rather than arbitrary edge editing.
 
 ## One repair procedure, different eligible coordinates
 
+The **bootstrapping phase** and **live phase** use this same patch law. They
+describe when an application prepares and runs its brain, not separate
+mathematical modes. Actual witnesses can support learning in either phase.
+
 A query freezes parameters and repairs live state. `step` can retain that live
 state. `observe` fixes witnessed output coordinates and also repairs weights
 and biases, adding a prior anchored to the pre-experience parameters:
@@ -57,7 +61,9 @@ E_learning = E + parameter_prior/2 * ||parameters - anchor||²
 The anchor stays fixed for the whole experience. Retained parameters are the
 memory used by later queries; warm live state is distinct from this durable
 learning. This engine does not claim that mere exposure to any stream discovers
-a useful task or supplies a reward-learning algorithm.
+a useful task or supplies a reward-learning algorithm. During the live phase,
+the application can continue to call `observe` when actual outcomes arrive;
+parameters are frozen only for individual query or `step` calls.
 
 Each sweep computes analytic derivatives, projects a candidate into configured
 state/parameter bounds, then backtracks until a sufficient energy decrease is

@@ -25,21 +25,23 @@ jobs:
       - name: Learn and restore a population brain without optional extras
         run: |
           python - <<'PY'
-          from cadence import Brain, Cortex, __version__
+          from cadence import Brain, Cortex, bootstrap, __version__
           layout = Cortex(seed=2)
           signal = layout.input("signal", shape=(1,))
           base = layout.column("base", patches=4, inputs=signal)
           observer = layout.observer("observer", patches=2, inputs=signal, observes=base)
           layout.output("answer", shape=(1,), reads=observer)
           brain = layout.build()
-          for event in range(40):
-              value = (-0.8, 0.8)[event % 2]
-              assert brain.observe({"signal": [value]}, {"answer": [value]})["accepted"]
+          examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
+          checks = [({"signal": [x]}, {"answer": [x]}) for x in (-0.4, 0.4)]
+          report = bootstrap(brain, examples, checks=checks, max_error=0.15)
+          assert report["passed"], report
           assert brain.predict({"signal": [0.4]})["answer"][0] > 0.2
           saved = brain.snapshot()
           restored = Brain.from_snapshot(saved)
           assert restored.snapshot() == saved
           assert restored.predict({"signal": [0.4]}) == brain.predict({"signal": [0.4]})
+          assert restored.observe({"signal": [0.3]}, {"answer": [0.3]})["accepted"]
           print("cadence", __version__, "population learning and continuation passed")
           PY
 

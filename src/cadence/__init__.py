@@ -1,11 +1,12 @@
 """Deep Recursive Settlement Networks with jointly settling populations."""
 
+from .bootstrap import bootstrap
 from .brain import Brain, SettlementError
 from .column import Population
 from .cortex import Cortex
 from .ports import Input, Output
 
-__version__ = "0.45.0"
+__version__ = "0.46.0"
 
 __all__ = [
     "Brain",
@@ -15,4 +16,5 @@ __all__ = [
     "Population",
     "SettlementError",
     "__version__",
+    "bootstrap",
 ]

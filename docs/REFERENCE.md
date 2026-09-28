@@ -3,16 +3,18 @@
 Cadence constructs Deep Recursive Settlement Networks from populations of
 processing patches. Ordinary data connections and recursive observation share
 one jointly repaired state. Public exports are `Cortex`, `Brain`, `Input`,
-`Population`, `Output`, `SettlementError` and `__version__`.
+`Population`, `Output`, `SettlementError`, `bootstrap` and `__version__`.
 
 ```python
-from cadence import Cortex, Brain, Input, Population, Output, SettlementError, __version__
+from cadence import Cortex, Brain, Input, Population, Output, SettlementError, bootstrap, __version__
 ```
 
 Use the package-level imports above. `Brain` and `SettlementError` live in
 `brain.py`, `Cortex` in `cortex.py`, `Population` in `column.py`, and `Input` and
 `Output` with boundary shape/value validation in `ports.py`. Numerical repair
 and numeric/JSON validation remain private in `_repair.py` and `_validation.py`.
+`bootstrap.py` orchestrates example replay and unclamped checks through the
+existing brain methods; it adds no solver or phase state.
 See the [quickstart](QUICKSTART.md) for a first example and the
 [architecture guide](DRSN.md) for equations and layout patterns.
 
@@ -160,7 +162,8 @@ always flat tuples, including multidimensional outputs.
 In `settle`, clamps express hypothetical queries and never become learning
 witnesses. `observe` requires a nonempty target mapping and treats it as an
 actual witness; it has no intervention argument. The application supplies
-witness provenance. Training outputs equal their clamps, so measure learning
+witness provenance. Outputs returned by `observe` equal their supplied target
+clamps, so measure learning
 using subsequent predictions without those clamps.
 
 `event_id` is an ordered nonnegative integer that must be serializable by the
@@ -269,6 +272,76 @@ The learning operation is supervised witness admission. Reward credit assignment
 automatic episodic retrieval, planning policies and learned structural growth
 are not provided by `observe`. Useful perception, behavior and benefits from
 observation depth require separate application tests.
+
+## bootstrap
+
+```text
+bootstrap(
+    brain,
+    examples,
+    *,
+    checks,
+    max_error,
+    epochs=20,
+    seed=0,
+    budget=None,
+)
+```
+
+Convenience orchestration for the **bootstrapping phase**, returning a plain
+report and admitting examples to the supplied `Brain`. The **live phase** uses
+that same brain, with continued `observe` calls when actual witnesses arrive.
+These are application phases; no solver mode changes at the boundary.
+
+| Argument | Contract |
+| --- | --- |
+| `brain` | Existing `Brain` to bootstrap. Earlier admitted experience is preserved. |
+| `examples` | Nonempty finite sequence of `(inputs, targets)` pairs, with the same named/owned-handle mappings and shapes as `observe`. Each pair needs at least one target. Rows may repeat; generators are not accepted. |
+| `checks` | Nonempty sequence in the same format, used only for unclamped evaluation. These cases influence stopping and are development data; reserve a separate final test. |
+| `max_error` | Required finite nonnegative maximum absolute error in encoded output units. This is an application error limit, separate from solver `tolerance`. |
+| `epochs` | Nonnegative maximum complete replay passes, default 20. Zero evaluates the current brain without learning. |
+| `seed` | Nonnegative integer for a private RNG that shuffles example indices each epoch. Does not alter Python's global random state. |
+| `budget` | Nonnegative solve-budget override applied to every admission and check; `None` uses the brain's configured ceiling. |
+
+All options, examples and checks are validated and samples copied before any
+solve or admission. Inputs and targets are not normalized automatically.
+Malformed examples fail with their collection/index and leave the brain
+unchanged. Numerical exceptions during subsequent solves propagate as in the
+underlying brain methods; earlier accepted experiences remain committed.
+
+Before the first epoch and after each complete epoch, pure `settle` calls score
+the examples (recall), then the checks, with **no targets supplied to the solve**.
+Only actual targeted state coordinates are compared; agreeing output aliases
+count once within a pair. Every query must qualify and both maximum errors must
+meet `max_error` to pass. An already satisfactory brain returns without replay.
+A refusal stops immediately; unqualified outputs never contribute a score.
+
+Each admitted presentation uses the ordinary `observe` rule and a fresh automatic
+event ID. Replay is repeated supervised experience, not new environmental data.
+The helper is not a batch transaction: a later refusal keeps earlier admitted
+examples. Starting a new helper call starts a new shuffle sequence and report;
+it does not resume an interrupted helper cursor. For external retry identities,
+streaming data or custom environment metrics, use `observe` and `settle` directly.
+
+| Report field | Meaning |
+| --- | --- |
+| `options` | Requested `max_error`, epoch allowance and shuffle `seed`, plus the resolved integer solve `budget`. Reuse these with the same starting checkpoint and data to repeat the call. |
+| `passed` | All current recall/check queries qualified and both errors met the declared limit. Applies only to the supplied cases. |
+| `reason` | `"passed"`, `"epochs"` (allowance exhausted), or `"refused"`. |
+| `epochs` | Number of fully admitted replay passes; excludes a partly completed pass. |
+| `presentations`, `accepted` | Attempted and admitted example presentations in this call, including replay. |
+| `examples`, `checks` | Counts of supplied rows, not deduplicated experiences. |
+| `history` | Epoch-zero assessment and an assessment after each complete epoch. Each entry has `epoch`, `recall` and `checks`. |
+| `work` | Summed solver work counters over admissions and all checks, including refused solves. Does not count Python preprocessing/bookkeeping. |
+| `failure` | `None`, or `stage` (`"observe"`, `"recall"`, `"checks"`), original row `index`, solver `reason`, and `stationarity`. |
+
+Each assessment metric contains `evaluated`, `qualified` and `max_error`.
+A refused query sets that collection's `max_error` to `None`, never a score
+over only the successful subset. A collection not reached after refusal has
+metric `None`. Checkpoint the brain and retain the report plus preprocessing
+alongside it; the report is not stored in the brain's snapshot. Exact replay
+also needs the **starting** checkpoint and the original examples/checks. The
+final checkpoint is the continuation used in the live phase.
 
 ## Checkpoints
 

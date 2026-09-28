@@ -64,6 +64,12 @@ on diagnostic outputs from a refused solve.
 
 ## Continuation and admission
 
+The **bootstrapping phase** prepares and checks a brain using representative
+experience. The **live phase** uses the resulting persistent brain and may
+continue admitting actual witnesses. These are application lifecycle terms,
+not runtime modes: there is no automatic phase toggle or phase-wide parameter
+freeze. The same repair law and the following per-call contracts apply in both.
+
 | Operation | Live state | Retained parameters | External event record |
 | --- | --- | --- | --- |
 | `settle` / `predict` | Unchanged | Unchanged | Unchanged |

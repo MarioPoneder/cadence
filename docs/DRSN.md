@@ -38,7 +38,7 @@ The small shapes and populations bound this layout example. A camera can declare
 `shape=(240, 320, 3)`, but dense connections then exceed the default connection
 budget. Choose a representation and wiring budget explicitly; see
 [connectivity and cost](VARIANTS.md#connectivity-and-cost).
-Shape does not provide a trained visual interpretation, and pixel
+Shape does not provide a learned visual interpretation, and pixel
 samples are not processing patches. Eight output values expose eight selected
 patch states. There is no separate policy network after settlement.
 
@@ -136,7 +136,15 @@ any allowed repair direction remains larger than the tolerance;
 `prediction_residual` reports the largest absolute prediction error. Neither
 number is a task accuracy score.
 
-## Learn from an actual experience
+## Bootstrapping and live experience
+
+The **bootstrapping phase** prepares a brain with representative experiences
+and checks its subsequent unclamped answers. The **live phase** runs that
+persistent brain with current inputs and can continue learning from actual
+outcomes. These are application lifecycle phases, using the same patch law and
+repair procedure. Entering the live phase does not automatically freeze
+parameters or enable a different solver: the application chooses when to query,
+retain activity with `step`, or admit witnesses with `observe`.
 
 `observe` clamps supplied output witnesses and jointly repairs live state and
 local relation parameters. A proximal prior anchors the parameters to their
@@ -174,9 +182,10 @@ assert learner.predict({"signal": [-0.4]})["answer"][0] < -0.2
 assert learner.predict({"signal": [0.4]})["answer"][0] > 0.2
 ```
 
-Training outputs equal their clamps by construction, so reporting them as
-learning accuracy would be invalid. Tests instead check subsequent **unclamped
-predictions**, new inputs and controls without admission or sensory access.
+Outputs fixed to supplied witnesses equal their targets by construction, so
+reporting them as learning accuracy would be invalid. Tests instead check
+subsequent **unclamped predictions**, new inputs and controls without admission
+or sensory access.
 This tiny example demonstrates acquisition of an input-dependent relation;
 it is not evidence that the observer improves it over a simpler model.
 
@@ -186,7 +195,7 @@ The [API reference](REFERENCE.md) documents every constructor parameter, method,
 result field and shape rule. `brain.inspect()` reports exact patch, input and
 connection counts, sensor coverage and observation roles. `brain.config` is
 read-only. Width, depth and sparse wiring all change resource cost; see
-[layout variants](VARIANTS.md) and [training and size](TRAINING.md).
+[layout variants](VARIANTS.md) and [bootstrapping and size](BOOTSTRAP.md).
 
 `brain.settle(inputs)` is a pure query; `brain.step(inputs)` retains qualified
 live state with parameters frozen. `brain.observe(inputs, targets)` also permits

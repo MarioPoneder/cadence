@@ -39,6 +39,8 @@ completed population predictions.
 validation. Private `_repair.py` supplies numerical repair and `_validation.py`
 supplies numeric/JSON validation. Package exports keep the public API small and
 application-independent. The package is standard library only, Python 3.11+.
+`bootstrap.py` supplies bounded replay and unclamped readiness checks through
+those existing brain methods. It owns orchestration, not a second learning rule.
 
 ## Changes and verification
 
@@ -61,17 +63,23 @@ and refuse malformed shapes before expensive materialization.
 
 ## Application rules
 
+- Use **bootstrapping phase** for initial preparation and **live phase** for
+  ongoing operation. These application lifecycle terms use the same repair law;
+  do not introduce an automatic phase toggle or phase-wide parameter freeze.
+  The live phase can continue learning through actual witnesses supplied to
+  `observe`; this remains supervised witness admission, not automatic reward
+  credit or a complete biological learning mechanism.
 - `settle` and `predict` are pure queries. `step` retains qualified live state;
   `observe` also repairs parameters from actual output witnesses.
 - Check `qualified`/`accepted`. Refused or capped outputs are diagnostics,
   not admitted actions. `predict` raises `SettlementError` on refusal.
-- Evaluate learning on subsequent **unclamped** predictions. A training output
+- Evaluate learning on subsequent **unclamped** predictions. A witnessed output
   equal to its clamp is not a learning result.
 - `observe` is supervised learning. Rewards require a separately justified
   temporal-credit design; do not label reward-as-target as reinforcement learning.
 - Check input sufficiency before interpreting failure. Sparse coverage does
   not provide learned visual/audio features or recover omitted information.
-- Start with [the training guide](docs/TRAINING.md). Default wiring includes
+- Start with [the bootstrapping guide](docs/BOOTSTRAP.md). Default wiring includes
   every declared source coordinate; sparse `fan_in` is an explicit choice.
   An unused flat patch does not provide hidden capacity to a separate output.
 - Serialize calls to a brain. Checkpoints bind exact implementation sources;

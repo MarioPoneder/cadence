@@ -20,8 +20,10 @@ class. Sensory `shape` describes supplied data, not learned interpretation.
 Patches in a flat population have separate incoming relations. Selecting one
 as an output does not give it access to all the other patches: connect a second
 population to the first to create a learned hidden representation. More unused
-flat patches are not a substitute for that connection. See [training](TRAINING.md)
-for small starting sizes and measured setup requirements.
+flat patches are not a substitute for that connection. See
+[bootstrapping](BOOTSTRAP.md) for small starting sizes and measured setup
+requirements. The bootstrapping and live phases can use the same persistent
+layout; live experience can continue to repair its relations through `observe`.
 
 ## A parallel system with recursive observation
 
@@ -69,6 +71,6 @@ branches on parallel accelerators.
 
 To test the value of recursion, compare a nested layout with shallow and
 ordinary-composition controls, match information and capacity, and account for
-all training and solving work. Measure target-free task performance, numerical
-refusal rates and latency. A wider brain or a larger budget alone is not
-proof that observation adds value.
+all bootstrapping, live learning and settlement work. Measure target-free task
+performance, numerical refusal rates and latency. A wider brain or a larger
+budget alone is not proof that observation adds value.

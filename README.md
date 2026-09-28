@@ -24,6 +24,11 @@ Python, using only the standard library. Every processing and observer patch
 uses one local prediction relation. The compiled brain supports joint
 settlement, supervised witness learning, diagnostics and continuation.
 
+In the **bootstrapping phase**, guided experience teaches the brain its basic
+abilities. In the **live phase**, that same brain acts in its environment and
+can continue learning from actual new witnesses. Both phases use the same
+patch rule and retained world model.
+
 ## Three pillars
 
 - **Minimalism:** one patch rule, a small public API, no runtime dependencies.
@@ -39,7 +44,7 @@ Every core change is reviewed against all three. The
 Python 3.11 or later; no runtime dependencies:
 
 ```sh
-python -m pip install --upgrade "cadence-net>=0.45.0"
+python -m pip install --upgrade "cadence-net>=0.46.0"
 ```
 
 If your package index has not listed a new release yet, its wheel is also
@@ -76,37 +81,37 @@ feed back into the observed states through the same energy and repair process.
 They are not a separate decision made after the lower system finishes.
 
 Population size counts processing patches. Sensor shape counts input samples;
-a larger camera shape does not supply trained visual understanding. The eight
+a larger camera shape does not supply learned visual understanding. The eight
 outputs expose eight settled patch values, without a separate policy network.
 The guide also shows parallel sensory branches and inspection of actual wiring.
 Every patch reads all coordinates of its declared sources by default; explicit
 `fan_in` opts into sparse sampling. This is a layout example, not a pretrained
 vision/audio model. For a first learning task, start smaller using the
-[training guide](docs/TRAINING.md).
+[bootstrapping guide](docs/BOOTSTRAP.md).
 Inspection also reports sensor coverage for each output coordinate, so you can
-check the decision's connections before training.
+check the decision's connections before bootstrapping.
 
-## Learn a small relation
+## Bootstrapping phase
 
-This inexpensive example teaches a small brain a signed input/output relation.
+This inexpensive example bootstraps a small brain's signed input/output relation.
 It uses the same population primitive, with fewer patches for a quick run.
 
 ```python
-teacher_layout = Cortex(seed=2)
-signal = teacher_layout.input("signal", shape=(1,))
-base = teacher_layout.column("base", patches=4, inputs=signal)
-reflection = teacher_layout.observer(
+from cadence import bootstrap
+
+bootstrap_layout = Cortex(seed=2)
+signal = bootstrap_layout.input("signal", shape=(1,))
+base = bootstrap_layout.column("base", patches=4, inputs=signal)
+reflection = bootstrap_layout.observer(
     "reflection", patches=2, inputs=signal, observes=base,
 )
-teacher_layout.output("answer", shape=(1,), reads=reflection)
-learner = teacher_layout.build()
+bootstrap_layout.output("answer", shape=(1,), reads=reflection)
+learner = bootstrap_layout.build()
 
-for event_id in range(40):
-    value = (-0.8, 0.8)[event_id % 2]
-    update = learner.observe(
-        {"signal": [value]}, {"answer": [value]}, event_id=event_id,
-    )
-    assert update["accepted"]
+examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
+checks = [({"signal": [x]}, {"answer": [x]}) for x in (-0.4, 0.4)]
+report = bootstrap(learner, examples, checks=checks, max_error=0.2)
+assert report["passed"], report
 
 # Fresh amplitudes, with no output targets supplied to the brain.
 assert learner.predict({"signal": [-0.4]})["answer"][0] < -0.2
@@ -118,6 +123,22 @@ state and retained relation parameters. Only qualified proposals are committed.
 Queries hold learned parameters fixed; hypothetical clamps never become
 experience. Learning is evaluated on later unclamped predictions, as above.
 This example establishes a small acquired relation, not a benefit from depth.
+
+## Live phase
+
+```python
+activity = learner.step({"signal": [0.3]})
+assert activity["accepted"]
+print(activity["outputs"]["answer"])
+
+# When an actual teaching signal arrives, the same brain can keep learning.
+assert learner.observe({"signal": [0.3]}, {"answer": [0.3]})["accepted"]
+```
+
+`bootstrap` supplies reproducible replay and unclamped readiness checks.
+Applications supply sensory acquisition, witnesses, actuator interpretation
+and environment-specific behavior checks. The [guide](docs/BOOTSTRAP.md)
+explains calibration and staged bootstrapping for perception and body control.
 
 ## Scope
 
@@ -139,7 +160,7 @@ depth require further controlled experiments. Follow the
 | --- | --- |
 | [DRSN guide](docs/DRSN.md) | Population layouts, equations, learning, all configuration, diagnostics and checkpoints |
 | [Quickstart](docs/QUICKSTART.md) | Inputs, settlement, learning and saved continuation |
-| [Training and size](docs/TRAINING.md) | Small starting layouts, data conditioning, teaching and validation |
+| [Bootstrapping and live phases](docs/BOOTSTRAP.md) | Calibration, guided experience, small starting layouts and readiness checks |
 | [API reference](docs/REFERENCE.md) | Every public class, method and configuration parameter |
 | [Mathematical specification](docs/SPECIFICATION.md) | Guarantees, qualification and evidence boundaries |
 
