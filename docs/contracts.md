@@ -28,11 +28,14 @@ slow states when the model has them. A small integration step can make activity
 move very little while the equation defect remains large. A numerical residual
 does not, by itself, prove uniqueness, stability or useful behavior.
 
-An admitted parameter step has a narrower meaning: the proposed parameters
-reduce a declared loss on a replay of the current observation/window. It does
-not establish retention on earlier tasks, generalization or biological
-plausibility. Keep those evaluations separate. Eligibility, reward and source
-identity must remain attached to the action that was actually executed.
+Admission depends on the API. `PatchNet.observe` qualifies its free and nudged
+equilibria before updating parameters; it does not replay the proposed update
+to guarantee a loss decrease. APIs with an explicit replay-loss admission
+check accept only steps meeting that check for the declared observation or
+window. Numerical qualification, parameter commitment and measured learning
+improvement are separate claims. None alone establishes retention on earlier
+tasks, generalization or biological plausibility. Eligibility, reward and
+source identity must remain attached to the action that was actually executed.
 
 An adjoint is reverse-mode differentiation even when written explicitly in
 NumPy without an autograd tape. Equivalence with an equilibrium contrast must
