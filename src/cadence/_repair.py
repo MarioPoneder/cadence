@@ -1,0 +1,521 @@
+"""Uniform local prediction relations on a jointly repaired population graph.
+
+Every patch has live state ``x``, retained incoming weights ``w`` and bias ``b``:
+``p_i = tanh(b_i + sum(w_ij * signal_j))`` and ``e_i = x_i - p_i``.
+A signal reads an input clamp, a live patch state, or an exactly recomputed
+patch error. State connections may be recurrent. Error-readback dependencies
+must be acyclic; this restriction concerns derived quantities, not the state
+feedback graph. Observers use the same relation as other processing patches.
+
+The energy is ``sum(e**2)/2 + state_prior*sum(x**2)/2``, plus a fixed proximal
+parameter prior during an admitted learning solve. One projected-gradient
+repair with Armijo backtracking updates the eligible coordinates. A query
+freezes parameters; a learning solve repairs state and parameters together.
+This module does not admit evidence or mutate a caller's durable memory.
+
+On the bounded boxes the energy is smooth. Accepted repairs decrease it;
+the usual projected-descent stationarity argument requires adequate line
+search and continued iteration. Nonconvexity permits different stationary
+points. Finite budgets can refuse, and neither uniqueness nor global optimality
+is claimed. Qualification checks the complete projected gradient, including
+derivatives through error readback, rather than requiring prediction errors
+to vanish. The latter can remain nonzero at a qualified compromise.
+"""
+
+from __future__ import annotations
+
+import math
+from collections import deque
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from decimal import Decimal
+from numbers import Integral, Real
+
+
+def _integer(value, name, minimum=0):
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
+        raise ValueError(f"{name} must be an integer >= {minimum}")
+    return int(value)
+
+
+def _number(value, name, *, positive=False):
+    if isinstance(value, bool) or not isinstance(value, (Real, Decimal)):
+        raise ValueError(f"{name} must be a finite real number")
+    try:
+        result = float(value)
+    except (ValueError, OverflowError) as error:
+        raise ValueError(f"{name} must be a finite real number") from error
+    if not math.isfinite(result) or (positive and result <= 0):
+        qualifier = "positive finite" if positive else "finite"
+        raise ValueError(f"{name} must be a {qualifier} real number")
+    return result
+
+
+def _vector(values, length, name):
+    if isinstance(values, (str, bytes, Mapping)):
+        raise ValueError(f"{name} must contain {length} finite numbers")
+    try:
+        result = tuple(_number(v, name) for v in values)
+    except TypeError as error:
+        raise ValueError(f"{name} must contain {length} finite numbers") from error
+    if len(result) != length:
+        raise ValueError(f"{name} must contain {length} finite numbers")
+    return result
+
+
+@dataclass(frozen=True, slots=True)
+class Graph:
+    """Immutable port topology; weights are supplied separately in edge order.
+
+    ``edges`` contains ``(kind, source, target)`` triples. ``kind`` is ``input``,
+    ``state`` or ``residual``. Input sources index ``n_inputs``; other sources
+    and every target index ``n_patches``. Identical edges are rejected. The
+    derived ``residual_order`` puts every error source before its consumer.
+    """
+
+    n_inputs: int
+    n_patches: int
+    edges: tuple[tuple[str, int, int], ...]
+    residual_order: tuple[int, ...] = field(init=False)
+    incoming: tuple[tuple[int, ...], ...] = field(init=False, repr=False)
+
+    def __post_init__(self):
+        n_inputs = _integer(self.n_inputs, "n_inputs")
+        n_patches = _integer(self.n_patches, "n_patches", 1)
+        if isinstance(self.edges, (str, bytes, Mapping)):
+            raise ValueError("edges must contain (kind, source, target) triples")
+        try:
+            supplied = tuple(self.edges)
+        except TypeError as error:
+            raise ValueError("edges must be iterable") from error
+        edges, seen = [], set()
+        incoming = [[] for _ in range(n_patches)]
+        descendants = [[] for _ in range(n_patches)]
+        degree = [0] * n_patches
+        for item in supplied:
+            if not isinstance(item, (tuple, list)) or len(item) != 3:
+                raise ValueError("Every edge must be a (kind, source, target) triple")
+            kind, source, target = item
+            if not isinstance(kind, str) or kind not in {"input", "state", "residual"}:
+                raise ValueError("Edge kind must be input, state or residual")
+            source = _integer(source, "edge source")
+            target = _integer(target, "edge target")
+            if source >= (n_inputs if kind == "input" else n_patches):
+                raise ValueError("Edge source is outside its declared population")
+            if target >= n_patches:
+                raise ValueError("Edge target is outside its declared population")
+            edge = (kind, source, target)
+            if edge in seen:
+                raise ValueError("Identical edges must not be repeated")
+            seen.add(edge)
+            incoming[target].append(len(edges))
+            edges.append(edge)
+            if kind == "residual":
+                descendants[source].append(target)
+                degree[target] += 1
+        ready = deque(i for i, count in enumerate(degree) if count == 0)
+        order = []
+        while ready:
+            source = ready.popleft()
+            order.append(source)
+            for target in descendants[source]:
+                degree[target] -= 1
+                if degree[target] == 0:
+                    ready.append(target)
+        if len(order) != n_patches:
+            raise ValueError("Residual-readback dependencies must be acyclic")
+        object.__setattr__(self, "n_inputs", n_inputs)
+        object.__setattr__(self, "n_patches", n_patches)
+        object.__setattr__(self, "edges", tuple(edges))
+        object.__setattr__(self, "residual_order", tuple(order))
+        object.__setattr__(self, "incoming", tuple(tuple(row) for row in incoming))
+
+
+def _arguments(graph, inputs, state, weights, biases, anchor_weights, anchor_biases):
+    if not isinstance(graph, Graph):
+        raise ValueError("graph must be a Graph")
+    inputs = _vector(inputs, graph.n_inputs, "inputs")
+    state = _vector(state, graph.n_patches, "state")
+    weights = _vector(weights, len(graph.edges), "weights")
+    biases = _vector(biases, graph.n_patches, "biases")
+    if (anchor_weights is None) != (anchor_biases is None):
+        raise ValueError("Supply both parameter anchors, or neither")
+    if anchor_weights is not None:
+        anchor_weights = _vector(anchor_weights, len(graph.edges), "anchor_weights")
+        anchor_biases = _vector(anchor_biases, graph.n_patches, "anchor_biases")
+    return inputs, state, weights, biases, anchor_weights, anchor_biases
+
+
+def _evaluate(
+    graph,
+    inputs,
+    state,
+    weights,
+    biases,
+    state_prior,
+    anchor_weights,
+    anchor_biases,
+    parameter_prior,
+    visits=None,
+):
+    predictions = [0.0] * graph.n_patches
+    errors = [0.0] * graph.n_patches
+    signals = [0.0] * len(graph.edges)
+    try:
+        for target in graph.residual_order:
+            if visits is not None:
+                visits["patch_visits"] += 1
+            terms = [biases[target]]
+            for edge_index in graph.incoming[target]:
+                if visits is not None:
+                    visits["edge_visits"] += 1
+                kind, source, _ = graph.edges[edge_index]
+                signals[edge_index] = (
+                    inputs[source]
+                    if kind == "input"
+                    else state[source]
+                    if kind == "state"
+                    else errors[source]
+                )
+                terms.append(weights[edge_index] * signals[edge_index])
+            activation = math.fsum(terms)
+            if not math.isfinite(activation):
+                raise ValueError("A prediction exceeds the finite numeric range")
+            predictions[target] = math.tanh(activation)
+            errors[target] = state[target] - predictions[target]
+        energy = 0.5 * math.fsum(e * e for e in errors)
+        energy += 0.5 * state_prior * math.fsum(x * x for x in state)
+        grad_state = [state_prior * x for x in state]
+        grad_weights = [0.0] * len(weights)
+        grad_biases = [0.0] * len(biases)
+        adj_error = list(errors)
+        for target in reversed(graph.residual_order):
+            if visits is not None:
+                visits["patch_visits"] += 1
+            adj = adj_error[target]
+            grad_state[target] += adj
+            adj_prediction = -adj * (1.0 - predictions[target] ** 2)
+            grad_biases[target] += adj_prediction
+            for edge_index in graph.incoming[target]:
+                if visits is not None:
+                    visits["edge_visits"] += 1
+                kind, source, _ = graph.edges[edge_index]
+                grad_weights[edge_index] += adj_prediction * signals[edge_index]
+                influence = adj_prediction * weights[edge_index]
+                if kind == "state":
+                    grad_state[source] += influence
+                elif kind == "residual":
+                    adj_error[source] += influence
+        if anchor_weights is not None:
+            delta_weights = [
+                w - a for w, a in zip(weights, anchor_weights, strict=True)
+            ]
+            delta_biases = [b - a for b, a in zip(biases, anchor_biases, strict=True)]
+            energy += (
+                0.5
+                * parameter_prior
+                * math.fsum(d * d for d in (*delta_weights, *delta_biases))
+            )
+            grad_weights = [
+                g + parameter_prior * d
+                for g, d in zip(grad_weights, delta_weights, strict=True)
+            ]
+            grad_biases = [
+                g + parameter_prior * d
+                for g, d in zip(grad_biases, delta_biases, strict=True)
+            ]
+        quantities = (
+            energy,
+            *predictions,
+            *errors,
+            *grad_state,
+            *grad_weights,
+            *grad_biases,
+        )
+        if not all(math.isfinite(x) for x in quantities):
+            raise ValueError("Energy or gradient exceeds the finite numeric range")
+    except (OverflowError, ArithmeticError) as error:
+        raise ValueError(
+            "Energy or gradient exceeds the finite numeric range"
+        ) from error
+    return {
+        "energy": energy,
+        "predictions": tuple(predictions),
+        "errors": tuple(errors),
+        "signals": tuple(signals),
+        "gradient_state": tuple(grad_state),
+        "gradient_weights": tuple(grad_weights),
+        "gradient_biases": tuple(grad_biases),
+    }
+
+
+def evaluate(
+    graph,
+    inputs,
+    state,
+    weights,
+    biases,
+    *,
+    state_prior=0.01,
+    anchor_weights=None,
+    anchor_biases=None,
+    parameter_prior=0.1,
+):
+    """Recompute energy, exact error readback and all analytic derivatives.
+
+    Supplied anchors add a fixed quadratic parameter prior. Without anchors,
+    parameter derivatives still describe the unanchored energy, even if a
+    caller will freeze those coordinates. Invalid or nonfinite inputs and
+    nonrepresentable derived quantities raise ``ValueError``. No input changes.
+    """
+    args = _arguments(
+        graph, inputs, state, weights, biases, anchor_weights, anchor_biases
+    )
+    inputs, state, weights, biases, anchor_weights, anchor_biases = args
+    state_prior = _number(state_prior, "state_prior", positive=True)
+    parameter_prior = _number(parameter_prior, "parameter_prior", positive=True)
+    return _evaluate(
+        graph,
+        inputs,
+        state,
+        weights,
+        biases,
+        state_prior,
+        anchor_weights,
+        anchor_biases,
+        parameter_prior,
+    )
+
+
+def _clip(value, bound):
+    return min(bound, max(-bound, value))
+
+
+def _projected_component(value, gradient, bound):
+    # Stable form of x - clip(x-g): avoid cancellation of tiny g at large x.
+    return (
+        min(gradient, value + bound) if gradient >= 0 else max(gradient, value - bound)
+    )
+
+
+def _stationarity(state, weights, biases, evaluated, clamps, learn, state_bound, bound):
+    residual = max(
+        (
+            abs(_projected_component(x, g, state_bound))
+            for i, (x, g) in enumerate(
+                zip(state, evaluated["gradient_state"], strict=True)
+            )
+            if i not in clamps
+        ),
+        default=0.0,
+    )
+    if learn:
+        for values, key in ((weights, "gradient_weights"), (biases, "gradient_biases")):
+            residual = max(
+                residual,
+                max(
+                    (
+                        abs(_projected_component(x, g, bound))
+                        for x, g in zip(values, evaluated[key], strict=True)
+                    ),
+                    default=0.0,
+                ),
+            )
+    return residual
+
+
+def settle(
+    graph,
+    inputs,
+    state,
+    weights,
+    biases,
+    *,
+    clamps=None,
+    learn=False,
+    budget=512,
+    tolerance=1e-6,
+    state_prior=0.01,
+    parameter_prior=0.1,
+    state_bound=1.0,
+    parameter_bound=4.0,
+    step=1.0,
+    backtracks=32,
+    anchor_weights=None,
+    anchor_biases=None,
+):
+    """Repair eligible coordinates and freshly qualify the complete final state.
+
+    A sweep proposes one simultaneous projected-gradient update and uses up to
+    ``backtracks`` energy evaluations to satisfy Armijo decrease. ``budget``
+    bounds accepted sweeps. A zero budget can qualify an already stationary
+    initial state. All returned arrays are tuples; caller-owned data is untouched.
+
+    ``clamps`` maps patch indices to witnessed fixed states. Inputs are always
+    hard boundary values. Query solves freeze parameters; learning solves repair
+    them with anchors fixed to their starting values unless explicitly supplied.
+    Invalid starts, bounds or configuration raise ``ValueError``. A valid solve
+    can return ``qualified=False`` with reason ``budget`` or ``line_search``.
+    This is numerical qualification, not evidence admission or task success.
+    Work counts include rejected proposals and final qualification; edge/patch
+    visits count prediction-error traversal, not every Python operation.
+    """
+    args = _arguments(
+        graph, inputs, state, weights, biases, anchor_weights, anchor_biases
+    )
+    inputs, state, weights, biases, anchor_weights, anchor_biases = args
+    if type(learn) is not bool:
+        raise ValueError("learn must be a boolean")
+    budget = _integer(budget, "budget")
+    backtracks = _integer(backtracks, "backtracks", 1)
+    tolerance = _number(tolerance, "tolerance", positive=True)
+    state_prior = _number(state_prior, "state_prior", positive=True)
+    parameter_prior = _number(parameter_prior, "parameter_prior", positive=True)
+    state_bound = _number(state_bound, "state_bound", positive=True)
+    parameter_bound = _number(parameter_bound, "parameter_bound", positive=True)
+    step = _number(step, "step", positive=True)
+    if any(abs(x) > state_bound for x in state):
+        raise ValueError("Initial state exceeds state_bound")
+    if any(abs(x) > parameter_bound for x in (*weights, *biases)):
+        raise ValueError("Initial parameters exceed parameter_bound")
+    if not learn and anchor_weights is not None:
+        raise ValueError("Query solves freeze parameters and do not accept anchors")
+    if learn and anchor_weights is None:
+        anchor_weights, anchor_biases = weights, biases
+    if anchor_weights is not None and any(
+        abs(x) > parameter_bound for x in (*anchor_weights, *anchor_biases)
+    ):
+        raise ValueError("Parameter anchors exceed parameter_bound")
+    if clamps is None:
+        clamps = {}
+    if not isinstance(clamps, Mapping):
+        raise ValueError("clamps must map patch indices to fixed values")
+    fixed = {}
+    for index, value in clamps.items():
+        index = _integer(index, "clamp index")
+        value = _number(value, "clamp value")
+        if index >= graph.n_patches or abs(value) > state_bound:
+            raise ValueError("Clamp index or value is outside its declared bounds")
+        fixed[index] = value
+    state = tuple(fixed.get(i, x) for i, x in enumerate(state))
+    evaluations, proposals, rejected = 0, 0, 0
+    visits = {"edge_visits": 0, "patch_visits": 0}
+
+    def compute(x, w, b):
+        nonlocal evaluations
+        evaluations += 1
+        return _evaluate(
+            graph,
+            inputs,
+            x,
+            w,
+            b,
+            state_prior,
+            anchor_weights,
+            anchor_biases,
+            parameter_prior,
+            visits,
+        )
+
+    current = compute(state, weights, biases)
+    history = [current["energy"]]
+    sweeps, reason = 0, "budget"
+    for _ in range(budget):
+        if (
+            _stationarity(
+                state,
+                weights,
+                biases,
+                current,
+                fixed,
+                learn,
+                state_bound,
+                parameter_bound,
+            )
+            <= tolerance
+        ):
+            reason = "qualified"
+            break
+        trial_step, accepted = step, False
+        for _attempt in range(backtracks):
+            proposals += 1
+            next_state = tuple(
+                fixed.get(i, _clip(x - trial_step * g, state_bound))
+                for i, (x, g) in enumerate(
+                    zip(state, current["gradient_state"], strict=True)
+                )
+            )
+            next_weights, next_biases = weights, biases
+            if learn:
+                next_weights = tuple(
+                    _clip(x - trial_step * g, parameter_bound)
+                    for x, g in zip(weights, current["gradient_weights"], strict=True)
+                )
+                next_biases = tuple(
+                    _clip(x - trial_step * g, parameter_bound)
+                    for x, g in zip(biases, current["gradient_biases"], strict=True)
+                )
+            try:
+                slope = math.fsum(
+                    g * (new - old)
+                    for old_values, new_values, key in (
+                        (state, next_state, "gradient_state"),
+                        (weights, next_weights, "gradient_weights"),
+                        (biases, next_biases, "gradient_biases"),
+                    )
+                    for old, new, g in zip(
+                        old_values, new_values, current[key], strict=True
+                    )
+                )
+                moved = (next_state, next_weights, next_biases) != (
+                    state,
+                    weights,
+                    biases,
+                )
+                proposed = compute(next_state, next_weights, next_biases)
+                accepted = (
+                    moved
+                    and math.isfinite(slope)
+                    and slope < 0
+                    and proposed["energy"] <= current["energy"] + 1e-4 * slope
+                )
+            except (ValueError, OverflowError):
+                accepted = False
+            if accepted:
+                state, weights, biases = next_state, next_weights, next_biases
+                current = proposed
+                history.append(current["energy"])
+                sweeps += 1
+                break
+            rejected += 1
+            trial_step *= 0.5
+        if not accepted:
+            reason = "line_search"
+            break
+    final = compute(state, weights, biases)
+    residual = _stationarity(
+        state, weights, biases, final, fixed, learn, state_bound, parameter_bound
+    )
+    qualified = math.isfinite(residual) and residual <= tolerance
+    if qualified:
+        reason = "qualified"
+    return {
+        "state": state,
+        "weights": weights,
+        "biases": biases,
+        "predictions": final["predictions"],
+        "errors": final["errors"],
+        "energy": final["energy"],
+        "stationarity": residual,
+        "prediction_residual": max(map(abs, final["errors"]), default=0.0),
+        "qualified": qualified,
+        "sweeps": sweeps,
+        "reason": reason,
+        "energy_history": tuple(history),
+        "work": {
+            "evaluations": evaluations,
+            **visits,
+            "proposals": proposals,
+            "backtracks": rejected,
+        },
+    }

@@ -1,30 +1,15 @@
-"""Self-reading columns and contextual predictors with local settlement."""
+"""Deep Recursive Settlement Networks with jointly settling populations."""
 
-from .column import CorticalColumn
-from .cortex import Cortex, SettlementError
-from .element import Port, settle, solve_cluster_forest
-from .wiring import (
-    BinnedFeatures,
-    ConstantFeatures,
-    IdentityFeatures,
-    calibrate,
-    grid,
-    wire,
-)
+from .drsn import Brain, Cortex, Input, Output, Population, SettlementError
 
-__version__ = "0.42.0"
+__version__ = "0.43.0"
+
 __all__ = [
-    "BinnedFeatures",
-    "ConstantFeatures",
+    "Brain",
     "Cortex",
-    "CorticalColumn",
-    "IdentityFeatures",
-    "Port",
+    "Input",
+    "Output",
+    "Population",
     "SettlementError",
     "__version__",
-    "calibrate",
-    "grid",
-    "settle",
-    "solve_cluster_forest",
-    "wire",
 ]

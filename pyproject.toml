@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cadence-net"
-version = "0.42.0"
-description = "Brains built from one element: the cortical column, a bounded self-reading settling patch with one repair law."
+version = "0.43.0"
+description = "Deep Recursive Settlement Networks: processing populations and observers learning and settling together."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Bernhard Mueller" }]
-keywords = ["cortical column", "settling", "local learning", "observer", "uncertainty", "reinforcement learning"]
+keywords = ["cortical column", "settling", "local learning", "observer", "recursive observation", "supervised learning"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
@@ -25,12 +25,11 @@ dependencies = []
 
 [project.urls]
 Homepage = "https://floatingpragma.io/cadence/"
-Documentation = "https://github.com/muellerberndt/cadence/blob/main/docs/REFERENCE.md"
+Documentation = "https://github.com/muellerberndt/cadence/blob/main/docs/index.md"
 Repository = "https://github.com/muellerberndt/cadence"
 Issues = "https://github.com/muellerberndt/cadence/issues"
 
 [project.optional-dependencies]
-games = ["gymnasium[atari]>=1.0", "ale-py>=0.10"]
 dev = ["pytest>=8", "ruff>=0.5"]
 
 [tool.hatch.build.targets.wheel]

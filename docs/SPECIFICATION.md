@@ -1,95 +1,93 @@
-# Behavioral specification
+# Runtime and mathematical specification
 
-This page separates the shipped contract from a proposed general intelligence
-architecture. The [reference](REFERENCE.md) defines argument types and defaults;
-the [element guide](ELEMENT.md) gives the equations.
+This document specifies the population DRSN engine. The equations are in
+[the processing-patch description](ELEMENT.md); all arguments and result fields
+are in [the API reference](REFERENCE.md).
 
-## Model boundaries
+## Layout and state
 
-- A scalar `CorticalColumn` retains sufficient statistics and an event cursor.
-  Its live reciprocal loop settles a belief variance and observer precision.
-- A `Cortex` indexes evidence columns by supplied contexts and output channels.
-  Local observer loops are reciprocal; coarse-to-fine priors are directed.
-- Exact factor federation operates on supplied binary tables over a certified
-  cluster forest. It neither learns those tables nor imports them into scalar
-  evidence automatically.
-- Custom context maps, sensor normalization, likelihood families, goals, action
-  meanings and reward construction are application-supplied choices.
+- `Cortex` is a declaration builder. `build()` requires at least one population
+  and output, resolves deterministic sparse wiring, and freezes declarations.
+- `Input`, `Population` and `Output` are immutable identity handles owned by a
+  layout. Their counts and shapes are validated before compilation.
+- `inputs` connects samples or live population states. `observes` connects live
+  states and derived prediction errors. Those constraints affect the same joint
+  repair; observers do not query completed lower-layer answers.
+- `Brain` owns state, relation weights and biases. Public state and parameter
+  views are tuples; configuration is read-only; returned diagnostics are owned
+  copies. Callers serialize access to each brain.
+- Bounds apply to live state, weights, biases and clamps. Sensory samples need
+  only be finite; applications choose normalization appropriate to their task.
 
-These components share port repair machinery. That does not make their model
-families, state formats or scientific guarantees interchangeable.
+## Repair and qualification
 
-## Observations and memory
+The solver minimizes the stated nonlinear energy by projected analytic-gradient
+steps with sufficient-decrease backtracking. Observed error derivatives include
+all transitive dependencies. A solve qualifies only when the full projected
+stationarity residual is at most `tolerance` over every eligible coordinate.
+Output clamps are excluded; learned parameters are included during admission.
 
-Actual observations enter through explicit admission methods. Predictions,
-queries and imagined values are not independently witnessed events. Ordered
-identifiers support retry handling; they do not prove that the caller's data
-are true or statistically independent.
+`prediction_residual` is a different quantity: the largest absolute local
+prediction error. Priors, bounds and competing constraints can leave this
+nonzero at a qualified point. Qualification establishes constrained numerical
+stationarity to the declared tolerance. It establishes neither a unique normal
+form nor a global minimum, and says nothing by itself about task accuracy.
 
-Admission first forms prospective statistics and checks the required solve and
-resource conditions. A failed scalar observation or Cortex native multi-output
-observation must not partially replace retained evidence. The latest identical
-retry is a duplicate; changed or out-of-order evidence must be handled as an
-error. Native `observe` and the optional reinforcement-learning transition
-wrapper have separate documented target meanings.
+`budget` limits accepted sweeps, with at most `backtracks` attempted steps per
+sweep. Already stationary proposals may qualify with budget zero. Exhaustion
+or inability to find a descent step refuses the proposal. Invalid arguments
+raise `ValueError`. Numerical overflow may refuse a proposal or raise
+`ValueError`; neither outcome commits continuation. Applications must not act
+on diagnostic outputs from a refused solve.
 
-Read operations do not acquire new witnesses. A Cortex may populate caches and
-advance work counters while answering, but does not retain new context columns.
-Scalar column queries leave their retained checkpoint state unchanged. Neither
-form of read implies an external world-model update.
+## Continuation and admission
 
-## Qualification
+| Operation | Live state | Retained parameters | External event record |
+| --- | --- | --- | --- |
+| `settle` / `predict` | Unchanged | Unchanged | Unchanged |
+| `settle` with hypothetical clamps | Unchanged | Unchanged | Unchanged |
+| Qualified `step` | Commit solved state | Unchanged | Unchanged |
+| Qualified `observe` | Commit solved state | Commit solved relations | Advance once |
+| Refused operation | Unchanged | Unchanged | Unchanged |
 
-A solve is qualified against its declared message equations and residual
-tolerance. A capped solve may be returned as unqualified; high-level prediction
-and action selection reject such results. Action selection qualifies all output
-beliefs before either random exploration or scoring. Damping and more sweeps
-change the numerical execution budget, not the target equations.
+`observe` requires at least one output witness. It fixes these values throughout
+joint state/parameter repair and anchors parameters to their pre-experience
+values. The entire proposal qualifies before admission. There are no partial
+parameter commits and no event ID consumption on refusal.
 
-Qualification is not an accuracy score, a confidence calibration theorem,
-proof of a global minimum or proof of uniqueness for arbitrary port graphs.
-The numerical `variance` and `novelty` fields are model-derived quantities;
-they are not automatically calibrated confidence or universal measures of
-ignorance or safe action risk. Coarse and fine levels can reuse correlated
-evidence; their witness weights do not make those observations independent.
+Explicit nonnegative event IDs are monotonically increasing. Retrying the latest
+admitted ID with identical sensory samples and physical clamps is idempotent;
+it returns `duplicate=True` without solving or committing. Changed or older IDs
+are rejected. This is latest-event deduplication, not a history of all events.
+Omitting an ID allocates the next identity on acceptance, so applications that
+need retry safety must retain their external IDs.
 
-For lesion diagnostics, distinguish the altered equations' residual from the
-intact model's residual. A lesion can be a valid solution of a different model.
-Full nonlinear biological circuit equivalence is not implied by a successful
-finite factor calculation or a local perturbation test.
+## Checkpoint contract
 
-## Bounded operation
+Snapshots contain the complete layout, configuration, arrays, admission cursor
+and digest. JSON must have exactly the expected fields, finite numeric values,
+consistent bounds, counts and identity. Duplicate JSON fields are invalid.
+Size is limited to 32 MiB. Reconstructed connections and dimensions are checked
+before installing a proposed continuation.
 
-Event capacity, statistic-size limits, context-column count, cached answers,
-pending transitions and settling work have explicit budgets. Resource refusal
-must remain visible. A limit on item count is not a guarantee of a fixed process
-RSS, a hard real-time deadline or bounded application-owned sensor data.
+A layout/configuration fingerprint and exact hashes of `drsn.py`, `_repair.py`
+and `_validation.py` bind compatibility. Source changes can invalidate a
+checkpoint, including changes between releases. `restore` only installs a
+validated continuation for the same graph/configuration; `from_snapshot`
+constructs one. Source identity and digest checks are integrity checks, not
+cryptographic authentication of a witness or proof of its truth. Treat caller
+provided files as bounded data, never executable code.
 
-Configuration is fixed for a model's lifetime, apart from the documented
-learning and prior-cut control switches. Construct a new model for a different
-likelihood, wiring or numerical contract. Changing a configuration must not
-silently reuse answers cached under the old one.
+## Evidence boundary
 
-## Continuation
+Tests check numerical derivatives independently against finite differences,
+analytic optima on small cases, causal feedback into observed populations,
+energy descent, constrained boundaries, source coverage, witnessed acquisition,
+unclamped recall, refusal rollback, event custody and continuation. Executable
+documentation uses the same released API.
 
-Checkpoints bind retained model state and its declared configuration. Cortex
-continuation also includes stochastic action state and pending transitions;
-a checkpoint does not capture the external environment or arbitrary feature-map
-code. Built-in feature descriptors support reconstruction. Custom maps require
-matching code supplied by the application and a matching declared identity.
-
-Restore validates the complete proposal before changing the live model.
-Malformed or incompatible state must not partially replace a valid instance.
-A checkpoint establishes declared-state consistency, not authenticity of the
-application's original observations.
-
-## Evaluation
-
-An application claim needs task-level evaluation in addition to library checks.
-Compare matched information and exposure, preserve failed solves, and charge
-calibration, all message sweeps, admission work, storage and optional RL episode
-processing. Context depth and observer height are separate interventions.
-
-Library checks do not validate biological column identity, establish general
-useful recursion or show generic efficiency over conventional learners. Those
-are separate empirical questions, with a declared task and resource budget.
+The engine supplies supervised witness learning and persistent joint activity.
+It does not yet supply reward-driven temporal credit, autonomous task discovery,
+learned structural growth or a general biological physiology model. Performance
+and advantages from recursive depth remain empirical questions. Biological
+inspiration is not evidence that a numerical qualification reproduces a brain.

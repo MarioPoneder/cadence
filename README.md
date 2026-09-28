@@ -1,130 +1,126 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: self-reading cortical columns with local state, readback and repair" width="100%">
+  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: recursive settling populations with local state, readback and repair" width="100%">
 </p>
 
 # Cadence
 
-[Website](https://floatingpragma.io/cadence/) · [Examples](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/) · [Documentation](https://github.com/muellerberndt/cadence/blob/main/docs/REFERENCE.md)
+[Website](https://floatingpragma.io/cadence/) · [Examples](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/) · [Documentation](docs/index.md)
 
 [![PyPI](https://img.shields.io/pypi/v/cadence-net)](https://pypi.org/project/cadence-net/)
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
 
-**Deep Recursive Settlement Networks (DRSNs), built from cortical columns that
-continually update their world model from experience.**
+**Build Deep Recursive Settlement Networks: processing populations and their
+observers, learning and settling together.**
 
-Cadence is a library for building persistent, self-reading learning systems.
-New experience changes the evidence held by local columns, disturbing their
-existing equilibrium. Local feedback repairs the affected message relationships
-until their beliefs settle again. The system retains what it has learned for
-the next interaction. Its world model is this retained evidence and the settled
-beliefs about the quantities an application asks it to model.
+Cadence explores a simple idea: a brain can be a persistent system of local
+relations that repairs its state as experience arrives. An observer reads
+what other patches are doing and influences them while remaining part of the
+same equilibrium. Another observer can read that enlarged system in turn.
 
-The central idea is **recursive observation inside the same equilibrium**.
-An observer reads a column's live uncertainty and sends feedback that changes
-it. Further observer stages read and regulate that activity in turn.
-**The observers become part of the system they observe: all stages remain live
-and settle together.** This is the recursive structure at the heart of a DRSN.
-
-The building block is the **cortical column**: a bounded patch with local
-memory, typed observation ports, readback and repair. Inspired by mammalian
-cortical organization, Cadence's columns are mathematical abstractions, not
-biophysical simulations. A `Cortex` combines them into contextual predictors;
-an optional action-value interface supports learning from the consequences
-of actions. The current models learn scalar quantities and context-dependent
-outputs; useful depth and comparative performance are still being evaluated.
-
-The library is pure Python and uses only the standard library. Building on
-Cadence with a coding agent: hand it [AGENTS.md](AGENTS.md), the operational
-pitfalls file, alongside the docs.
-
-## The roadmap
-
-The goal is continuing intelligence: learning from experience, retaining useful
-knowledge, imagining alternatives and solving problems across domains.
-The building block stays as simple as possible; every part answers through
-local settlement, and evolution across lives is preferred to hand-designed
-complexity.
-
-We want to reach a point where we can effortlessly evolve a human-like brain,
-teach it first by imitation and then through its own life, and give it an
-experience identical to that of a human living in our world. Brains with
-capabilities far beyond ours are thinkable on the same path; human-level
-competence comes first, as a sensible milestone. The steps from the
-brains in this library to that milestone are tracked as issues in this repository,
-rung by rung, each with its task, its control and its falsifier.
+Cadence implements this population architecture in pure
+Python, using only the standard library. Every processing and observer patch
+uses one local prediction relation. The compiled brain supports joint
+settlement, supervised witness learning, diagnostics and continuation.
 
 ## Install
 
-From a checkout, with Python 3.11 or later:
+Python 3.11 or later; no runtime dependencies:
 
 ```sh
-python -m pip install -e .
+python -m pip install cadence-net
 ```
 
-The optional `games` extra adds Gymnasium and ALE; neither is needed below.
-
-## Learn from a sensor
-
-```python
-from cadence import CorticalColumn
-
-column = CorticalColumn(height=3, decay=0.9)
-for reading in (0.2, 0.4, 0.3):
-    admitted = column.add(reading)
-    assert admitted["accepted"]
-
-belief = column.query()
-assert belief["qualified"]
-print(belief["answer"], belief["variance"])
-```
-
-`height=3` adds two recursive rate-observer stages above the base
-belief–precision loop. All of them participate in the same settlement.
-Each `add` proposes new retained evidence and admits it after the solve
-qualifies; `query` reads the resulting belief without adding an observation.
-Use explicit ordered event IDs with `observe` when delivery may be retried.
-
-## Add context
+## Declare the brain
 
 ```python
 from cadence import Cortex
 
-model = Cortex.from_dimensions(
-    n_inputs=2, n_outputs=1, bounds=(-1.0, 1.0), bins=8, depth=1, height=3,
+cortex = Cortex(seed=7)
+eyes = cortex.input("eyes", shape=(8, 8))
+ears = cortex.input("ears", shape=(2, 16))
+body = cortex.input("sensory_nerves", shape=(8,))
+senses = (eyes, ears, body)
+
+c1 = cortex.column("perception", patches=256, inputs=senses)
+c2 = cortex.observer(
+    "integration", patches=256, inputs=senses, observes=(c1,),
 )
-context = (-0.5, 0.25)
+c3 = cortex.observer(
+    "reflection", patches=256, inputs=senses, observes=(c1, c2),
+)
+cortex.output("motor_nerves", shape=(8,), reads=c3)
+brain = cortex.build()
 
-before = model.predict(context)[0]
-result = model.observe(context, -0.3)
-assert result["accepted"]
-after = model.predict(context)[0]
-print(before, after)
-
-saved = model.snapshot()
-restored = Cortex.from_snapshot(saved)
-assert restored.predict(context) == model.predict(context)
+assert brain.inspect()["patches"] == 768
+assert brain.inspect()["sensor_coverage"] == 104
 ```
 
-Here two normalized sensor values select a context, and the observed target
-teaches one scalar output. Built-in binning supplies the representation;
-Cadence learns the evidence within those contexts. `height` controls recursive
-observer stages inside each column; `depth` controls the context hierarchy.
-They are independent choices, alongside output count and context resolution.
+`inputs` supplies sensory or represented data. `observes` adds readback of
+**live patch states and exact current prediction errors**. Observer constraints
+feed back into the observed states through the same energy and repair process.
+They are not a separate decision made after the lower system finishes.
 
-Within a column, observer feedback is reciprocal. Between Cortex levels,
-coarser beliefs supply priors to finer ones; this directed hierarchy is a
-different structure. Each output's active context chain is solved and qualified
-separately. Additional levels or observer stages are choices to test, not a
-guaranteed improvement.
+Population size counts processing patches. Sensor shape counts input samples;
+a larger camera shape does not supply trained visual understanding. The eight
+outputs expose eight settled patch values, without a separate policy network.
+The guide also shows parallel sensory branches and inspection of actual wiring.
 
-| Start here | What it covers |
+## Learn a small relation
+
+This inexpensive example teaches a small brain a signed input/output relation.
+It uses the same population primitive, with fewer patches for a quick run.
+
+```python
+teacher_layout = Cortex(seed=2, settle_budget=1200, tolerance=1e-5)
+signal = teacher_layout.input("signal", shape=(1,))
+base = teacher_layout.column("base", patches=4, inputs=signal)
+reflection = teacher_layout.observer(
+    "reflection", patches=2, inputs=signal, observes=base,
+)
+teacher_layout.output("answer", shape=(1,), reads=reflection)
+learner = teacher_layout.build()
+
+for event_id in range(40):
+    value = (-0.8, 0.8)[event_id % 2]
+    update = learner.observe(
+        {"signal": [value]}, {"answer": [value]}, event_id=event_id,
+    )
+    assert update["accepted"]
+
+# Fresh amplitudes, with no output targets supplied to the brain.
+assert learner.predict({"signal": [-0.4]})["answer"][0] < -0.2
+assert learner.predict({"signal": [0.4]})["answer"][0] > 0.2
+```
+
+Actual witnesses clamp the supplied outputs and allow joint repair of live
+state and retained relation parameters. Only qualified proposals are committed.
+Queries hold learned parameters fixed; hypothetical clamps never become
+experience. Learning is evaluated on later unclamped predictions, as above.
+This example establishes a small acquired relation, not a benefit from depth.
+
+## Scope
+
+The reference engine repairs a nonlinear residual energy using analytic
+derivatives and a bounded descent procedure. Every participating population is
+included in the final constrained-stationarity check. Prediction errors can
+remain nonzero at a qualified compromise; different starting states can reach
+different stationary points. A solver can refuse when its budget is exhausted.
+
+Performance evaluations and comparisons remain ongoing. Tests cover layouts,
+derivatives through recursive error readback, reciprocal
+interventions, actual acquisition, refusal and checkpoint custody. The goal is
+a reusable learner across perception, memory, reasoning and embodied action.
+Reward-driven temporal credit, broader capability and advantages from recursive
+depth require further controlled experiments. Follow the
+[DRSN completion epic](https://github.com/muellerberndt/cadence/issues/51).
+
+| Documentation | Scope |
 | --- | --- |
-| [Quickstart](https://github.com/muellerberndt/cadence/blob/main/docs/QUICKSTART.md) | Sensors, multiple outputs, retries, checkpoints and optional actions. |
-| [Reference](https://github.com/muellerberndt/cadence/blob/main/docs/REFERENCE.md) | Public classes, methods, parameters, defaults and errors. |
-| [Element](https://github.com/muellerberndt/cadence/blob/main/docs/ELEMENT.md) | Evidence, executed equations, residuals and qualification. |
-| [Variants](https://github.com/muellerberndt/cadence/blob/main/docs/VARIANTS.md) | Context depth, width, observer height and evidence limits. |
-| [Specification](https://github.com/muellerberndt/cadence/blob/main/docs/SPECIFICATION.md) | What the API guarantees and what the application supplies. |
+| [DRSN guide](docs/DRSN.md) | Population layouts, equations, learning, all configuration, diagnostics and checkpoints |
+| [Quickstart](docs/QUICKSTART.md) | Inputs, settlement, learning and saved continuation |
+| [API reference](docs/REFERENCE.md) | Every public class, method and configuration parameter |
+| [Mathematical specification](docs/SPECIFICATION.md) | Guarantees, qualification and evidence boundaries |
 
 MIT license.

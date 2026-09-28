@@ -22,21 +22,27 @@ jobs:
           python -m pip wheel --no-deps --wheel-dir dist .
           python -m pip install dist/*.whl
           python -m pip check
-      - name: Import and settle a column without any optional extras
+      - name: Learn and restore a population brain without optional extras
         run: |
           python - <<'PY'
-          from cadence import CorticalColumn, Cortex, __version__
-          column = CorticalColumn()
-          for event, value in enumerate([2, 2, 2, 0], 1):
-              assert column.observe(event, value)['accepted'] is True
-          answer = column.query()
-          assert answer['qualified'] is True and answer['answer'] > 0.5
-          cortex = Cortex.from_dimensions(2, n_outputs=2, bins=4)
-          assert cortex.observe((0.1, -0.1), (0.5, -0.5))['accepted']
-          restored = Cortex.from_snapshot(cortex.snapshot())
-          assert restored.predict((0.1, -0.1)) == cortex.predict((0.1, -0.1))
-          print('cadence', __version__, 'ok:', answer['answer'])
+          from cadence import Brain, Cortex, __version__
+          layout = Cortex(seed=2, settle_budget=1200, tolerance=1e-5)
+          signal = layout.input("signal", shape=(1,))
+          base = layout.column("base", patches=4, inputs=signal)
+          observer = layout.observer("observer", patches=2, inputs=signal, observes=base)
+          layout.output("answer", shape=(1,), reads=observer)
+          brain = layout.build()
+          for event in range(40):
+              value = (-0.8, 0.8)[event % 2]
+              assert brain.observe({"signal": [value]}, {"answer": [value]})["accepted"]
+          assert brain.predict({"signal": [0.4]})["answer"][0] > 0.2
+          saved = brain.snapshot()
+          restored = Brain.from_snapshot(saved)
+          assert restored.snapshot() == saved
+          assert restored.predict({"signal": [0.4]}) == brain.predict({"signal": [0.4]})
+          print("cadence", __version__, "population learning and continuation passed")
           PY
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:

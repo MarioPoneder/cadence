@@ -42,7 +42,7 @@ def test_public_exports_are_documented():
         assert re.search(rf"\b{re.escape(name)}\b", reference), name
 
 
-@pytest.mark.parametrize("name", ["CorticalColumn", "Cortex"])
+@pytest.mark.parametrize("name", ["Cortex"])
 def test_constructor_reference_matches_api(name):
     reference = (ROOT / "docs" / "REFERENCE.md").read_text()
     match = re.search(rf"(?ms)^{name}\(.*?\)", reference)
