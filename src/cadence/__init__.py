@@ -1,6 +1,9 @@
 """Deep Recursive Settlement Networks with jointly settling populations."""
 
-from .drsn import Brain, Cortex, Input, Output, Population, SettlementError
+from .brain import Brain, SettlementError
+from .column import Population
+from .cortex import Cortex
+from .ports import Input, Output
 
 __version__ = "0.43.0"
 

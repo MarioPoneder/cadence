@@ -1,402 +1,39 @@
-"""Population layouts with live recursive observation and joint local repair.
+"""Run joint repair, admit witnessed experience and preserve brain continuation.
 
-``inputs`` carry sensor or represented values. ``observes`` additionally reads
-the exact current prediction errors of other populations. Both are constraints
-in one energy: their feedback participates in the same settlement.
-
-The nonlinear residual-energy model is a candidate learning architecture.
-Qualification means projected stationarity, not unique equilibrium, zero
-prediction error, biological fidelity or a demonstrated depth advantage.
+Qualification means constrained stationarity of the declared nonlinear energy,
+not a unique equilibrium, zero prediction error or a demonstrated depth benefit.
 """
 
 from __future__ import annotations
 
 import hashlib
-import math
-import random
 from collections.abc import Mapping
-from dataclasses import dataclass, field
 from importlib.resources import files
-from itertools import islice
 from types import MappingProxyType
 
 from . import _repair
 from ._validation import canonical, integer, number, strict_json
+from .ports import _values
 
 SCHEMA = "population-brain/1"
 MAX_CHECKPOINT_BYTES = 32 * 1024 * 1024
 IMPLEMENTATION = MappingProxyType(
     {
         name: hashlib.sha256(files(__package__).joinpath(name).read_bytes()).hexdigest()
-        for name in ("_repair.py", "drsn.py", "_validation.py")
+        for name in (
+            "brain.py",
+            "cortex.py",
+            "column.py",
+            "ports.py",
+            "_repair.py",
+            "_validation.py",
+        )
     }
 )
 
 
 class SettlementError(RuntimeError):
     """A population solve did not meet its full stationarity threshold."""
-
-
-def _shape(shape):
-    if isinstance(shape, int):
-        shape = (shape,)
-    if not isinstance(shape, (tuple, list)) or len(shape) > 8:
-        raise ValueError("shape must have at most eight positive dimensions")
-    return tuple(integer(n, "shape dimension", 1) for n in shape)
-
-
-def _values(value, shape, name):
-    """Accept a shaped nested array or an explicitly flattened numeric vector."""
-    count = math.prod(shape)
-    if callable(getattr(value, "tolist", None)):
-        array_shape = getattr(value, "shape", None)
-        if array_shape is not None:
-            if not isinstance(array_shape, (tuple, list)) or tuple(array_shape) not in (
-                shape,
-                (count,),
-            ):
-                raise ValueError(f"{name} does not match shape {shape}")
-        value = value.tolist()
-    if not shape:
-        return (number(value, name),)
-    if isinstance(value, (list, tuple)) and len(value) == count:
-        if all(not isinstance(v, (list, tuple)) for v in value):
-            return tuple(number(v, name) for v in value)
-
-    def flatten(item, dimensions):
-        if not dimensions:
-            return [number(item, name)]
-        if not isinstance(item, (list, tuple)) or len(item) != dimensions[0]:
-            raise ValueError(f"{name} does not match shape {shape}")
-        return [v for child in item for v in flatten(child, dimensions[1:])]
-
-    return tuple(flatten(value, shape))
-
-
-@dataclass(frozen=True, slots=True, eq=False)
-class Input:
-    """A named sensor boundary; ``shape`` describes externally clamped data."""
-
-    name: str
-    shape: tuple[int, ...]
-    _owner: object = field(repr=False)
-
-    @property
-    def size(self):
-        """Number of scalar sensor samples, independent of processing capacity."""
-        return math.prod(self.shape)
-
-
-@dataclass(frozen=True, slots=True, eq=False)
-class Population:
-    """An exact patch count and its data and internal-observation connections."""
-
-    name: str
-    patches: int
-    inputs: tuple
-    observes: tuple
-    _owner: object = field(repr=False)
-
-    def __repr__(self):
-        inputs = tuple(source.name for source in self.inputs)
-        observes = tuple(source.name for source in self.observes)
-        return (
-            f"Population(name={self.name!r}, patches={self.patches!r}, "
-            f"inputs={inputs!r}, observes={observes!r})"
-        )
-
-    @property
-    def role(self):
-        """Layout role; observation function still requires causal testing."""
-        return "observer" if self.observes else "processing"
-
-
-@dataclass(frozen=True, slots=True, eq=False)
-class Output:
-    """A shaped selection of settled patch values, without a separate policy head."""
-
-    name: str
-    shape: tuple[int, ...]
-    reads: Population
-    indices: tuple[int, ...]
-    _owner: object = field(repr=False)
-
-
-class Cortex:
-    """Declare a population graph and compile it with :meth:`build`.
-
-    ``seed`` fixes sparse wiring and initial relations. ``fan_in`` is the
-    minimum sample count per source per target patch, raised when necessary
-    to cover every source coordinate across the destination population.
-    ``initial_scale`` bounds random weights before fan-in normalization.
-
-    ``settle_budget``, ``tolerance``, ``step`` and ``backtracks`` configure the
-    common projected-gradient repair. ``state_prior`` penalizes activity;
-    ``parameter_prior`` anchors relation changes to pre-experience parameters.
-    Both priors are strictly positive. ``state_bound`` and ``parameter_bound``
-    bound the state and relation boxes. Values outside them are rejected.
-
-    ``max_inputs``, ``max_patches`` and ``max_connections`` bound construction.
-    They count scalar sensor samples, processing patches and directed signal
-    connections respectively, not physical process memory or latency.
-    """
-
-    def __init__(
-        self,
-        *,
-        seed=0,
-        fan_in=8,
-        initial_scale=0.3,
-        settle_budget=512,
-        tolerance=1e-6,
-        state_prior=0.01,
-        parameter_prior=0.1,
-        state_bound=1.0,
-        parameter_bound=4.0,
-        step=1.0,
-        backtracks=32,
-        max_patches=10000,
-        max_connections=1000000,
-        max_inputs=1000000,
-    ):
-        config = {
-            "seed": integer(seed, "seed"),
-            "settle_budget": integer(settle_budget, "settle_budget"),
-        }
-        for name, value in (
-            ("fan_in", fan_in),
-            ("backtracks", backtracks),
-            ("max_patches", max_patches),
-            ("max_connections", max_connections),
-            ("max_inputs", max_inputs),
-        ):
-            config[name] = integer(value, name, 1)
-        for name, value in (
-            ("initial_scale", initial_scale),
-            ("tolerance", tolerance),
-            ("state_prior", state_prior),
-            ("parameter_prior", parameter_prior),
-            ("state_bound", state_bound),
-            ("parameter_bound", parameter_bound),
-            ("step", step),
-        ):
-            config[name] = number(value, name)
-            if config[name] <= 0:
-                raise ValueError(f"{name} must be positive")
-        if config["initial_scale"] > config["parameter_bound"]:
-            raise ValueError("initial_scale must not exceed parameter_bound")
-        self._config = MappingProxyType(config)
-        self._owner = object()
-        self._nodes = {}
-        self._inputs = []
-        self._populations = []
-        self._outputs = []
-        self._built = False
-
-    @property
-    def config(self):
-        """Read-only resolved construction and numerical configuration."""
-        return self._config
-
-    def _name(self, name, prefix):
-        if self._built:
-            raise ValueError("A built layout is frozen; create a new Cortex")
-        if name is None:
-            index = 1
-            while f"{prefix}{index}" in self._nodes:
-                index += 1
-            name = f"{prefix}{index}"
-        if not isinstance(name, str) or not name or len(name) > 256:
-            raise ValueError("Names must be nonempty strings of at most 256 characters")
-        try:
-            name.encode("utf-8")
-        except UnicodeEncodeError as error:
-            raise ValueError("Names must be valid UTF-8 text") from error
-        if name in self._nodes:
-            raise ValueError(f"Duplicate layout name: {name}")
-        return name
-
-    def _sources(self, values, types):
-        if isinstance(values, types):
-            values = (values,)
-        try:
-            values = tuple(islice(values, len(self._nodes) + 1))
-        except TypeError as error:
-            raise ValueError("Connections require layout references") from error
-        if len(values) > len(self._nodes):
-            raise ValueError("Too many source references for this Cortex")
-        for value in values:
-            if (
-                not isinstance(value, types)
-                or not isinstance(value.name, str)
-                or self._nodes.get(value.name) is not value
-            ):
-                raise ValueError(
-                    "Connections must reference existing nodes in this Cortex"
-                )
-        if len(set(values)) != len(values):
-            raise ValueError("Duplicate source reference")
-        return values
-
-    def input(self, name, *, shape):
-        """Add a sensor with declared shape; samples stay fixed during a solve."""
-        name, shape = self._name(name, "input"), _shape(shape)
-        if (
-            math.prod(shape) + sum(i.size for i in self._inputs)
-            > self.config["max_inputs"]
-        ):
-            raise ValueError("Input sample budget exceeded")
-        node = Input(name, shape, self._owner)
-        self._inputs.append(node)
-        self._nodes[name] = node
-        return node
-
-    def _population(self, name, patches, inputs, observes):
-        patches = integer(patches, "patches", 1)
-        if (
-            patches + sum(p.patches for p in self._populations)
-            > self.config["max_patches"]
-        ):
-            raise ValueError("Processing patch budget exceeded")
-        node = Population(name, patches, inputs, observes, self._owner)
-        self._populations.append(node)
-        self._nodes[name] = node
-        return node
-
-    def column(self, name=None, *, patches, inputs=()):
-        """Add processing patches reading sensor or represented data ports."""
-        name = self._name(name, "column")
-        inputs = self._sources(inputs, (Input, Population))
-        return self._population(name, patches, inputs, ())
-
-    def observer(self, name=None, *, patches, inputs=(), observes):
-        """Add the same patches reading live states and exact prediction errors.
-
-        Observed populations must already exist, so residual readback has an
-        acyclic definition. Its energy feedback acts on lower populations in
-        the same joint solve; it is not a post-processing mode switch.
-        """
-        name = self._name(name, "observer")
-        inputs = self._sources(inputs, (Input, Population))
-        observes = self._sources(observes, (Population,))
-        if not observes:
-            raise ValueError("An observer must observe at least one population")
-        return self._population(name, patches, inputs, observes)
-
-    def output(self, name, *, shape, reads, indices=None):
-        """Expose selected patch coordinates; default indices start at zero."""
-        name, shape = self._name(name, "output"), _shape(shape)
-        (reads,) = self._sources((reads,), (Population,))
-        count = math.prod(shape)
-        if count > reads.patches:
-            raise ValueError("Output size exceeds its source population")
-        if indices is None:
-            indices = tuple(range(count))
-        else:
-            try:
-                indices = tuple(
-                    integer(i, "output index") for i in islice(indices, count + 1)
-                )
-            except TypeError as error:
-                raise ValueError(
-                    "Output indices must be an integer sequence"
-                ) from error
-        if len(indices) != count or any(i >= reads.patches for i in indices):
-            raise ValueError("Output indices do not match shape/source")
-        if len(set(indices)) != len(indices):
-            raise ValueError("Output indices must be distinct")
-        node = Output(name, shape, reads, indices, self._owner)
-        self._outputs.append(node)
-        self._nodes[name] = node
-        return node
-
-    def build(self):
-        """Resolve sparse wiring once and construct one jointly settling brain."""
-        return self._compile(self.config["max_connections"])
-
-    def _compile(self, edge_limit):
-        if self._built or not self._populations or not self._outputs:
-            raise ValueError(
-                "Build requires an unbuilt layout with patches and outputs"
-            )
-        rng = random.Random(self.config["seed"])
-        input_ranges, population_ranges = {}, {}
-        n_inputs = n_patches = 0
-        for source in self._inputs:
-            input_ranges[source.name] = range(n_inputs, n_inputs + source.size)
-            n_inputs += source.size
-        for population in self._populations:
-            population_ranges[population.name] = range(
-                n_patches, n_patches + population.patches
-            )
-            n_patches += population.patches
-        edges, seen = [], set()
-        for population in self._populations:
-            sources = [
-                ("input" if isinstance(s, Input) else "state", s)
-                for s in population.inputs
-            ]
-            sources += [
-                (kind, s) for s in population.observes for kind in ("state", "residual")
-            ]
-            targets = population_ranges[population.name]
-            source_ports = set()
-            for kind, source in sources:
-                if (kind, source.name) in source_ports:
-                    continue
-                source_ports.add((kind, source.name))
-                ranges = input_ranges if kind == "input" else population_ranges
-                indices = ranges[source.name]
-                fan_in = min(
-                    len(indices),
-                    max(self.config["fan_in"], math.ceil(len(indices) / len(targets))),
-                )
-                if len(edges) + len(targets) * fan_in > edge_limit:
-                    raise ValueError("Connection budget exceeded")
-                indices = list(indices)
-                rng.shuffle(indices)
-                for local_target, target in enumerate(targets):
-                    for slot in range(fan_in):
-                        source_index = indices[
-                            (local_target * fan_in + slot) % len(indices)
-                        ]
-                        edge = (kind, source_index, target)
-                        if edge not in seen:
-                            seen.add(edge)
-                            edges.append(edge)
-        graph = _repair.Graph(n_inputs, n_patches, tuple(edges))
-        fan_counts = [0] * n_patches
-        for _, _, target in edges:
-            fan_counts[target] += 1
-        scale = self.config["initial_scale"]
-        weights = tuple(
-            rng.uniform(-1.0, 1.0) * scale / math.sqrt(fan_counts[t])
-            for _, _, t in edges
-        )
-        layout = {
-            "inputs": [{"name": i.name, "shape": i.shape} for i in self._inputs],
-            "populations": [
-                {
-                    "name": p.name,
-                    "patches": p.patches,
-                    "inputs": [s.name for s in p.inputs],
-                    "observes": [s.name for s in p.observes],
-                }
-                for p in self._populations
-            ],
-            "outputs": [
-                {
-                    "name": o.name,
-                    "shape": o.shape,
-                    "reads": o.reads.name,
-                    "indices": o.indices,
-                }
-                for o in self._outputs
-            ],
-        }
-        brain = Brain(self, graph, weights, input_ranges, population_ranges, layout)
-        self._built = True
-        return brain
 
 
 class Brain:
@@ -668,6 +305,9 @@ class Brain:
     @classmethod
     def from_snapshot(cls, text):
         """Reconstruct the declared graph and validate all state before use."""
+        # Restore uses the ordinary builder; defer the import to avoid a cycle.
+        from .cortex import Cortex
+
         data = strict_json(text, MAX_CHECKPOINT_BYTES)
         fields = {
             "schema",

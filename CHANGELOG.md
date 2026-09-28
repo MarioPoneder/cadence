@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Separate runtime (`brain.py`), construction (`cortex.py`), population definitions
+  (`column.py`) and sensory/output boundaries (`ports.py`). Top-level imports
+  remain `from cadence import Cortex, Brain`; module imports use those focused
+  files. Remove the combined `cadence.drsn` module.
+- Preserve settlement and learning behavior, with exact before/after comparisons.
+  Bind checkpoints to all six semantic modules; source-bound snapshots from a
+  different implementation remain incompatible.
+- Clarify that minimalism concerns concepts, dependencies and indirection;
+  focused source files are encouraged.
+
 ## 0.43.0 — 2026-09-28
 
 - Make population DRSNs the public API: `Cortex` declares sensors, processing

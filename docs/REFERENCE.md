@@ -9,8 +9,11 @@ one jointly repaired state. Public exports are `Cortex`, `Brain`, `Input`,
 from cadence import Cortex, Brain, Input, Population, Output, SettlementError, __version__
 ```
 
-The same classes are available from `cadence.drsn`. See the
-[quickstart](QUICKSTART.md) for a first example and the
+Use the package-level imports above. `Brain` and `SettlementError` live in
+`brain.py`, `Cortex` in `cortex.py`, `Population` in `column.py`, and `Input` and
+`Output` with boundary shape/value validation in `ports.py`. Numerical repair
+and numeric/JSON validation remain private in `_repair.py` and `_validation.py`.
+See the [quickstart](QUICKSTART.md) for a first example and the
 [architecture guide](DRSN.md) for equations and layout patterns.
 
 ## Cortex: declare a layout
@@ -250,9 +253,10 @@ observation depth require separate application tests.
 
 Checkpoints contain schema, full configuration and layout, graph fingerprint,
 live state, weights, biases, admission count and latest event identity. They
-bind the exact source hashes of `drsn.py`, `_repair.py` and `_validation.py`.
-Loading refuses different source implementations even if package version labels
-match; compatibility is therefore stricter than version compatibility.
+bind the exact source hashes of `brain.py`, `cortex.py`, `column.py`, `ports.py`,
+`_repair.py` and `_validation.py`. Loading rejects previous source sets or
+different hashes even if package version labels match; compatibility is
+therefore stricter than version compatibility.
 
 Loading checks structure, configuration, deterministic topology, array lengths,
 finite values, bounds and event-ownership consistency. Restoration builds and

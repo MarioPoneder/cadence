@@ -27,6 +27,7 @@ settlement, supervised witness learning, diagnostics and continuation.
 ## Three pillars
 
 - **Minimalism:** one patch rule, a small public API, no runtime dependencies.
+  Focused modules keep each responsibility easy to find.
 - **User-friendliness:** explicit layouts, sensible defaults and runnable examples.
 - **Agent-friendliness:** exact contracts, inspectable state and explicit refusal.
 

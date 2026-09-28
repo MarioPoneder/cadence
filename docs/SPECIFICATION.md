@@ -70,13 +70,14 @@ consistent bounds, counts and identity. Duplicate JSON fields are invalid.
 Size is limited to 32 MiB. Reconstructed connections and dimensions are checked
 before installing a proposed continuation.
 
-A layout/configuration fingerprint and exact hashes of `drsn.py`, `_repair.py`
-and `_validation.py` bind compatibility. Source changes can invalidate a
-checkpoint, including changes between releases. `restore` only installs a
-validated continuation for the same graph/configuration; `from_snapshot`
-constructs one. Source identity and digest checks are integrity checks, not
-cryptographic authentication of a witness or proof of its truth. Treat caller
-provided files as bounded data, never executable code.
+A layout/configuration fingerprint and exact hashes of `brain.py`, `cortex.py`,
+`column.py`, `ports.py`, `_repair.py` and `_validation.py` bind compatibility.
+Previous source sets and different hashes are rejected, including across
+releases. `restore` only installs a validated continuation for the same
+graph/configuration; `from_snapshot` constructs one. Source identity and digest
+checks are integrity checks, not cryptographic authentication of a witness or
+proof of its truth. Treat caller-provided files as bounded data, never executable
+code.
 
 ## Evidence boundary
 

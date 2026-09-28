@@ -1,12 +1,15 @@
 """Population construction, causal coupling and transactional learning contracts."""
 
+import hashlib
 import json
 import math
+from importlib.resources import files
 
 import pytest
 
+from cadence import Brain, Cortex, SettlementError
 from cadence._repair import Graph, settle
-from cadence.drsn import IMPLEMENTATION, Brain, Cortex, SettlementError
+from cadence.brain import IMPLEMENTATION
 
 
 def small_brain(**options):
@@ -614,7 +617,7 @@ def test_layout_handles_are_immutable_owned_references():
 
 
 def test_recursive_handle_hash_and_repr_do_not_walk_ancestry(monkeypatch):
-    from cadence.drsn import Input
+    from cadence import Input
 
     cortex = Cortex(fan_in=1)
     sensor = cortex.input("sensor", shape=1)
@@ -650,7 +653,19 @@ def test_deep_observer_handle_can_be_used_without_python_recursion():
 
 
 def test_source_provenance_includes_validation_and_is_read_only():
-    assert set(IMPLEMENTATION) == {"_repair.py", "drsn.py", "_validation.py"}
+    assert set(IMPLEMENTATION) == {
+        "brain.py",
+        "cortex.py",
+        "column.py",
+        "ports.py",
+        "_repair.py",
+        "_validation.py",
+    }
+    for name, digest in IMPLEMENTATION.items():
+        assert (
+            digest
+            == hashlib.sha256(files("cadence").joinpath(name).read_bytes()).hexdigest()
+        )
     with pytest.raises(TypeError):
         IMPLEMENTATION["_validation.py"] = "0" * 64
     info = small_brain().inspect()
@@ -735,7 +750,7 @@ def test_array_protocol_accepts_nested_and_flat_values_without_a_dependency():
 
 
 def test_malformed_foreign_reference_names_raise_validation_errors():
-    from cadence.drsn import Input
+    from cadence import Input
 
     class Foreign:
         name = []
@@ -750,3 +765,22 @@ def test_malformed_foreign_reference_names_raise_validation_errors():
     forged = Input([], (1,), object())
     with pytest.raises(ValueError, match="existing nodes"):
         cortex.column("invalid", patches=1, inputs=(forged,))
+
+
+@pytest.mark.parametrize("module", sorted(IMPLEMENTATION))
+@pytest.mark.parametrize("operation", ["change", "remove"])
+def test_checkpoint_binds_every_semantic_module_before_restoring(module, operation):
+    brain = small_brain()
+    assert brain.observe({"sensor": [0.3, -0.2]}, {"answer": [0.4, -0.1]})["accepted"]
+    before = brain.snapshot()
+    tampered = json.loads(before)
+    if operation == "change":
+        tampered["implementation"][module] = "0" * 64
+    else:
+        del tampered["implementation"][module]
+    text = json.dumps(tampered)
+    with pytest.raises(ValueError, match="implementation mismatch"):
+        brain.restore(text)
+    assert brain.snapshot() == before
+    with pytest.raises(ValueError, match="implementation mismatch"):
+        Brain.from_snapshot(text)

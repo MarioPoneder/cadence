@@ -13,6 +13,9 @@ Read [the guide](docs/DRSN.md), [API reference](docs/REFERENCE.md) and
 | User-friendliness | A first-time user can construct, query, teach and save a brain from the quickstart. Names separate width, sensor shape and recursive observation. Configuration has validated defaults, errors explain the violated contract, and failure leaves continuation intact. |
 | Agent-friendliness | Public signatures, defaults, return fields, mutation rules and failure behavior match the reference. State and topology are inspectable; examples execute; checkpoint identity and retry semantics are explicit. No undocumented preprocessing or hidden fallback changes the task. |
 
+Minimalism measures concepts and dependencies, not file count. Separate
+responsibilities into focused modules when that makes ownership clearer.
+
 Before merging, explain how the change meets each applicable gate and run the
 checks below. Prefer improving an existing primitive to adding another. Do not
 add aliases or wrappers solely to make a second way to express the same thing.
@@ -30,10 +33,12 @@ Width counts processing states. Recursive depth comes from observation wiring.
 feedback to the same coupled solve. Do not implement recursion by chaining
 completed population predictions.
 
-The only runtime modules are the population builder/brain (`drsn.py`), numerical
-repair (`_repair.py`) and validation (`_validation.py`), plus package exports.
-Keep the public API small and application-independent. The package is standard
-library only, Python 3.11+.
+`brain.py` owns `Brain`, `SettlementError`, runtime state and checkpoints;
+`cortex.py` owns the `Cortex` builder and compiler; `column.py` owns immutable
+`Population` handles; `ports.py` owns `Input`, `Output` and boundary shape/value
+validation. Private `_repair.py` supplies numerical repair and `_validation.py`
+supplies numeric/JSON validation. Package exports keep the public API small and
+application-independent. The package is standard library only, Python 3.11+.
 
 ## Changes and verification
 
