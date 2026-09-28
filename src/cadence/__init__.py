@@ -12,7 +12,7 @@ from .wiring import (
     wire,
 )
 
-__version__ = "0.20.1"
+__version__ = "0.42.0"
 __all__ = [
     "BinnedFeatures",
     "ConstantFeatures",

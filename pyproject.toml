@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cadence-net"
-version = "0.20.1"
+version = "0.42.0"
 description = "Brains built from one element: the cortical column, a bounded self-reading settling patch with one repair law."
 readme = "README.md"
 requires-python = ">=3.11"
