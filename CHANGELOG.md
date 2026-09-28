@@ -4,7 +4,7 @@
 
 The cortical-column reset. The library is rebuilt around one element
 and one composition; the pre-reset tree is tagged `legacy-0.19-final`
-and docs/MIGRATION.md maps the old surface to the new one.
+for anyone who needs the old surface.
 
 - `CorticalColumn`: the qualified candidate element, vendored with
   identical executed code (origin sha256 `44654b3d…e3f07`): one settle

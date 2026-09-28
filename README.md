@@ -65,7 +65,6 @@ the development receipts (docs/VARIANTS.md).
 Docs: [REFERENCE](docs/REFERENCE.md) (API and every parameter),
 [VARIANTS](docs/VARIANTS.md) (flat, deep, wide - with the measured
 evidence), [ELEMENT](docs/ELEMENT.md) (the law, the equations, the
-qualification story and its limits), [MIGRATION](docs/MIGRATION.md)
-(coming from 0.19 and earlier).
+qualification story and its limits).
 
 MIT license.
