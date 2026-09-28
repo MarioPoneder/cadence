@@ -20,19 +20,26 @@ def run(model, steps=900):
     return sum(errors) / len(errors)
 
 
+def test_self_observation_is_the_default_and_needs_height():
+    assert make().self_observation is True
+    assert make().reflective is False  # height one has no modes to select
+    assert make(height=3).reflective is True
+    assert make(height=3, self_observation=False).reflective is False
+
+
 def test_height_one_is_unchanged_by_the_flag():
-    assert run(make(height=1, self_observation=True)) == run(make(height=1))
+    assert run(make(height=1)) == run(make(height=1, self_observation=False))
 
 
 def test_height_changes_answers_under_hidden_rule_switches():
-    plain = run(make(height=3))
-    reflective = make(height=3, self_observation=True)
+    plain = run(make(height=3, self_observation=False))
+    reflective = make(height=3)
     assert run(reflective) < plain / 5
     assert reflective.stats()["mode_switches"] > 0
 
 
 def test_reflection_state_round_trips():
-    model = make(height=3, self_observation=True)
+    model = make(height=3)
     run(model, 400)
     clone = Cortex.from_snapshot(model.snapshot())
     assert clone.snapshot() == model.snapshot() and clone.mode == model.mode
@@ -41,6 +48,6 @@ def test_reflection_state_round_trips():
 
 def test_invalid_reflection_parameters_are_rejected():
     with pytest.raises(ValueError):
-        make(height=2, self_observation=True, reflect_threshold=1.0)
+        make(height=2, reflect_threshold=1.0)
     with pytest.raises(ValueError):
-        make(height=2, self_observation=True, reflect_rate=0.0)
+        make(height=2, reflect_rate=0.0)

@@ -169,6 +169,17 @@ class Cortex:
     wiring_id : str or None
         Required to checkpoint custom callables. The application owns this semantic
         version identifier and must change it when their behavior changes.
+    self_observation : bool, default True
+        With ``height > 1``, watch the cortex's own prediction error and gate
+        every context by one of ``height`` self-selected modes: on a sustained
+        error spike, re-score the modes against the latest evidence and switch
+        to the best or recruit a fresh one. Height one is unaffected. False
+        disables the mode machinery entirely. Mode selection runs in ``observe``;
+        RL transitions keep the current mode.
+    reflect_rate : float, default .2
+        Fast surprise-trace rate in (0, 1]; the slow baseline uses a tenth of it.
+    reflect_threshold : float, default 2
+        Fast-to-slow surprise ratio above one that triggers mode re-evaluation.
 
     Numerical configuration is fixed at construction; ``learning_enabled`` and
     the diagnostic ``prior_ports_cut`` switch remain mutable bool properties.
@@ -246,7 +257,7 @@ class Cortex:
         max_pending: int = 10000,
         max_checkpoint_bytes: int = 8388608,
         wiring_id: str | None = None,
-        self_observation: bool = False,
+        self_observation: bool = True,
         reflect_rate: float = 0.2,
         reflect_threshold: float = 2.0,
     ):
@@ -1265,7 +1276,10 @@ class Cortex:
             "cursor": self._cursor,
             "cache_entries": len(self._cache),
             **(
-                {"mode": self._reflect["mode"], "mode_switches": self._reflect["switches"]}
+                {
+                    "mode": self._reflect["mode"],
+                    "mode_switches": self._reflect["switches"],
+                }
                 if self.reflective
                 else {}
             ),
