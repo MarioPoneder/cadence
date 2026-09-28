@@ -28,6 +28,7 @@ IMPLEMENTATION = MappingProxyType(
             "ports.py",
             "_repair.py",
             "_validation.py",
+            "_tensor.py",
         )
     }
 )
@@ -93,6 +94,7 @@ class Brain:
         self._event_id = -1
         self._event_digest = None
         self._admissions = 0
+        self._engine = None
         self._fingerprint = hashlib.sha256(
             canonical(
                 {"layout": layout, "config": dict(self.config), "edges": graph.edges}
@@ -203,6 +205,10 @@ class Brain:
 
     def _solve(self, inputs, clamps, *, learn, budget):
         config = self.config
+        if config["device"] != "python" and self._engine is None:
+            from ._tensor import TensorEngine
+
+            self._engine = TensorEngine(self.graph, config["device"], config["dtype"])
         result = _repair.settle(
             self.graph,
             inputs,
@@ -221,6 +227,7 @@ class Brain:
             parameter_bound=config["parameter_bound"],
             step=config["step"],
             backtracks=config["backtracks"],
+            _engine=self._engine,
         )
         result["outputs"] = {
             output.name: tuple(
@@ -367,8 +374,13 @@ class Brain:
         return result
 
     @classmethod
-    def from_snapshot(cls, text):
-        """Reconstruct the declared graph and validate all state before use."""
+    def from_snapshot(cls, text, *, device=None, dtype=None):
+        """Validate continuation, optionally selecting a different execution device.
+
+        Overrides are applied only after validating the original checkpoint.
+        Changing device without a dtype chooses that device's default precision.
+        The retained values stay unchanged; later numerical trajectories can differ.
+        """
         # Restore uses the ordinary builder; defer the import to avoid a cycle.
         from .cortex import Cortex
 
@@ -477,6 +489,22 @@ class Brain:
                 digest,
                 admissions,
             )
+            if device is not None or dtype is not None:
+                config = dict(brain.config)
+                if device is not None:
+                    config.update(device=device, dtype=dtype)
+                else:
+                    config["dtype"] = dtype
+                brain._config = Cortex(**config).config
+                brain._fingerprint = hashlib.sha256(
+                    canonical(
+                        {
+                            "layout": layout,
+                            "config": dict(brain.config),
+                            "edges": brain.graph.edges,
+                        }
+                    ).encode()
+                ).hexdigest()
             return brain
         except (KeyError, TypeError, OverflowError, AttributeError) as error:
             raise ValueError("Malformed population checkpoint") from error

@@ -353,6 +353,7 @@ def settle(
     backtracks=32,
     anchor_weights=None,
     anchor_biases=None,
+    _engine=None,
 ):
     """Repair eligible coordinates and freshly qualify the complete final state.
 
@@ -415,6 +416,25 @@ def settle(
             raise ValueError("Clamp index or value is outside its declared bounds")
         fixed[index] = value
     state = tuple(fixed.get(i, x) for i, x in enumerate(state))
+    if _engine is not None:
+        return _engine.settle(
+            inputs,
+            state,
+            weights,
+            biases,
+            clamps=fixed,
+            learn=learn,
+            budget=budget,
+            tolerance=tolerance,
+            state_prior=state_prior,
+            parameter_prior=parameter_prior,
+            state_bound=state_bound,
+            parameter_bound=parameter_bound,
+            step=step,
+            backtracks=backtracks,
+            anchor_weights=anchor_weights,
+            anchor_biases=anchor_biases,
+        )
     evaluations, proposals, rejected = 0, 0, 0
     visits = {"edge_visits": 0, "patch_visits": 0}
 

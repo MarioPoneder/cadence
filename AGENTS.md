@@ -9,7 +9,7 @@ Read [the guide](docs/DRSN.md), [API reference](docs/REFERENCE.md) and
 
 | Pillar | A change is ready only when |
 | --- | --- |
-| Minimalism | It uses the common patch/repair substrate, keeps the public API small, and adds no compatibility machinery, application-specific core rule or runtime dependency. A new abstraction must remove real duplication or enable a demonstrated general need. |
+| Minimalism | It uses the common patch/repair substrate, keeps the public API small, and adds no compatibility machinery, application-specific core rule or mandatory runtime dependency. Optional acceleration must preserve the same mathematical rule and admission contract. A new abstraction must remove real duplication or enable a demonstrated general need. |
 | User-friendliness | A first-time user can construct, query, teach and save a brain from the quickstart. Names separate width, sensor shape and recursive observation. Configuration has validated defaults, errors explain the violated contract, and failure leaves continuation intact. |
 | Agent-friendliness | Public signatures, defaults, return fields, mutation rules and failure behavior match the reference. State and topology are inspectable; examples execute; checkpoint identity and retry semantics are explicit. No undocumented preprocessing or hidden fallback changes the task. |
 
@@ -38,7 +38,10 @@ completed population predictions.
 `Population` handles; `ports.py` owns `Input`, `Output` and boundary shape/value
 validation. Private `_repair.py` supplies numerical repair and `_validation.py`
 supplies numeric/JSON validation. Package exports keep the public API small and
-application-independent. The package is standard library only, Python 3.11+.
+application-independent. The default engine is standard library only, Python 3.11+. Private `_tensor.py`
+provides optional PyTorch tensor execution with analytic derivatives; it supplies
+no autograd optimizer or separate learning rule. Final tensor proposals are
+qualified against the original float64 objective by the reference engine.
 `bootstrap.py` supplies bounded replay and unclamped readiness checks through
 those existing brain methods. It owns orchestration, not a second learning rule.
 
@@ -82,6 +85,9 @@ and refuse malformed shapes before expensive materialization.
 - Start with [the bootstrapping guide](docs/BOOTSTRAP.md). Default wiring includes
   every declared source coordinate; sparse `fan_in` is an explicit choice.
   An unused flat patch does not provide hidden capacity to a separate output.
+- Parallelize independent brains or environment collection; keep each brain's
+  experience admissions ordered. Device availability is checked on first solve;
+  do not silently substitute a different device.
 - Serialize calls to a brain. Checkpoints bind exact implementation sources;
   source hashes are compatibility checks, not authenticated witness evidence.
 

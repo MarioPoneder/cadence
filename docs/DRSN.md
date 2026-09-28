@@ -93,8 +93,11 @@ a solve. Feedback changes internal interpretations, not the supplied samples.
 
 Parallel branches need no arbitrary sequencing as completed neural answers.
 Each repair considers the current complete state; all participating populations
-are included in final numerical qualification. The implementation uses a
-synchronized reference schedule, not parallel hardware execution.
+are included in final numerical qualification. The default Python engine uses a synchronized reference schedule. Optional
+tensor execution parallelizes eligible arithmetic on CPU or GPU while retaining
+the same coupled objective and final numerical check; see
+[acceleration](ACCELERATION.md). Independent brains can also run in separate
+processes. Neither kind of parallelism chains completed population answers.
 
 ## What a processing patch computes
 
@@ -213,7 +216,9 @@ repair work separate in comparisons.
 The [API reference](REFERENCE.md) documents every constructor parameter, method,
 result field and shape rule. `brain.inspect()` reports exact patch, input and
 connection counts, sensor coverage and observation roles. `brain.config` is
-read-only. Width, depth and sparse wiring all change resource cost; see
+read-only. `Cortex(device="mps")`, `Cortex(device="cuda")` or
+`Cortex(device="cpu")` selects optional tensor execution; the default is
+`device="python"`. Width, depth and sparse wiring all change resource cost; see
 [layout variants](VARIANTS.md) and [bootstrapping and size](BOOTSTRAP.md).
 
 `brain.settle(inputs)` is a pure query; `brain.step(inputs)` retains qualified
@@ -234,7 +239,11 @@ assert restored.predict({"signal": [0.4]}) == learner.predict({"signal": [0.4]})
 ```
 
 Checkpoints bind the complete configuration, graph identity and the exact
-layout, repair and validation source hashes. Loading requires these sources to
+layout, repair, tensor and validation source hashes.
+`Brain.from_snapshot(saved, device="python")` explicitly transfers a compatible
+continuation to the reference engine while preserving its arrays and witness
+cursor. Device selection changes configuration identity; see
+[checkpoint transfer](ACCELERATION.md#move-a-continuation-between-devices). Loading requires these sources to
 match exactly, including across releases. A checkpoint is a continuation record,
 not proof that its witnesses came from a real environment. Queries and
 hypothetical interventions do not add witnesses. Restore validates the entire

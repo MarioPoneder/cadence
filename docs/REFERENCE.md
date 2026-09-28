@@ -13,6 +13,8 @@ Use the package-level imports above. `Brain` and `SettlementError` live in
 `brain.py`, `Cortex` in `cortex.py`, `Population` in `column.py`, and `Input` and
 `Output` with boundary shape/value validation in `ports.py`. Numerical repair
 and numeric/JSON validation remain private in `_repair.py` and `_validation.py`.
+Private `_tensor.py` supplies optional device execution of the same analytic
+repair law, with final qualification by the float64 reference engine.
 `bootstrap.py` orchestrates example replay and unclamped checks through the
 existing brain methods; it adds no solver or phase state.
 See the [quickstart](QUICKSTART.md) for a first example and the
@@ -37,6 +39,8 @@ Cortex(
     max_patches=10000,
     max_connections=1000000,
     max_inputs=1000000,
+    device="python",
+    dtype=None,
 )
 ```
 
@@ -61,10 +65,17 @@ for small numerical and learning examples, not universal task settings.
 | `max_patches` | Positive integer cap on processing patches across all populations. Sensor samples and output aliases do not consume this count. |
 | `max_connections` | Positive integer cap on compiled directed input, state and error-readback connections. |
 | `max_inputs` | Positive integer cap on scalar samples across all sensors. |
+| `device` | `"python"` (default) uses the standard-library reference engine. `"cpu"`, `"mps"`, `"cuda"` and `"cuda:N"` select optional PyTorch tensor execution. `"cuda"` resolves to `"cuda:0"`; `N` is a nonnegative device index. Availability is checked on the first solve. |
+| `dtype` | `None` resolves to `"float32"` for `"mps"`, otherwise `"float64"`. Explicit `"float32"` or `"float64"` selects tensor proposal precision. `"python"` requires `"float64"`; `"mps"` requires `"float32"`. Final qualification always uses Python float64 with the original data. |
 
 `cortex.config` is a read-only mapping of resolved settings. Construction caps
 count graph elements; they do not bound actual RAM or runtime. Larger inputs
-increase coverage cost even when `fan_in` is small.
+increase coverage cost even when `fan_in` is small. Tensor execution requires
+`pip install "cadence-net[gpu]"`. Declaring, building or loading a brain does
+not import PyTorch or allocate GPU resources. The first solve raises
+`ImportError` if PyTorch is missing or `ValueError` for an unavailable device;
+it never silently selects a different device. Device/precision affect numerical
+trajectories and cost, not the declared patch law. See [acceleration](ACCELERATION.md).
 
 ### Layout methods
 
@@ -121,7 +132,7 @@ is `patches`; observation nesting is defined by `observes`.
 
 ## Brain: query, continue and learn
 
-Construct with `Cortex.build()` or `Brain.from_snapshot(text)`; the `Brain`
+Construct with `Cortex.build()` or `Brain.from_snapshot`; the `Brain`
 constructor itself is an internal compilation interface. Use one serial owner
 per brain. Methods do not provide thread synchronization. Admission and restore
 are all-or-nothing under serial access, not concurrent database transactions.
@@ -134,7 +145,7 @@ are all-or-nothing under serial access, not concurrent database transactions.
 | `observe(inputs, targets, *, event_id=None, budget=None)` | Jointly repair state, weights and biases under at least one actual output witness. A qualified solve atomically retains state, parameters and event ownership; a refusal retains none of the proposal. |
 | `inspect()` | Owned layout description, resolved graph counts, topology, observation roles and continuation metadata. |
 | `snapshot()` | Complete continuation as a JSON string, limited to 32 MiB of UTF-8 text. |
-| `Brain.from_snapshot(text)` | Class method validating and reconstructing a new brain from compatible JSON. |
+| `Brain.from_snapshot(text, *, device=None, dtype=None)` | Class method validating the complete original snapshot before constructing a new brain. Optional execution overrides retain arrays and witness identity while changing configuration/fingerprint. See [checkpoints](#checkpoints). |
 | `restore(text)` | Validate before replacing this brain's continuation. Layout and configuration fingerprint must match. Returns `None`. |
 
 `budget` overrides `settle_budget` for an attempted solve and must be a
@@ -208,8 +219,9 @@ not a separately stored reverse edge.
 | `qualified` | Whether a fresh final evaluation satisfies the stationarity tolerance. |
 | `reason` | `"qualified"`, `"budget"` or `"line_search"`. |
 | `sweeps` | Accepted repair sweeps. |
-| `energy_history` | Initial energy followed by each accepted proposal's energy. |
-| `work` | Algorithmic work counts, including attempted work on refused solves. |
+| `energy_history` | With the Python engine, initial energy followed by each accepted proposal's energy. Tensor execution records its approximate device trajectory and any reference refinement; do not treat that combined trace as a float64 monotonicity certificate. |
+| `work` | Algorithmic work counts, including attempted work on refused solves. Tensor and reference qualification/refinement work are both counted. |
+| `execution` | Present for tensor solves: selected device/precision, tensor library version and work split; see below. |
 
 `step` adds `accepted`, equal to `qualified`. A newly attempted `observe` adds
 `accepted`, `duplicate=False` and `event_id`. An identical latest-event retry
@@ -224,6 +236,21 @@ traversals, including partial work before numeric failure. Proposals count
 line-search attempts; backtracks count rejected proposals, including the last
 rejection when line search fails. These are not CPU instruction counts or
 complete memory/latency measurements.
+
+Tensor `execution` contains `device`, `dtype`, `torch` (library version),
+`tensor_sweeps`, `reference_sweeps`, `reference_evaluations` and
+`reference_restart`. The last flag reports whether an unacceptable float64
+energy increase discarded the device candidate and restarted from the original
+coordinates. Reference checking may refine a device candidate, using only the
+remaining total sweep allowance. For a positive budget, float32 device repair
+uses at most `max(1, budget // 2)` accepted sweeps, reserving at least half of
+budgets of two or more for reference refinement. Float64 may use the full
+allowance. The device stopping hint `max(tolerance, 64 * dtype_epsilon)` never
+relaxes final admission tolerance. `sweeps` includes both stages. Returned
+`energy`, `predictions`, `errors`, `stationarity` and `qualified` come from the
+reference check using original inputs, exact clamps, original learning anchors
+and original frozen query parameters. Device proposals may follow a different
+trajectory; matching device results bit for bit is not promised.
 
 ### Inspector result
 
@@ -348,7 +375,7 @@ final checkpoint is the continuation used in the live phase.
 Checkpoints contain schema, full configuration and layout, graph fingerprint,
 live state, weights, biases, admission count and latest event identity. They
 bind the exact source hashes of `brain.py`, `cortex.py`, `column.py`, `ports.py`,
-`_repair.py` and `_validation.py`. Loading rejects previous source sets or
+`_repair.py`, `_tensor.py` and `_validation.py`. Loading rejects previous source sets or
 different hashes even if package version labels match; compatibility is
 therefore stricter than version compatibility.
 
@@ -356,7 +383,19 @@ Loading checks structure, configuration, deterministic topology, array lengths,
 finite values, bounds and event-ownership consistency. Restoration builds and
 validates a complete proposal before replacing continuation. Newly loaded brains
 own different handles; address them by names when using reconstructed layouts.
-`restore` retains the receiving brain's existing handles.
+`restore` retains the receiving brain's existing handles and requires the
+complete configuration, including device and dtype, to match.
+
+`Brain.from_snapshot(text, device=..., dtype=...)` first validates the complete
+original snapshot against its saved configuration and current implementation.
+An override cannot bypass an invalid fingerprint, source mismatch or malformed
+array. Only then are explicit execution settings applied. With both overrides
+omitted, saved settings are retained. Supplying `device` without `dtype` uses
+the new device's default precision; supplying only `dtype` preserves the saved
+device. Arrays, bounds, topology and event ownership are preserved exactly;
+execution changes alter the configuration fingerprint. Choosing float32 does
+not round stored checkpoint arrays: conversion occurs for device proposals
+on the next solve. Hardware availability remains a first-solve check.
 
 JSON is data, not executable deserialization. A structurally valid checkpoint
 does not authenticate its maker, prove its witness history or certify current

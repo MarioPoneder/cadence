@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.48.0 — 2026-09-28
+
+- Add optional vectorized CPU, Apple Metal and NVIDIA CUDA execution with
+  `Cortex(device=..., dtype=...)` and the `gpu` installation extra. The default
+  remains dependency-free Python float64. Tensor execution uses the same patch
+  energy and analytic derivatives; recursive observers settle jointly.
+- Qualify tensor candidates against original inputs, witnesses and anchors
+  using the float64 reference engine. Preserve exact frozen query parameters
+  and clamp values. Float32 device repair reserves part of the existing sweep
+  budget for reference refinement; tolerance and total budget are not relaxed.
+- Reduce device synchronization, cache graph indices and batch independent
+  patch arithmetic within each error-dependency level. Track combined device
+  and reference work, refinement and restart in solve diagnostics.
+- Support explicit device/precision changes through `Brain.from_snapshot` after
+  complete checkpoint validation. The new engine module participates in exact
+  source identity; earlier engine snapshots remain incompatible.
+- Add a complete parallel simulated-lives example using standard-library
+  processes with independent brains and ordered witnessed experience. Document
+  hardware choice, precision, checkpoint transfer and complete cost accounting.
+- Add independent analytic-gradient and state-custody tests, actual Apple GPU
+  qualification/learning tests, optional CPU tensor CI and base-install checks.
+  CUDA execution is implemented but has not been hardware-tested in this release.
+
 ## 0.47.0 — 2026-09-28
 
 - Query repair computes state derivatives without allocating or validating

@@ -75,7 +75,12 @@ prevents sufficient decrease; ordinary steps retain that decrease requirement.
 All eligible coordinates share
 this procedure. The implementation is a
 synchronized reference solver with a global energy check, not an asynchronous
-local-message protocol.
+local-message protocol. Optional tensor execution uses the same equations and
+analytic derivatives, parallelizing eligible arithmetic on CPU/GPU. Device
+proposals are checked against the original float64 objective and exact clamps;
+reference refinement may use the remaining sweep budget. Device rounding can
+change the intermediate path, but never relaxes the final qualification
+threshold. See [execution and precision](ACCELERATION.md).
 
 ## What qualification means
 

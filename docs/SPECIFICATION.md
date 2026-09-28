@@ -70,6 +70,42 @@ raise `ValueError`. Numerical overflow may refuse a proposal or raise
 `ValueError`; neither outcome commits continuation. Applications must not act
 on diagnostic outputs from a refused solve.
 
+## Optional tensor execution
+
+`device="python"` selects the standard-library float64 reference solver.
+Optional `"cpu"`, `"mps"` and `"cuda:N"` execution computes the same patch energy
+and analytic derivatives with PyTorch tensors; `"cuda"` selects `"cuda:0"`.
+MPS uses float32. CPU/CUDA default to float64 and also accept float32.
+No autograd optimizer or separate learning rule is introduced. Tensor code
+parallelizes arithmetic within residual-dependency levels and retains returning
+influence through every level.
+
+Device arithmetic is a proposal mechanism. Final diagnostics and admission
+are recomputed by the reference engine with the original sensory values,
+exact output/intervention clamps, original pre-experience parameter anchors,
+and original frozen query parameters. The requested tolerance is never
+relaxed to accommodate float32. Reference refinement, or restart after an
+unacceptable float64 energy increase, consumes only the remaining total
+accepted-sweep budget. With a positive budget, float32 device repair is capped
+at `max(1, budget // 2)` accepted sweeps; budgets of two or more retain at least
+half for reference refinement. Float64 may use the full allowance. The device
+stopping hint is `max(tolerance, 64 * dtype_epsilon)`, while final qualification
+always uses the original `tolerance`. A refused solve still retains nothing.
+
+The device may take different steps or reach a different stationary point.
+Its `energy_history` includes approximate device arithmetic and any subsequent
+reference refinement, rather than a float64 proof of decrease at each device
+step. The `execution` diagnostic identifies device, precision and reference
+work. Precision and hardware comparisons must measure behavioral accuracy,
+refusals and full cost, not merely device kernel timing.
+
+Tensor dependencies and device availability are checked lazily on first solve.
+Missing PyTorch raises `ImportError`; an unavailable selected device raises
+`ValueError`. Neither condition silently selects another device. Reference
+qualification/refinement is an explicit part of tensor execution, not an
+unreported hardware substitution. Independent brains may run in separate
+processes; admissions to any one brain remain serial.
+
 ## Continuation and admission
 
 The **bootstrapping phase** prepares and checks a brain using representative
@@ -107,10 +143,16 @@ Size is limited to 32 MiB. Reconstructed connections and dimensions are checked
 before installing a proposed continuation.
 
 A layout/configuration fingerprint and exact hashes of `brain.py`, `cortex.py`,
-`column.py`, `ports.py`, `_repair.py` and `_validation.py` bind compatibility.
+`column.py`, `ports.py`, `_repair.py`, `_tensor.py` and `_validation.py` bind
+compatibility.
 Previous source sets and different hashes are rejected, including across
 releases. `restore` only installs a validated continuation for the same
-graph/configuration; `from_snapshot` constructs one. Source identity and digest
+graph/configuration; `from_snapshot` constructs one. Optional `device`/`dtype`
+overrides on `from_snapshot` apply only after the saved snapshot has passed
+its original complete validation. They preserve arrays and admission identity
+but update resolved execution configuration and its fingerprint. Supplying a
+new device with no dtype chooses that device's default. `restore` has no
+overrides and requires an exact configuration match. Source identity and digest
 checks are integrity checks, not cryptographic authentication of a witness or
 proof of its truth. Treat caller-provided files as bounded data, never executable
 code.

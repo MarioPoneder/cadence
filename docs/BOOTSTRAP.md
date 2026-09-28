@@ -259,3 +259,30 @@ is good but new cases fail, examine data coverage and generalization. Compare
 ordinary composition and recursive observation at declared capacity and work.
 Report evaluations/backtracks as well as wall time; more observers can add cost
 without improving a task already solved by a small model.
+
+## Accelerate simulated experience
+
+Use `Cortex(device="mps")` or `Cortex(device="cuda")` with the optional
+`cadence-net[gpu]` installation to run repair proposals on a GPU. Use
+`device="cpu"` for tensor execution on CPU. `bootstrap`, `observe` and live
+queries keep their existing interfaces and witness rules. Admission always
+uses the original float64 objective and requested tolerance, including when
+tensor proposals use float32. See [the acceleration guide](ACCELERATION.md).
+
+Environment collection and independent brains can run in parallel. The runnable
+[parallel bootstrap example](../examples/parallel_bootstrap.py) owns one small
+simulated body and one brain per process. Each brain predicts fresh outcomes
+before admitting the measured outcomes during its live phase:
+
+```sh
+python examples/parallel_bootstrap.py --lives 4 --workers 2
+```
+
+A single brain's experiences remain ordered: each witness is anchored to the
+parameters retained by the preceding one. Collecting data concurrently does
+not justify concurrent mutation or averaging independently learned brains.
+For one brain, queue simulator witnesses with explicit event identities and
+admit them serially. Count simulator steps, distinct witnesses, replayed
+presentations, refused solves and total wall time separately. GPU execution
+and faster simulation do not provide missing information or guarantee that
+added observers improve acquisition.

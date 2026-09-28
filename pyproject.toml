@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cadence-net"
-version = "0.47.0"
+version = "0.48.0"
 description = "Deep Recursive Settlement Networks: processing populations and observers learning and settling together."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -31,6 +31,7 @@ Issues = "https://github.com/muellerberndt/cadence/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
+gpu = ["torch>=2.5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cadence"]

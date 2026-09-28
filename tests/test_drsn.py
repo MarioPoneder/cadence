@@ -703,6 +703,7 @@ def test_source_provenance_includes_validation_and_is_read_only():
         "ports.py",
         "_repair.py",
         "_validation.py",
+        "_tensor.py",
     }
     for name, digest in IMPLEMENTATION.items():
         assert (

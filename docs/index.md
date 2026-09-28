@@ -10,6 +10,7 @@ Both phases use the same mechanism; neither implies an automatic mode switch.
 | --- | --- |
 | [Quickstart](QUICKSTART.md) | Build, query, learn and save a small brain |
 | [Bootstrapping and size](BOOTSTRAP.md) | Starting configurations, representative experience and task checks |
+| [GPU execution and parallel experience](ACCELERATION.md) | CPU/GPU selection, numerical checks and independent simulated lives |
 | [DRSN guide](DRSN.md) | Multimodal layouts and how recursive observation works |
 | [Layout variants](VARIANTS.md) | Width, parallel branches, depth and connection cost |
 | [Processing patch](ELEMENT.md) | Local state, prediction errors, repair and retained relations |

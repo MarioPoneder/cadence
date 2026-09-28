@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import random
+import re
 from itertools import islice
 from types import MappingProxyType
 
@@ -36,6 +37,12 @@ class Cortex:
     ``max_inputs``, ``max_patches`` and ``max_connections`` bound construction.
     They count scalar sensor samples, processing patches and directed signal
     connections respectively, not physical process memory or latency.
+
+    ``device`` selects ``python`` (default), tensor ``cpu``, Apple ``mps``, or
+    NVIDIA ``cuda``/``cuda:N``. ``dtype`` defaults to float64 except on MPS,
+    which requires float32. Tensor devices need the optional ``gpu`` extra;
+    availability is checked on first solve. Final admission uses float64
+    reference checks against the original inputs, witnesses and anchors.
     """
 
     def __init__(
@@ -55,8 +62,27 @@ class Cortex:
         max_patches=10000,
         max_connections=1000000,
         max_inputs=1000000,
+        device="python",
+        dtype=None,
     ):
+        if not isinstance(device, str) or not re.fullmatch(
+            r"python|cpu|mps|cuda(?::[0-9]+)?", device
+        ):
+            raise ValueError("device must be python, cpu, mps, cuda or cuda:N")
+        if device == "cuda":
+            device = "cuda:0"
+        dtype = (
+            ("float32" if device == "mps" else "float64") if dtype is None else dtype
+        )
+        if dtype not in ("float32", "float64"):
+            raise ValueError("dtype must be float32 or float64")
+        if device == "python" and dtype != "float64":
+            raise ValueError("The Python reference engine uses float64")
+        if device == "mps" and dtype != "float32":
+            raise ValueError("Metal (mps) requires float32; final checks use float64")
         config = {
+            "device": device,
+            "dtype": dtype,
             "seed": integer(seed, "seed"),
             "settle_budget": integer(settle_budget, "settle_budget"),
             "fan_in": None if fan_in is None else integer(fan_in, "fan_in", 1),

@@ -23,10 +23,11 @@ The aim is a straightforward replacement for legacy deep neural networks,
 including transformers, built around persistent recursive settlement.
 Performance comparisons are ongoing.
 
-Cadence implements this population architecture in pure
-Python, using only the standard library. Every processing and observer patch
-uses one local prediction relation. The compiled brain supports joint
-settlement, supervised witness learning, diagnostics and continuation.
+Cadence implements this population architecture with a standard-library Python
+engine and optional tensor execution on CPU, Apple Silicon GPU or NVIDIA GPU.
+Every processing and observer patch uses one local prediction relation. The
+compiled brain supports joint settlement, supervised witness learning,
+diagnostics and continuation.
 
 In the **bootstrapping phase**, guided experience teaches the brain its basic
 abilities. In the **live phase**, that same brain acts in its environment and
@@ -35,7 +36,7 @@ patch rule and retained world model.
 
 ## Three pillars
 
-- **Minimalism:** one patch rule, a small public API, no runtime dependencies.
+- **Minimalism:** one patch rule, a small public API, no required runtime dependencies.
   Focused modules keep each responsibility easy to find.
 - **User-friendliness:** explicit layouts, sensible defaults and runnable examples.
 - **Agent-friendliness:** exact contracts, inspectable state and explicit refusal.
@@ -45,14 +46,27 @@ Every core change is reviewed against all three. The
 
 ## Install
 
-Python 3.11 or later; no runtime dependencies:
+Python 3.11 or later; the default engine has no runtime dependencies:
 
 ```sh
-python -m pip install --upgrade "cadence-net>=0.47.0"
+python -m pip install --upgrade "cadence-net>=0.48.0"
 ```
 
 If your package index has not listed a new release yet, its wheel is also
 available from [GitHub Releases](https://github.com/muellerberndt/cadence/releases/latest).
+
+For GPU execution, install the optional tensor extra:
+
+```sh
+python -m pip install --upgrade "cadence-net[gpu]"
+```
+
+Choose `Cortex(device="mps")` for an Apple Silicon GPU or
+`Cortex(device="cuda")` for a compatible NVIDIA GPU. The same brain methods
+and learning rule apply. Final admission is checked against the original
+float64 objective. Small brains can be faster with the default Python engine;
+see [GPU execution and parallel experience](docs/ACCELERATION.md) for precision,
+measurement and independent simulated lives.
 
 ## Declare the brain
 
@@ -165,6 +179,7 @@ depth require further controlled experiments. Follow the
 | [DRSN guide](docs/DRSN.md) | Population layouts, equations, learning, all configuration, diagnostics and checkpoints |
 | [Quickstart](docs/QUICKSTART.md) | Inputs, settlement, learning and saved continuation |
 | [Bootstrapping and live phases](docs/BOOTSTRAP.md) | Calibration, guided experience, small starting layouts and readiness checks |
+| [GPU execution and parallel experience](docs/ACCELERATION.md) | Device selection, precision, checkpoint transfer and concurrent simulated lives |
 | [API reference](docs/REFERENCE.md) | Every public class, method and configuration parameter |
 | [Mathematical specification](docs/SPECIFICATION.md) | Guarantees, qualification and evidence boundaries |
 
