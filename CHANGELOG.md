@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- mypy strict checks `cadence.record_ports` as a whole: its private scan,
+  adjoint and interface checks carry types, and its file-level ignore, the
+  last one in the package, is gone. `Settled.paths` is typed
+  `list[RecordPath]`, and `build(groups=...)` takes one sequence of group
+  sizes per cortex, as `RecordPatchNet` reads it. Contributed by
+  @bastitva0-blip (#48).
+
 ## 0.19.0 — 2026-09-28
 
 - Add opt-in `PatchNet(..., solver="hybrid", refinement_steps=64)` for CPU
