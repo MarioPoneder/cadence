@@ -191,6 +191,16 @@ checks, not measured causal effects or accuracy. Zero weights and saturation
 can still suppress influence. Parallel branches may deliberately use different
 sensors. See [layout variants](VARIANTS.md).
 
+Check the expressive capacity of supplied encodings as well as their size.
+For example, multiplying a centered category vector by context basis functions
+creates interaction features whose category mean is zero in every context.
+A flat patch with one bias then cannot express independently varying mean
+**drives** for those contexts. Include the public context basis itself when
+that variation is needed, or test a connected nonlinear representation. The
+cases can have distinct input vectors and still exceed a flat patch's capacity.
+For a small finite task, inspect rank or fit the required pre-activation drives
+before attributing underfitting to settlement or recursive depth.
+
 Increasing `state_bound` permits larger clamps; it does **not** rescale `tanh`.
 For an output patch that no other patch reads or observes, unconstrained free
 settlement gives `x = tanh(drive) / (1 + state_prior)`, so its magnitude stays
@@ -224,6 +234,11 @@ from reward alone. A weak teacher also limits what imitation can achieve.
 This follows the dataset-aggregation approach studied by
 [Ross, Gordon and Bagnell (2011)](https://proceedings.mlr.press/v15/ross11a.html);
 it is a bootstrapping procedure, not an additional Cadence primitive.
+
+Report rare but important decisions separately: if almost every demonstration
+says to keep moving straight, high aggregate agreement can hide failure to
+acquire any evasive maneuver. Balanced replay is a supplied curriculum choice;
+count repeated presentations and recheck ordinary behavior after reweighting.
 
 ## Diagnose before scaling
 
