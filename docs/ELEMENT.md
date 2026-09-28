@@ -50,7 +50,8 @@ The **bootstrapping phase** and **live phase** use this same patch law. They
 describe when an application prepares and runs its brain, not separate
 mathematical modes. Actual witnesses can support learning in either phase.
 
-A query freezes parameters and repairs live state. `step` can retain that live
+A query freezes parameters and computes repair derivatives for live state;
+unused parameter derivatives are not evaluated. `step` can retain that live
 state. `observe` fixes witnessed output coordinates and also repairs weights
 and biases, adding a prior anchored to the pre-experience parameters:
 

@@ -48,7 +48,7 @@ Every core change is reviewed against all three. The
 Python 3.11 or later; no runtime dependencies:
 
 ```sh
-python -m pip install --upgrade "cadence-net>=0.46.0"
+python -m pip install --upgrade "cadence-net>=0.47.0"
 ```
 
 If your package index has not listed a new release yet, its wheel is also

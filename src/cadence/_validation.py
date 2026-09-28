@@ -15,7 +15,9 @@ def integer(value, name: str, minimum: int = 0) -> int:
 
 
 def number(value, name: str, *, positive: bool = False) -> float:
-    if isinstance(value, bool) or not isinstance(value, (Real, Decimal)):
+    if type(value) not in (float, int) and (
+        isinstance(value, bool) or not isinstance(value, (Real, Decimal))
+    ):
         raise ValueError(f"{name} must be a finite real number")
     try:
         result = float(value)

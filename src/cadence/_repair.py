@@ -140,6 +140,8 @@ def _evaluate(
     anchor_biases,
     parameter_prior,
     visits=None,
+    *,
+    parameter_gradients=True,
 ):
     predictions = [0.0] * graph.n_patches
     errors = [0.0] * graph.n_patches
@@ -169,8 +171,8 @@ def _evaluate(
         energy = 0.5 * math.fsum(e * e for e in errors)
         energy += 0.5 * state_prior * math.fsum(x * x for x in state)
         grad_state = [state_prior * x for x in state]
-        grad_weights = [0.0] * len(weights)
-        grad_biases = [0.0] * len(biases)
+        grad_weights = [0.0] * len(weights) if parameter_gradients else []
+        grad_biases = [0.0] * len(biases) if parameter_gradients else []
         adj_error = list(errors)
         for target in reversed(graph.residual_order):
             if visits is not None:
@@ -178,17 +180,18 @@ def _evaluate(
             adj = adj_error[target]
             grad_state[target] += adj
             adj_prediction = -adj * (1.0 - predictions[target] ** 2)
-            grad_biases[target] += adj_prediction
+            if parameter_gradients:
+                grad_biases[target] += adj_prediction
             for edge_index in graph.incoming[target]:
                 if visits is not None:
                     visits["edge_visits"] += 1
                 kind, source, _ = graph.edges[edge_index]
-                grad_weights[edge_index] += adj_prediction * signals[edge_index]
-                influence = adj_prediction * weights[edge_index]
+                if parameter_gradients:
+                    grad_weights[edge_index] += adj_prediction * signals[edge_index]
                 if kind == "state":
-                    grad_state[source] += influence
+                    grad_state[source] += adj_prediction * weights[edge_index]
                 elif kind == "residual":
-                    adj_error[source] += influence
+                    adj_error[source] += adj_prediction * weights[edge_index]
         if anchor_weights is not None:
             delta_weights = [
                 w - a for w, a in zip(weights, anchor_weights, strict=True)
@@ -429,6 +432,7 @@ def settle(
             anchor_biases,
             parameter_prior,
             visits,
+            parameter_gradients=learn,
         )
 
     current = compute(state, weights, biases)
@@ -470,14 +474,16 @@ def settle(
                     _clip(x - trial_step * g, parameter_bound)
                     for x, g in zip(biases, current["gradient_biases"], strict=True)
                 )
+            groups = ((state, next_state, "gradient_state"),)
+            if learn:
+                groups += (
+                    (weights, next_weights, "gradient_weights"),
+                    (biases, next_biases, "gradient_biases"),
+                )
             try:
                 slope = math.fsum(
                     g * (new - old)
-                    for old_values, new_values, key in (
-                        (state, next_state, "gradient_state"),
-                        (weights, next_weights, "gradient_weights"),
-                        (biases, next_biases, "gradient_biases"),
-                    )
+                    for old_values, new_values, key in groups
                     for old, new, g in zip(
                         old_values, new_values, current[key], strict=True
                     )
@@ -515,11 +521,7 @@ def settle(
                 accepted = False
             if accepted:
                 next_step = _next_step(
-                    (
-                        (state, next_state, "gradient_state"),
-                        (weights, next_weights, "gradient_weights"),
-                        (biases, next_biases, "gradient_biases"),
-                    ),
+                    groups,
                     current,
                     proposed,
                     step,

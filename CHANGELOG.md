@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.47.0 — 2026-09-28
+
+- Query repair computes state derivatives without allocating or validating
+  unused parameter derivatives. This fixes a finite-input query that failed
+  solely because a derivative of a frozen weight overflowed. Learning and the
+  full derivative evaluator still validate parameter gradients.
+- Remove frozen parameter coordinates from query line-search and secant work.
+  Joint state/error feedback, energy, qualification, refusal and learning rules
+  are unchanged. The public API gains no new flag or primitive.
+- Avoid abstract-number type checks for native Python floats and integers;
+  retain finite-value, positive-value, boolean, extended-real and conversion
+  validation. This reduces repeated validation overhead in larger layouts.
+- Add regressions for the public query failure, exact full-result parity through
+  recurrent state/error graphs, learning and numeric validation. Document the
+  distinction between recursive observation depth and planning horizon.
+- Checkpoints remain bound to exact engine sources; these engine changes require
+  checkpoints produced by the new implementation.
+
 ## 0.46.0 — 2026-09-28
 
 - Add `bootstrap(brain, examples, checks=..., max_error=...)`: one standard-library

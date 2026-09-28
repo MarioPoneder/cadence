@@ -29,6 +29,14 @@ all transitive dependencies. A solve qualifies only when the full projected
 stationarity residual is at most `tolerance` over every eligible coordinate.
 Output clamps are excluded; learned parameters are included during admission.
 
+Query solves omit derivatives of frozen parameters and exclude those coordinates
+from line-search and secant calculations. State derivatives still include every
+returning constraint through live state and error readback. An overflow confined
+to an unused parameter derivative therefore cannot reject an otherwise valid
+query. Learning and the mathematical `evaluate` function compute and validate
+the full parameter derivatives. Finite energy and all computed derivatives
+remain mandatory; input validation is never skipped.
+
 The first trial uses `step`. After acceptance, let `s` be the change in eligible
 coordinates and `y` the change in their exact gradient under the same objective.
 The next trial uses the scalar secant estimate `dot(s,s) / dot(s,y)` when its
