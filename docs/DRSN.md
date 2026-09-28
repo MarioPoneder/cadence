@@ -112,11 +112,21 @@ E = 1/2 sum_i e_i² + state_prior/2 sum_i x_i²
 ```
 
 Prediction `p_i` and error `e_i` are recomputed exactly. They are not separately
-adjustable reports that could hide a disagreement. Error-readback definitions
-must be acyclic: a newly declared observer can read existing populations,
-including existing observers. State coupling and its returning influence remain
-part of one joint problem. This restriction is on how a derived quantity is
-defined, not a feed-forward execution of the brain.
+adjustable reports that could hide a disagreement. The public builder accepts
+only previously declared source populations, so **both state and error-reading
+connections are acyclic**. All their eligible states settle together. Returning
+energy derivatives let a later population influence an earlier one; this is
+different from an independently learned reverse state connection. The private
+numerical kernel supports recurrent state contacts, but the public layout does
+not expose them.
+
+The positive `state_prior` is part of this model, not just a numerical setting.
+In the idealized zero-penalty limit, an unclamped layered query with fixed
+parameters and state bounds at least one has a unique stationary solution:
+forward substitution with every prediction error zero. Zero penalty is not a
+supported configuration. At positive penalty, or with output/intervention
+clamps, returning constraints can change earlier states. Joint settlement alone
+does not establish recurrent working memory or a useful recursive-depth effect.
 
 Repair uses the analytic derivatives of this energy with respect to eligible
 coordinates, projected into bounded boxes. Derivatives include the effects of
@@ -259,6 +269,7 @@ The suite covers parallel and nested layouts, multimodal shapes, exact patch
 counts, sparse source coverage, live-error derivatives, reciprocal intervention,
 energy descent, bounded stationary solutions, refusal, actual acquisition,
 event custody, configuration and checkpoint validation. Finite differences
-check derivatives through recursive error readback and recurrent state contacts.
+check derivatives through recursive error readback and, in the private numerical
+kernel, recurrent state contacts.
 Larger application results and advantages over competing architectures require
 separate controlled tests.

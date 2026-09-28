@@ -15,6 +15,11 @@ are in [the API reference](REFERENCE.md).
 - `inputs` connects samples or live population states. `observes` connects live
   states and derived prediction errors. Those constraints affect the same joint
   repair; observers do not query completed lower-layer answers.
+- Public declarations can read only existing populations. Both state-reading
+  and error-reading connections therefore follow declaration order. Returning
+  energy derivatives couple their states without creating separately learned
+  reverse connections. Recurrent state graphs supported by the private kernel
+  are not a public builder feature.
 - `Brain` owns state, relation weights and biases. Public state and parameter
   views are tuples; configuration is read-only; returned diagnostics are owned
   copies. Callers serialize access to each brain.

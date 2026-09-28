@@ -153,6 +153,45 @@ The five-patch confirmation used four distinct examples replayed for 4,096
 updates per model, then tested nearby unseen inputs across three initializations.
 Both ordinary and recursive layouts succeeded; it did not show a depth advantage.
 
+## A qualified starting recipe for small coordinate relations
+
+For immediate scalar regression, two-output linear mixing and a single `tanh`
+relation, start with one directly sensing processing patch per output:
+
+```python
+cortex = Cortex(seed=0)
+signal = cortex.input("signal", shape=1)
+response = cortex.column("response", patches=1, inputs=signal)
+cortex.output("answer", shape=1, reads=response)
+brain = cortex.build()
+teaching = [({"signal": [x]}, {"answer": [0.6 * x]}) for x in (-0.8, 0.8, -0.4, 0.4)]
+checks = [({"signal": [x]}, {"answer": [0.6 * x]}) for x in (-0.6, 0.6, -0.2, 0.2)]
+report = bootstrap(brain, teaching, checks=checks, max_error=0.1, epochs=20, seed=0)
+assert report["passed"], report
+```
+
+Keep inputs and outputs in these normalized units. The selected settings use
+the unchanged defaults: `parameter_prior=0.1`, `state_prior=0.01`,
+`settle_budget=2048`, `tolerance=1e-6`, and bounds `1` for state and `4` for
+parameters. Width and data change with the declared relation; no source edits
+are needed. Save the units and data split alongside `brain.snapshot()`.
+
+The [bounded defaults study](https://github.com/muellerberndt/cadence/issues/66)
+screened nine recipes over two development seeds per family, then froze settings
+before 30 fresh seed blocks. All 90 family/seed cases passed acquisition,
+stable replay, witnessed sign reversal, explicitly taught restoration and
+checkpoint continuation. Independent assessment errors stayed below `0.12`
+in original units; all cases met the declared two-second limit.
+
+This measures initialization/replay sensitivity on three fixed tasks. The 30
+shared seed blocks give a one-sided 95% reference lower reliability bound of
+90.5%, not 99% or a guarantee for new tasks. Restoration is supervised relearning,
+not protected long-term memory. Recursive layouts had development checks only.
+Aliased inputs and oversized targets failed readiness; multiplying input scale
+by 100 also caused failures. Inspect units, coverage and unclamped errors before
+increasing depth or replay. Delayed reward credit and raw perception are outside
+this recipe's support envelope.
+
 ## Supply an informative, well-scaled teaching stream
 
 `observe(inputs, targets)` learns an actual desired output or measured outcome.

@@ -56,7 +56,7 @@ for small numerical and learning examples, not universal task settings.
 | `initial_scale` | Positive initial weight scale, no greater than `parameter_bound`. Each weight is sampled uniformly in `[-initial_scale, initial_scale]` and divided by the square root of its target's total incoming connection count. Biases and live state start at zero. |
 | `settle_budget` | Nonnegative maximum accepted repair sweeps per solve. Zero can qualify an already stationary state. A sweep may evaluate several rejected proposals. |
 | `tolerance` | Positive maximum complete projected-gradient residual for qualification. An absolute numerical threshold, not prediction accuracy. |
-| `state_prior` | Positive coefficient of the quadratic activity penalty. Changes the model's preferred states, not merely solver speed. |
+| `state_prior` | Positive coefficient of the quadratic activity penalty. Changes preferred states and returning influence in free layered queries, not merely solver speed. Zero is unsupported. |
 | `parameter_prior` | Positive coefficient anchoring weights and biases to their pre-experience values during `observe`. This anchor stays fixed throughout the experience solve. |
 | `state_bound` | Positive absolute bound on processing-patch states and output/intervention clamps. Sensor values are not clipped to it. |
 | `parameter_bound` | Positive absolute bound on weights and biases; repair projects eligible parameter coordinates into this box. |
