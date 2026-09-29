@@ -250,3 +250,85 @@ delayed reward and reversal, replay retention, saved continuation, consequence
 prediction, numerical refusal and stale-command handling. Longer memory,
 continuous-action reinforcement, learned planning and a browser creature remain
 separate demonstrations.
+
+
+## Qualify temporal context and delayed credit
+
+`examples/temporal_credit.py` separates two bounded capabilities. In the cue
+fixture, opposite initial cues have identical distractor suffixes and final
+observations. Delays are 2, 4 and 8 observation ticks; the supplied `History`
+window is `delay + 1`. Training uses cue amplitudes ±0.8 and two distractor
+sequences, stopping checks use ±0.4 and a third sequence, and reserved tests
+use ±0.3/±0.6 and two new sequences. Flat, ordinary-connected and observing
+layouts each contain four patches. Their edges and parameters differ; this
+is a capability comparison at matched patch count, not a depth advantage claim.
+Each layout is queried with retained or reset activity, and again with history
+removed. A saved brain and history resume partway through every test episode.
+Retaining activity alone is not assumed to preserve an occluded cue.
+
+The credit fixture has two actions and a supplied one-hot observation of the
+current stage and the first executed action. Subsequent actions leave that
+choice unchanged. Only the final transition supplies reward, +1 or −1 according
+to the first choice. Delays 0/2/4/8 therefore mean 1/3/5/9 executed transitions.
+The two possible rewarded choices are tested separately for every seed. Neither
+the preferred choice nor a desired value enters the sensors or a witness target.
+This fixture provides sufficient observed state to isolate reward credit from
+the separate history experiment; it does not establish learned recurrent memory.
+
+Each life collects 60 episodes, then executes 40 evaluation episodes with
+learning disabled and exploration still 0.4. Success measures those actual
+choices, not just greedy value rankings. The declared behavioral gate is at
+least 0.65 success per TD case; an optimal policy with this exploration has
+expected success 0.8. Frozen parameters and discount-zero learning are controls,
+not additional acquisition claims. Disabling bootstrapping can still change
+unvisited-state values through shared parameters, so its measured behavior is
+reported rather than assumed to be chance. Discount is 0.8 for TD, replay stores
+256 transitions and samples up to eight per update. The ideal first-choice
+value magnitude is `0.18 * 0.8**delay`; attenuation and finite approximation
+error limit the useful horizon. This tests one-step TD with replay, not eligibility
+traces, unrestricted delays or a comparison of every return estimator.
+
+One serial owner pairs each `act` with the transition it executes. Event time
+is an integer simulation tick with one discount factor per transition; there is
+no variable wall-time discount. At most one action awaits feedback. Terminal
+means the reward horizon has actually ended. A collection pause instead saves
+and resumes the learner, including a pending executed action, replay and RNG;
+it does not create a terminal transition. A refused action is never executed.
+A refused learning attempt preserves its actual transition but no parameter
+update. Abandoned commands use `reset`; hypothetical `settle` queries own no
+pending action and cannot receive feedback.
+
+Run the bounded confirmation on seeds 2 and 7 (seed 0 is the development and
+CI fixture):
+
+```sh
+python examples/temporal_credit.py --out /tmp/temporal-credit.json
+```
+
+The JSON preserves every scheduled case, trial outcome, resumed comparison,
+source hash, learning configuration and helper-level solver-work sum, including
+candidate queries, replay, evaluation, refused calls and continuation twins.
+The report also records complete wall and CPU time. The source hashes must
+remain unchanged during the run. These are two controlled demonstrations, not
+one integrated autonomous life, learned episodic retrieval or evidence that
+observers outperform conventional recurrent models.
+
+The [source-bound confirmation receipt](../examples/receipts/temporal_credit.json)
+contains all 66 cases for seeds 2 and 7. All 18 memory cases pass, with maximum
+reserved full-history error 0.107. All 16 TD cases exceed the 0.65 executed-choice
+gate; their individual success rates range from 0.725 to 0.900. The following
+means pool both rewarded choices and both seeds (160 evaluation episodes per
+cell):
+
+| Reward delay | TD with replay | Discount-zero learning | Frozen parameters |
+| --- | ---: | ---: | ---: |
+| 0 | 0.750 | 0.750 | 0.500 |
+| 2 | 0.806 | 0.625 | 0.500 |
+| 4 | 0.794 | 0.363 | 0.500 |
+| 8 | 0.781 | 0.631 | 0.500 |
+
+Every saved/resumed comparison matched and no solve refused. The complete run
+recorded 291 seconds wall time and 275 seconds CPU time while other local checks
+were running; these are execution receipts, not production latency claims.
+Controls sometimes succeed individually, and two seeds do not establish broad
+statistical superiority. The seed-0 development and CI cases can be rerun with `--seeds 0`.

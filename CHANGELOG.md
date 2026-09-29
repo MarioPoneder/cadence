@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add bounded temporal qualification at delays 2/4/8 with retained/reset-state
+  and memoryless controls, and immediate/delayed reward experiments with
+  executed-policy, frozen/discount-zero and mid-episode continuation checks.
+
 - Add bounded sensory `History`, checkpointed reward learning and transition
   replay through `Reinforcement`, and a `LearningProgress` curiosity heuristic.
 - Support either action-conditioned scalar values or distinct per-action
