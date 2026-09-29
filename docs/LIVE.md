@@ -7,7 +7,7 @@ an explicit record of recent observations. These are different mechanisms.
 Neither saved activity nor a larger observer population automatically provides
 working memory, episodic retrieval, or protection against forgetting.
 
-The helpers on this page are development additions after 0.49.0. They reuse
+The helpers on this page are available in Cadence 0.50.0. They reuse
 the same patch equation and qualified admission. They add no mandatory dependency
 and do not simulate neurotransmitter chemistry. See the [reference](REFERENCE.md)
 for every parameter and failure contract.

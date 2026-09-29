@@ -1,6 +1,6 @@
 # Quickstart
 
-Install Python 3.11+ and `python -m pip install --upgrade "cadence-net>=0.49.0"`.
+Install Python 3.11+ and `python -m pip install --upgrade "cadence-net>=0.50.0"`.
 The [release wheel](https://github.com/muellerberndt/cadence/releases/latest)
 is also available when a package index has not listed the new version yet. Cadence has no
 mandatory runtime dependencies. A `Cortex` declares a layout; `build()` returns its

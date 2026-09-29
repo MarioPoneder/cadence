@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.50.0 — 2026-09-29
 
 - Add bounded temporal qualification at delays 2/4/8 with retained/reset-state
   and memoryless controls, and immediate/delayed reward experiments with
