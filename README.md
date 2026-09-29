@@ -63,7 +63,6 @@ cd cadence-demos/doom-lab && ./get_wad.sh && python server.py
 The complete training pipeline ships with it — scripted privileged teacher,
 witness corpora, conditioned batched bootstrap with matched controls, DAgger
 correction rounds, and a foresight variant trained on measured outcomes:
-[demo page](https://floatingpragma.io/cadence/demos/) ·
 [training tutorial](https://github.com/muellerberndt/cadence-demos/blob/main/doom-lab/TRAINING.md).
 
 ## Install
