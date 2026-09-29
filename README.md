@@ -48,8 +48,8 @@ Every core change is reviewed against all three. The
 
 The main Cadence demo is [Doom Lab](https://github.com/muellerberndt/cadence-demos/tree/main/doom-lab):
 a settling brain plays shareware Doom in your browser from pixels alone —
-two grayscale retinas in, eight settled motor states out, no policy network
-and no backpropagation. Take the controls yourself and your frame-and-button
+two grayscale retinas in, eight settled motor states out, with no separate
+policy network. The repair engine uses analytic derivatives. Take the controls yourself and your frame-and-button
 pairs are admitted as witnesses while you play; a live, rotatable 3D view
 shows the populations settling, the wiring carrying signal, and each
 committed batch as it changes the brain. Brains hot-swap mid-game and travel
