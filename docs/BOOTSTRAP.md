@@ -199,6 +199,25 @@ The five-patch confirmation used four distinct examples replayed for 4,096
 updates per model, then tested nearby unseen inputs across three initializations.
 Both ordinary and recursive layouts succeeded; it did not show a depth advantage.
 
+## The parameter prior governs supervised extraction
+
+On supervised mappings with many binary outputs and rare positive targets,
+`parameter_prior` decides how much of the linearly available structure the
+settled readout recovers. In the
+[supervised extraction study](https://github.com/muellerberndt/cadence/issues/70),
+a one-column network trained on eight linear rules at a 5% positive rate
+reached mean test AUC 0.733 at prior 0.005, 0.922 at the default 0.1, and
+0.977 at 0.4, against 0.951 for closed-form ridge regression on identical
+rows. Single-witness admission at the default prior reached 0.796, so
+batched admission helps extraction on such tasks. Widening the column from
+8 to 24 patches left every per-epoch AUC unchanged to three decimals and
+eight epochs oscillated without a trend: the settled readout is a fixed
+point that capacity and exposure do not move, and the prior places it.
+Before judging a layout on a supervised task, sweep `parameter_prior`
+upward and compare the settled readout's ranking against a ridge baseline
+on the same rows; the linear baseline is the floor an extraction run
+should clear.
+
 ## A qualified starting recipe for small coordinate relations
 
 For immediate scalar regression, two-output linear mixing and a single `tanh`
