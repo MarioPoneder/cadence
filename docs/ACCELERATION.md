@@ -187,6 +187,11 @@ brain; do not replace a whole-life restore with a brain-only transfer.
 
 ## Parallel simulated lives
 
+Worker processes that import torch must start with the spawn context;
+a forked worker inherits the parent's OpenMP state and can deadlock
+before its first batch.
+
+
 From the repository with Cadence installed, run:
 
 ```sh
@@ -244,6 +249,11 @@ Changing `tolerance` changes what gets admitted and must not be hidden inside
 a speed comparison.
 
 ## Measured starting points
+
+CPU thread counts saturate: on a 64-core host, identical `observe_batch`
+work ran fastest near 64 threads and measurably slower at 128. Measure
+per-sweep time at two thread counts before assuming more cores help.
+
 
 The measurements below use individual witness admissions. They are not batch
 benchmarks and do not predict a speedup from changing `batch_size`.

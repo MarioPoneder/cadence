@@ -151,6 +151,47 @@ For a completely isolated assessment, evaluate a `Reinforcement.from_snapshot`
 copy. Call `replay()` explicitly if you want extra updates: nothing schedules
 background learning for you.
 
+## Decode discrete actions from settled scores
+
+Under imbalanced ±targets, each output's settled score is pulled toward
+that output's base-rate target mean: an action pressed on a quarter of
+the teaching frames rests near −0.3, and a fixed zero threshold then
+decodes it as never chosen while the score still ranks the right
+moments highly. Decode discrete choices against per-output thresholds
+taken from the teaching base rates (the matching score quantiles), or
+select the largest mean-relative score, and recalibrate after further
+learning because admission moves the score distribution. Judge such a
+policy by ranking quality and pressed recall on held-out rows; raw
+per-frame accuracy mostly restates the base rates.
+
+## A bootstrap, then a life
+
+A workable live loop has two stages under one serial owner. First the
+learner watches a demonstrator act, admits witness batches, and its
+decoded agreement with the demonstrator is probed on the side; it takes
+over when agreement clears a gate that reflects what the demonstrator's
+policy makes visible in the supplied inputs. A demonstrator habit keyed
+to hidden state, such as an internal clock, caps attainable agreement
+and belongs out of the gate. After takeover, `Reinforcement` selects
+actions; record outcomes with `feedback(..., learn=False)` and run
+`replay()` as separate budgeted pulses every few transitions, so
+decisions stay frequent while learning arrives in rhythm. Keep the
+environment loop in its own thread repeating the last selected action
+while the owner thread thinks; a stalled decision then holds a pose
+instead of freezing the world.
+
+## Watch the equilibrium, not a relaxation film
+
+A query settle reaches its equilibrium in one numerical repair: repeated
+small-budget settles on the same clamped inputs show one state change
+and then none, and the settled per-patch errors are near zero whenever
+qualification succeeds. There is no sweep-by-sweep relaxation to
+display, and settled error is not a skill measure. Instrument live
+behavior with the state difference between successive settles as the
+inputs change, the qualification rate at the deployment budget, and the
+admission sweeps a new batch needs; falling admission sweeps are the
+visible signature of a world already understood.
+
 ## Retain skills and predict the body
 
 `parameter_prior` limits parameter movement within one admission. It is not

@@ -218,6 +218,16 @@ upward and compare the settled readout's ranking against a ridge baseline
 on the same rows; the linear baseline is the floor an extraction run
 should clear.
 
+## Read outputs from enough of the network
+
+Where an output reads from bounds what the mapping can use. An output read
+only from one small late observer can extract less task structure than the
+declared inputs support, while a direct read from the sensing population, or
+a read from a wide observer over every processing stage, recovers it. When a
+supervised readout underperforms its linear baseline, widen what the output
+reads before adding capacity anywhere else; capacity behind a narrow read
+does not reach the output.
+
 ## A qualified starting recipe for small coordinate relations
 
 For immediate scalar regression, two-output linear mixing and a single `tanh`
@@ -271,7 +281,10 @@ fact. Valid feedback consumes its pending action even when numerical fitting
 refuses; use `replay()` to retry fitting that retained experience.
 
 1. Include the information needed to distinguish different answers. A position
-   alone cannot identify velocity. A numeric-array interface does not provide
+   alone cannot identify velocity, and a demonstrator's action that depends on
+   hidden state, such as an internal counter, cannot be agreed with from the
+   supplied observations at all; measure a linear baseline on the same rows to
+   know what the stream supports before judging the learner. A numeric-array interface does not provide
    learned vision or recover discarded observations. `History` can preserve a
    bounded explicit sample window with validity masks; it is an input encoding,
    not learned recurrent memory or automatic object tracking.
@@ -288,6 +301,9 @@ refuses; use `replay()` to retry fitting that retained experience.
 4. Evaluate with targets absent, on data and environment starts reserved before
    tuning. Check `qualified`/`accepted`; refusing an action is different from
    making a wrong one. A refused admission changes no state or event identity.
+   Track the qualification rate at the deployment budget across training:
+   settling cost can grow as content accumulates, and a fixed budget that was
+   generous early can start refusing held-out queries later.
 
 The default `fan_in=None` gives each patch every coordinate of each declared
 source. Opting into sparse `fan_in` changes the information available to each
