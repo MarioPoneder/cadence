@@ -3,9 +3,10 @@
 Cadence can accelerate repair with CPU or GPU tensors and run independent
 simulated lives in separate processes. The brain's interface stays the same:
 `settle` queries, `step` retains qualified activity, and `observe` admits an
-actual witness through joint state/parameter repair. `observe_batch` admits a
-group of witnessed examples with shared parameters and private experience
-states. `bootstrap` replays witnesses, optionally in batches, and checks
+target through joint state/parameter repair, labeled as a witness or an estimate.
+`observe_batch` admits a group of labeled examples with shared parameters and
+private experience states. `bootstrap` replays witnesses, optionally in batches,
+and checks
 unclamped predictions.
 
 More width or recursive depth increases capacity and cost. Whether it improves
@@ -90,6 +91,8 @@ This is one-device batching, not distributed multi-GPU learning, averaging
 checkpoints or concurrent calls to one brain. Continue to serialize admissions.
 Independent lives can still use separate processes. Neither batching nor
 parallel simulation supplies a missing memory or temporal-credit mechanism.
+`Reinforcement` explicitly supplies one-step Q targets and uses the same batch
+execution with `source="estimate"`; its next-action queries also count as work.
 
 The [batch bootstrap example](../examples/batch_bootstrap.py) measures a small
 supervised relation with 32 teaching rows, eight readiness checks and 16 fresh
@@ -163,7 +166,7 @@ print(result["outputs"], result["execution"])
 ```
 
 The entire original checkpoint is validated before applying execution overrides.
-This retains its arrays and witness cursor exactly, then changes configuration
+This retains its arrays and admission cursor exactly, then changes configuration
 and fingerprint. A device override without `dtype` selects that device's
 default; a dtype-only override keeps the saved device. With both omitted,
 saved settings are retained. `restore` still requires the exact complete
@@ -201,6 +204,23 @@ Independent environment collectors can instead send an ordered witness stream
 to one owner; the application must preserve event identity and provenance.
 Do not start one GPU process per CPU core: many small jobs can contend for the
 same accelerator. This example deliberately uses the dependency-free engine.
+
+## Responsive live operation
+
+`LiveController` keeps one callback on a serial worker while the application
+submits sensory observations and reads fresh qualified commands. Only one
+observation can wait behind the active callback; a newer pending observation
+replaces it. Keep reward and transition records in a separate lossless queue.
+The worker must exclusively own its brain and any reinforcement helper.
+
+Command age starts at sensory submission, so queue and solve time consume
+`max_age`. Expired, refused or malformed completions use the declared fallback.
+No call cancels an active solve, and a thread does not remove Python's GIL or
+provide hard real-time deadlines. Submission copying/validation and lock
+acquisition also cost time. Measure callback latency, pending replacements,
+command age and fallback duration along with rendering rate. `slew` can limit
+actuator changes toward a selected target; it supplies no neural decisions.
+See [live-system setup](LIVE.md).
 
 ## Measure the complete improvement
 

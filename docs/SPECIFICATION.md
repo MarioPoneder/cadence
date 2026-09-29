@@ -28,7 +28,7 @@ are in [the API reference](REFERENCE.md).
 
 ## Batch experience objective
 
-`observe_batch` groups `B` witnessed input/output pairs under one shared
+`observe_batch` groups `B` labeled input/target pairs under one shared
 parameter vector `theta`. Each row has private activity `x_b`, its own fixed
 sensory values and its own output clamps. All rows start from the same retained
 pre-call live state. With `E_b` denoting the existing residual-plus-state-prior
@@ -171,12 +171,12 @@ freeze. The same repair law and the following per-call contracts apply in both.
 | Qualified `observe_batch` | Unchanged | Commit shared solved relations | Advance once for the batch |
 | Refused operation | Unchanged | Unchanged | Unchanged |
 
-`observe` requires at least one output witness. It fixes these values throughout
+`observe` requires at least one output target. It fixes these values throughout
 joint state/parameter repair and anchors parameters to their pre-experience
 values. The entire proposal qualifies before admission. There are no partial
 parameter commits and no event ID consumption on refusal.
 
-`observe_batch` requires a finite nonempty sequence of such witnesses, validated
+`observe_batch` requires a finite nonempty sequence of such pairs, validated
 before solving. A successful batch commits only shared parameters and event
 ownership. The row states are returned, not retained: selecting the last or mean
 experience as the present live state would be arbitrary. A one-row batch has
@@ -195,6 +195,49 @@ includes its ordered input/clamp rows; reordering an otherwise identical batch
 under the same event ID is a conflict. Checkpoints retain the resulting
 parameters and admission identity, not the batch's private states or a pending
 minibatch cursor.
+
+Both methods accept `source="witness"` for actual observations or
+`source="estimate"` for derived teaching targets. The caller declares provenance;
+the engine does not authenticate it. The source label affects event identity
+and appears in accepted, refused and duplicate results. Changing the label
+under an admitted ID conflicts. The label changes neither the objective nor
+qualification. All rows of one batch share a label.
+
+## Learning and runtime orchestration
+
+`Reinforcement` stores actual `(context, action, reward, next_context)` records
+and constructs discrete-action Q estimates. With discount `gamma`, value scale
+`v` and reward scale `r`, its teaching target is
+
+```text
+target = (1-gamma) * v * reward/r
+         + gamma * clip(max_a Q(next_context, a), -v, v)
+```
+
+Terminal transitions omit the second term. Rewards must lie in `[-r,r]`;
+`gamma` lies in `[0,1)`. This is a scaled discounted-return target, not a
+measured future outcome. Candidate and next-action values require qualified
+queries. Replay uniformly samples a bounded store while always including the
+latest record; all targets use the same pre-update brain. One
+`observe_batch(source="estimate")` fits them with ordinary joint repair.
+There is no second optimizer or convergence guarantee for this nonlinear
+Q approximation. Valid feedback records remain stored and consume the pending
+action even if fitting later refuses; retry fitting with `replay()`.
+
+`History` retains a caller-fed window of samples and slot-validity masks.
+It exposes temporal context but does not learn recurrent memory. Relation
+parameters remain plastic; neither the proximal anchor nor replay guarantees
+protected consolidation. `LearningProgress` scores positive decreases in
+per-context moving predictor error. Noise can also cause a decrease; this
+score is neither information gain nor solver stationarity.
+
+`LiveController` gives a callback one serial worker with one replaceable pending
+sensory sample. Its command expires from submission time, including queue and
+solve latency. It does not cancel an active solve or guarantee a wall-clock
+deadline. Reward/transition records must use lossless application storage,
+not that replaceable sensory slot. `slew` limits actuator change toward a
+caller-selected target. Neither helper selects a behavioral objective or
+changes patch repair. See [live operation](LIVE.md) for ownership and timing.
 
 ## Checkpoint contract
 
@@ -227,8 +270,9 @@ energy descent, constrained boundaries, source coverage, witnessed acquisition,
 unclamped recall, refusal rollback, event custody and continuation. Executable
 documentation uses the same released API.
 
-The engine supplies supervised witness learning and persistent joint activity.
-It does not yet supply reward-driven temporal credit, autonomous task discovery,
-learned structural growth or a general biological physiology model. Performance
-and advantages from recursive depth remain empirical questions. Biological
+The engine supplies labeled-target learning and persistent joint activity;
+the reinforcement helper adds explicit one-step discrete Q credit and replay.
+These do not establish autonomous task discovery, general long-horizon credit,
+learned structural growth or a biological physiology model. Performance and
+advantages from recursive depth remain empirical questions. Biological
 inspiration is not evidence that a numerical qualification reproduces a brain.

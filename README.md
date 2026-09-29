@@ -195,6 +195,14 @@ Applications supply sensory acquisition, witnesses, actuator interpretation
 and environment-specific behavior checks. The [guide](docs/BOOTSTRAP.md)
 explains calibration and staged bootstrapping for perception and body control.
 
+Development support for a continuing life adds explicit sensory `History`,
+discrete reward learning with `Reinforcement`, an optional `LearningProgress`
+curiosity signal, and a `LiveController` that keeps rendering independent of
+brain work. Reward-derived action values are labeled estimates and learned by
+the same patch repair. Replay and checkpointing preserve experience for later
+use. These additions follow 0.49.0; see [memory, rewards and live control](docs/LIVE.md)
+for setup, examples and the boundary between learned decisions and body support.
+
 ## Scope
 
 The reference engine repairs a nonlinear residual energy using analytic
@@ -207,7 +215,8 @@ Performance evaluations and comparisons remain ongoing. Tests cover layouts,
 derivatives through recursive error readback, reciprocal
 interventions, actual acquisition, refusal and checkpoint custody. The goal is
 a reusable learner across perception, memory, reasoning and embodied action.
-Reward-driven temporal credit, broader capability and advantages from recursive
+Discrete Q-learning and bounded temporal history have small behavioral checks;
+long-lived learned memory, broader capability and advantages from recursive
 depth require further controlled experiments. Follow the
 [DRSN completion epic](https://github.com/muellerberndt/cadence/issues/51).
 

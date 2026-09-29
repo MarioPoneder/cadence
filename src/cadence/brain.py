@@ -1,4 +1,4 @@
-"""Run joint repair, admit witnessed experience and preserve brain continuation.
+"""Run joint repair, admit labeled targets and preserve brain continuation.
 
 Qualification means constrained stationarity of the declared nonlinear energy,
 not a unique equilibrium, zero prediction error or a demonstrated depth benefit.
@@ -75,11 +75,11 @@ class Brain:
 
     Construct with ``Cortex.build`` or ``Brain.from_snapshot``. Query methods
     freeze parameters; ``step`` can retain qualified live state. ``observe``
-    jointly repairs live state and local relations under actual output witnesses,
-    then commits only a qualified complete proposal. ``observe_batch`` repairs
-    private experience states and shared parameters, preserving live activity.
-    This is supervised witness
-    admission, not an implemented reward/temporal-credit algorithm.
+    jointly repairs live state and local relations under output targets, then
+    commits only a qualified complete proposal. Targets are actual witnesses by
+    default; derived estimates must use ``source="estimate"``. ``observe_batch``
+    repairs private experience states and shared parameters, preserving live
+    activity. These methods do not assign reward or temporal credit themselves.
     """
 
     def __init__(self, builder, graph, weights, population_ranges, layout):
@@ -266,19 +266,27 @@ class Brain:
             self._state = tuple(result["state"])
         return {**result, "accepted": result["qualified"]}
 
-    def observe(self, inputs, targets, *, event_id=None, budget=None):
-        """Jointly repair and atomically retain an actual input/target experience.
+    def observe(self, inputs, targets, *, event_id=None, budget=None, source="witness"):
+        """Jointly repair and atomically retain a labeled input/target experience.
 
-        Targets clamp at least one declared output. Ordered nonnegative event
-        IDs recognize an identical latest retry; changed or older IDs are
-        rejected. Omitting the ID allocates the next one only on acceptance.
+        Targets clamp at least one declared output. ``source="witness"`` labels
+        actual observations; ``source="estimate"`` labels derived teaching values,
+        not observed facts. Both use identical repair. The caller supplies this
+        provenance label; the brain does not independently authenticate it.
+        Results include ``source``, including refusals and duplicate retries.
+
+        Ordered nonnegative event IDs recognize an identical latest retry with
+        the same source; changed or older IDs are rejected. Omitting the ID
+        allocates the next one only on acceptance.
         A refusal leaves live state, parameters and event ownership unchanged.
         """
+        if not isinstance(source, str) or source not in ("witness", "estimate"):
+            raise ValueError("source must be 'witness' or 'estimate'")
         if not isinstance(targets, Mapping) or not targets:
-            raise ValueError("Observation requires at least one actual output target")
+            raise ValueError("Observation requires at least one output target")
         flat, clamps = self._arguments(inputs, targets)
         event_id, digest, duplicate = self._event(
-            [flat, sorted(clamps.items())], event_id
+            [flat, sorted(clamps.items())], event_id, source
         )
         if duplicate:
             return duplicate
@@ -291,9 +299,10 @@ class Brain:
             "accepted": result["qualified"],
             "duplicate": False,
             "event_id": event_id,
+            "source": source,
         }
 
-    def observe_batch(self, examples, *, event_id=None, budget=None):
+    def observe_batch(self, examples, *, event_id=None, budget=None, source="witness"):
         """Jointly learn a batch with private activities and shared parameters.
 
         ``examples`` is a nonempty finite sequence of ``(inputs, targets)``
@@ -308,7 +317,14 @@ class Brain:
         ``states``, ``outputs``, ``predictions`` and ``errors`` contain one entry
         per example; other solve diagnostics describe the complete batch.
         Batch grouping changes the learning objective versus serial admission.
+
+        ``source="witness"`` labels actual observations; ``source="estimate"``
+        labels derived targets for every row, using the same repair. The source
+        is caller-declared provenance, not authentication. It is bound into the
+        event identity and returned for accepted, refused and duplicate results.
         """
+        if not isinstance(source, str) or source not in ("witness", "estimate"):
+            raise ValueError("source must be 'witness' or 'estimate'")
         if (
             isinstance(examples, (str, bytes))
             or not isinstance(examples, Sequence)
@@ -325,13 +341,13 @@ class Brain:
                 ):
                     raise ValueError("Each example must be an (inputs, targets) pair")
                 if not isinstance(pair[1], Mapping) or not pair[1]:
-                    raise ValueError("Supply at least one actual output target")
+                    raise ValueError("Supply at least one output target")
                 flat, clamps = self._arguments(*pair)
                 records.append((flat, sorted(clamps.items())))
             except ValueError as error:
                 raise ValueError(f"examples[{index}]: {error}") from error
         size, width = len(records), self.graph.n_patches
-        event_id, digest, duplicate = self._event(["batch", records], event_id)
+        event_id, digest, duplicate = self._event(["batch", records], event_id, source)
         if duplicate:
             return {**duplicate, "batch_size": size}
         inputs = tuple(v for flat, _ in records for v in flat)
@@ -341,12 +357,12 @@ class Brain:
             for i, value in fixed
         }
         result = self._solve(inputs, clamps, learn=True, budget=budget, batch_size=size)
-        for source, target in (
+        for field, target in (
             ("state", "states"),
             ("predictions", "predictions"),
             ("errors", "errors"),
         ):
-            values = result.pop(source)
+            values = result.pop(field)
             result[target] = tuple(
                 tuple(values[row * width : (row + 1) * width]) for row in range(size)
             )
@@ -359,6 +375,7 @@ class Brain:
             "duplicate": False,
             "event_id": event_id,
             "batch_size": size,
+            "source": source,
         }
 
     def _outputs_from(self, state):
@@ -370,8 +387,10 @@ class Brain:
             for output in self._outputs
         }
 
-    def _event(self, payload, event_id):
+    def _event(self, payload, event_id, source):
         """Validate an atomic event and identify a latest-event retry."""
+        if source == "estimate":
+            payload = {"source": source, "content": payload}
         event_id = (
             self._event_id + 1 if event_id is None else integer(event_id, "event_id")
         )
@@ -392,6 +411,7 @@ class Brain:
                         "qualified": True,
                         "duplicate": True,
                         "event_id": event_id,
+                        "source": source,
                     },
                 )
             raise ValueError(

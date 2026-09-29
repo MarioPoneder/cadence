@@ -48,6 +48,12 @@ those existing brain methods. It owns orchestration, not a second learning rule.
 mean example energy plus one pre-batch parameter anchor. It commits parameters
 and one event identity, preserving live state. Tensor execution vectorizes rows;
 it does not average separately learned checkpoints or introduce another solver.
+`memory.py` supplies explicit bounded sensory history and an error-progress
+heuristic. `reinforcement.py` supplies discrete Q-learning target orchestration
+and transition replay through that same repair law; derived teaching targets
+must use `source="estimate"`. `runtime.py` supplies a serial callback owner and
+actuator rate limits, without hard deadlines or solver cancellation. These
+helpers are not new patch primitives or biological chemistry.
 
 ## Changes and verification
 
@@ -78,8 +84,9 @@ equivalence of parameter solves and the distinct live-state commitment rules.
   ongoing operation. These application lifecycle terms use the same repair law;
   do not introduce an automatic phase toggle or phase-wide parameter freeze.
   The live phase can continue learning through actual witnesses supplied to
-  `observe`; this remains supervised witness admission, not automatic reward
-  credit or a complete biological learning mechanism.
+  `observe`. The `Reinforcement` helper assigns explicit estimated action-value
+  targets from observed transitions; neither primitive admission alone nor that
+  helper is a complete biological learning mechanism.
 - `settle` and `predict` are pure queries. `step` retains qualified live state;
   `observe` also repairs parameters from actual output witnesses.
 - `observe_batch` repairs private row states and shared parameters, retaining
@@ -92,8 +99,15 @@ equivalence of parameter solves and the distinct live-state commitment rules.
   not admitted actions. `predict` raises `SettlementError` on refusal.
 - Evaluate learning on subsequent **unclamped** predictions. A witnessed output
   equal to its clamp is not a learning result.
-- `observe` is supervised learning. Rewards require a separately justified
-  temporal-credit design; do not label reward-as-target as reinforcement learning.
+- `observe` is supervised learning. Use `source="estimate"` for derived targets;
+  keep source labels bound to retry identity. `Reinforcement` implements declared
+  normalized, clipped Q targets and replay; do not label a raw reward-as-action
+  target as reinforcement learning. Check behavior on later free decisions.
+- A `History` buffer is explicit external memory; do not claim learned recurrent
+  memory from it. Retention after replay requires old-skill checks.
+- Never discard unprocessed reward/action evidence in `LiveController`'s latest
+  sensory slot. Count candidate queries, learning work and complete command age;
+  a solver sweep budget is not a real-time guarantee.
 - Check input sufficiency before interpreting failure. Sparse coverage does
   not provide learned visual/audio features or recover omitted information.
 - Start with [the bootstrapping guide](docs/BOOTSTRAP.md). Default wiring includes

@@ -6,11 +6,13 @@ a body, and retaining those abilities together. The **live phase** uses that
 same brain in a continuing environment. Both phases use the same patch rule;
 actual new witnesses can keep changing learned relations during the live phase.
 
-Cadence currently supplies supervised witness learning. The application provides
-sensor data, desired outputs or measured outcomes, and the environment used to
+Cadence supplies supervised witness learning and an explicit `Reinforcement`
+helper for discrete choices, one-step Q credit and replay. The application
+provides sensors, measured outcomes or rewards, and the environment used to
 check behavior. A declared eye port does not by itself teach vision; a motor
 port does not by itself teach walking. These are abilities to bootstrap and
-measure, using the same generic interfaces.
+measure, using the same generic interfaces. See [live learning](LIVE.md) for
+reward-driven interaction, explicit history and runtime control.
 
 ## A complete small bootstrap
 
@@ -243,11 +245,17 @@ It does not turn an environment reward into action credit. A controller can
 learn from demonstrated actions; a dynamics model can learn measured next
 observations. State who supplies those witnesses. Calling repeated examples
 through `observe` is replayed supervised learning, not fresh environment
-experience or reward-only discovery.
+experience or reward-only discovery. For discrete reward-driven choices, use
+`Reinforcement`: it records actual transitions and separately derives Q targets,
+fitted with `source="estimate"`. Do not label a predicted return as an observed
+fact. Valid feedback consumes its pending action even when numerical fitting
+refuses; use `replay()` to retry fitting that retained experience.
 
 1. Include the information needed to distinguish different answers. A position
    alone cannot identify velocity. A numeric-array interface does not provide
-   learned vision or recover discarded observations.
+   learned vision or recover discarded observations. `History` can preserve a
+   bounded explicit sample window with validity masks; it is an input encoding,
+   not learned recurrent memory or automatic object tracking.
 2. Scale inputs consistently and use targets comfortably inside both the
    `tanh` prediction range and `state_bound`, such as `-0.6` and `0.6` with
    the default bounds. Fit preprocessing on bootstrap examples only. Centering

@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Add bounded sensory `History`, checkpointed reward learning and transition
+  replay through `Reinforcement`, and a `LearningProgress` curiosity heuristic.
+- Support either action-conditioned scalar values or distinct per-action
+  outputs from one joint settlement, reducing repeated decision solves.
+- Distinguish actual witnesses from derived teaching estimates with a
+  source label bound into learning-event retry identity. The patch energy and
+  numerical admission rule remain unchanged.
+- Add `LiveController` for serial asynchronous decisions, stale-command fallback
+  and diagnostics, plus `slew` for bounded actuator changes.
+- Add runnable temporal recall, delayed reward/reversal, retention and live
+  body-prediction examples, with documentation and adversarial regression tests.
+
+
 ## 0.49.0 — 2026-09-29
 
 - License this release under GPL-3.0-or-later; update the license text, package

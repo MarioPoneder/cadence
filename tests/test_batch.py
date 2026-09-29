@@ -105,6 +105,7 @@ def test_latest_batch_retry_is_idempotent_across_checkpoint_and_interleaved_call
         "duplicate": True,
         "event_id": 5,
         "batch_size": 2,
+        "source": "witness",
     }
     assert restored.snapshot() == before
     for changed, identity in ((examples[::-1], 5), (examples, 4), (examples[:1], 5)):

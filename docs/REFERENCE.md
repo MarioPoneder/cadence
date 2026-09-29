@@ -3,10 +3,14 @@
 Cadence constructs Deep Recursive Settlement Networks from populations of
 processing patches. Ordinary data connections and recursive observation share
 one jointly repaired state. Public exports are `Cortex`, `Brain`, `Input`,
-`Population`, `Output`, `SettlementError`, `bootstrap` and `__version__`.
+`Population`, `Output`, `SettlementError`, `bootstrap`, `History`,
+`LearningProgress`, `Reinforcement`, `LiveController`, `slew` and `__version__`.
 
 ```python
-from cadence import Cortex, Brain, Input, Population, Output, SettlementError, bootstrap, __version__
+from cadence import (
+    Cortex, Brain, Input, Population, Output, SettlementError, bootstrap,
+    History, LearningProgress, Reinforcement, LiveController, slew, __version__,
+)
 ```
 
 Use the package-level imports above. `Brain` and `SettlementError` live in
@@ -16,7 +20,10 @@ and numeric/JSON validation remain private in `_repair.py` and `_validation.py`.
 Private `_tensor.py` supplies optional device execution of the same analytic
 repair law, with final qualification by the float64 reference engine.
 `bootstrap.py` orchestrates example replay and unclamped checks through the
-existing brain methods; it adds no solver or phase state.
+existing brain methods; it adds no solver or phase state. `memory.py` holds
+explicit history and error-progress bookkeeping; `reinforcement.py` supplies
+discrete-action Q-learning orchestration; `runtime.py` supplies serial live
+scheduling and actuator rate limits. These helpers preserve the patch equation.
 See the [quickstart](QUICKSTART.md) for a first example and the
 [architecture guide](DRSN.md) for equations and layout patterns.
 
@@ -142,8 +149,8 @@ are all-or-nothing under serial access, not concurrent database transactions.
 | `settle(inputs, *, targets=None, interventions=None, budget=None)` | Pure query returning a complete solve result. Optional output targets and population interventions are hypothetical clamps. Changes neither retained live state nor parameters. |
 | `predict(inputs, *, budget=None)` | Pure query returning an output-name-to-flat-tuple mapping. Raises `SettlementError` if the solve does not qualify. |
 | `step(inputs, *, budget=None)` | Repair activity with parameters frozen. Retain proposed state only if qualified. Returns the full result plus `accepted`. |
-| `observe(inputs, targets, *, event_id=None, budget=None)` | Jointly repair state, weights and biases under at least one actual output witness. A qualified solve atomically retains state, parameters and event ownership; a refusal retains none of the proposal. |
-| `observe_batch(examples, *, event_id=None, budget=None)` | Jointly repair private experience states and shared parameters under a batch of actual witnesses. A qualified solve atomically retains parameters and one event identity, preserving the pre-call live state. A refusal commits nothing. |
+| `observe(inputs, targets, *, event_id=None, budget=None, source="witness")` | Jointly repair state, weights and biases under at least one labeled output target. A qualified solve atomically retains state, parameters and event ownership; a refusal retains none of the proposal. |
+| `observe_batch(examples, *, event_id=None, budget=None, source="witness")` | Jointly repair private experience states and shared parameters under a batch of labeled targets. A qualified solve atomically retains parameters and one event identity, preserving the pre-call live state. A refusal commits nothing. |
 | `inspect()` | Owned layout description, resolved graph counts, topology, observation roles and continuation metadata. |
 | `snapshot()` | Complete continuation as a JSON string, limited to 32 MiB of UTF-8 text. |
 | `Brain.from_snapshot(text, *, device=None, dtype=None)` | Class method validating the complete original snapshot before constructing a new brain. Optional execution overrides retain arrays and witness identity while changing configuration/fingerprint. See [checkpoints](#checkpoints). |
@@ -172,17 +179,20 @@ shared patches or the call raises `ValueError`. Returned output values are
 always flat tuples, including multidimensional outputs.
 
 In `settle`, clamps express hypothetical queries and never become learning
-witnesses. `observe` requires a nonempty target mapping and treats it as an
-actual witness; it has no intervention argument. The application supplies
-witness provenance. Outputs returned by `observe` equal their supplied target
-clamps, so measure learning
+admissions. `observe` requires a nonempty target mapping and has no intervention
+argument. `source="witness"` labels actual observed targets;
+`source="estimate"` labels derived teaching targets, including Q estimates.
+These are the only accepted labels. Both use identical repair; the label is
+caller-declared provenance, not authentication. It is included in every
+admission result and the event identity. A batch uses one label for all rows.
+Outputs returned by learning equal their supplied clamps, so measure learning
 using subsequent predictions without those clamps.
 
 `event_id` is an ordered nonnegative integer that must be serializable by the
 runtime's JSON integer encoder. Excessive digit counts raise `ValueError`
 before solving or admitting experience. Omission selects the latest
 admitted identifier plus one; initially this is `0`. Gaps are allowed. The
-latest accepted identifier may be retried with identical inputs and clamps,
+latest accepted identifier may be retried with identical inputs, clamps and source,
 performing no solve or second admission. Reusing it with different content, or
 supplying an older identifier, raises `ValueError`. Refused proposals consume
 no inferred identifier and retain no event content.
@@ -213,9 +223,10 @@ parameter solve matches `observe` from the same starting continuation and
 execution settings.
 
 One ordered batch owns one `event_id`, in the same event sequence as `observe`.
-Its digest includes every row's sensory inputs and physical clamps, in order.
+Its digest includes every row's sensory inputs and physical clamps, in order,
+and distinguishes witness targets from estimates.
 An identical latest batch retry performs no solve or second admission. Changing
-row order, values or batch membership under that ID conflicts. Individual and
+row order, values, source or batch membership under that ID conflicts. Individual and
 batch calls have distinct event payloads: retry through the same method,
 including for a one-row batch. Serial calls and one joint batch generally
 produce different parameters: serial learning
@@ -262,8 +273,9 @@ not a separately stored reverse edge.
 | `execution` | Present for tensor solves: selected device/precision, tensor library version and work split; see below. |
 
 `step` adds `accepted`, equal to `qualified`. A newly attempted `observe` adds
-`accepted`, `duplicate=False` and `event_id`. An identical latest-event retry
-returns only `accepted=False`, `qualified=True`, `duplicate=True` and `event_id`.
+`accepted`, `duplicate=False`, `event_id` and `source`. An identical latest-event
+retry returns only `accepted=False`, `qualified=True`, `duplicate=True`,
+`event_id` and `source`.
 Its qualification refers to the prior admission; it is not a fresh prediction
 or qualification of live state after intervening calls.
 
@@ -282,7 +294,7 @@ admission fields, with `batch_size` and these per-example fields:
 | `batch_size` | Number of examples in this atomic admission. |
 
 An identical latest batch retry returns `accepted=False`, `qualified=True`,
-`duplicate=True`, `event_id` and `batch_size`, without new solve diagnostics.
+`duplicate=True`, `event_id`, `source` and `batch_size`, without new solve diagnostics.
 Returned batch arrays belong to the result, not the retained continuation.
 
 `work` contains `evaluations`, `patch_visits`, `edge_visits`, `proposals` and
@@ -355,9 +367,11 @@ quantities raise `ValueError`. `SettlementError` is a `RuntimeError` used by
 `predict` for a valid but unqualified solve. Its message includes the refusal
 reason, stationarity, tolerance and sweep count; use `settle` for full diagnostics.
 
-The learning operation is supervised witness admission. Reward credit assignment,
-automatic episodic retrieval, planning policies and learned structural growth
-are not provided by `observe`. Useful perception, behavior and benefits from
+The learning primitive fits labeled target constraints. `Reinforcement` adds
+one-step discrete-action Q targets and bounded replay through that primitive;
+it is not an additional parameter updater. Automatic episodic retrieval,
+protected consolidation, planning policies and learned structural growth are
+not provided by `observe`. Useful perception, behavior and benefits from
 observation depth require separate application tests.
 
 ## bootstrap
@@ -439,6 +453,188 @@ metric `None`. Checkpoint the brain and retain the report plus preprocessing
 alongside it; the report is not stored in the brain's snapshot. Exact replay
 also needs the **starting** checkpoint and the original examples/checks. The
 final checkpoint is the continuation used in the live phase.
+
+## History: explicit temporal context
+
+```text
+History(size, *, steps=4)
+```
+
+`size` is the positive integer number of raw scalars per sample; `steps` is a
+positive integer window length. Encodings contain oldest-to-newest blocks of
+`[sample values..., present]`, with `present=1` for a supplied sample and zero
+for initial padding. Missing sensor data within a supplied sample needs its own
+caller encoding. The oldest sample is discarded when the window fills.
+
+| Property or method | Contract |
+| --- | --- |
+| `input_size`, `steps` | Read-only raw sample width and retained window length. |
+| `size`, `shape` | Read-only encoded width `steps * (input_size + 1)` and `(size,)`, suitable for an input port. Encoded width is limited to one million coordinates. |
+| `push(values)` | Validate a finite flat sample, retain it, and return the padded encoding as a tuple. Invalid samples leave history unchanged. |
+| `preview(values)` | Return the same hypothetical encoding without retaining the sample. |
+| `reset()` | Clear retained samples. |
+| `snapshot()` | JSON of dimensions and retained samples. |
+| `History.from_snapshot(text)` | Validate exact schema, finite rows, dimensions and window bounds before restoring. Text limit: 32 MiB. |
+
+Samples follow flat boundary validation, including array objects with a valid
+`tolist()`/shape; booleans and nonfinite values are rejected. This helper stores
+caller-provided observations, not learned neural or episodic memory. Save its
+snapshot separately from the brain when resuming an application.
+
+## LearningProgress: predictor-error reduction
+
+```text
+LearningProgress(*, rate=0.1, capacity=128)
+```
+
+`rate` is finite in `(0,1]`; integer `capacity` is in `[1,4096]`. Both are
+read-only properties. `update(key, error)` accepts a nonempty string key of at
+most 256 UTF-8 bytes and a finite nonnegative error. It retains one moving mean
+per key, evicting the least recently updated context when full. New contexts
+score zero; subsequent updates use
+
+```text
+new_mean = old_mean + rate * (error - old_mean)
+progress = max(0, old_mean - new_mean) / max(1, old_mean)
+```
+
+The score lies in `[0,1]` and depends on error units. A constant stream from the
+first observation scores zero, as does an error at or above its current mean.
+Random downward fluctuations can score positively.
+Use actual predictor errors with a consistent definition. This heuristic is
+neither information gain nor solver stationarity and does not update a brain.
+`snapshot()` and `LearningProgress.from_snapshot(text)` preserve means and
+eviction order; loading validates exact fields, bounded capacity, unique keys
+and finite errors within 32 MiB. Invalid updates change no records or ordering.
+
+## Reinforcement: discrete reward-driven choices
+
+```text
+Reinforcement(
+    brain,
+    *,
+    actions,
+    action_input="action",
+    value_output="value",
+    discount=0.95,
+    exploration=0.1,
+    reward_scale=1.0,
+    value_scale=0.9,
+    capacity=1024,
+    batch_size=16,
+    seed=0,
+)
+```
+
+With the default action-conditioned form, the compiled `brain` needs an
+`action_input` sensor with exactly `actions` coordinates and a `value_output`
+selecting one scalar patch state. With `action_input=None`, `value_output`
+must be a tuple/list of exactly `actions` scalar output names exposing distinct
+physical patches. These action values come from one jointly settled query;
+only the selected output is clamped by its teaching estimate. Other
+inputs describe the situation, explicit history and any drives. Values are
+settled outputs, not a separate policy head. `brain` remains accessible and
+`config` is a read-only mapping; one serial owner must control both objects.
+
+| Argument | Contract |
+| --- | --- |
+| `actions` | Integer at least two. Number of discrete choices. |
+| `action_input`, `value_output` | Sensor name plus scalar output name for one-hot action-conditioned queries; or `None` plus a tuple/list of distinct scalar output names for one joint vector-value query. Lists are normalized to tuples in configuration. |
+| `discount` | Finite discount in `[0,1)`. |
+| `exploration` | Finite probability in `[0,1]` of a uniform action during exploratory selection. |
+| `reward_scale` | Positive finite bound for supplied reward magnitude. Rewards beyond it are rejected, not silently clipped. |
+| `value_scale` | Positive finite target scale, strictly below both `state_bound` and `1 / (1 + state_prior)`. This check does not establish that a chosen architecture learns the value function. |
+| `capacity` | Positive integer bound on stored transition records; oldest records are discarded when full. |
+| `batch_size` | Positive integer no greater than capacity. Replay samples up to this many records, always including the latest. |
+| `seed` | Nonnegative integer for private exploration, tie-breaking and replay sampling. |
+
+For reward `r`, the target is a normalized discounted-return estimate:
+
+```text
+y = (1-discount) * value_scale * r/reward_scale
+    + discount * clip(max_a Q(next_inputs, a), -value_scale, value_scale)
+```
+
+Terminal records omit the second term. All targets use unchanged pre-update
+parameters. `observe_batch(source="estimate")` fits them with ordinary joint
+repair, preserving current live activity. Actual rewards and observations are
+records; fitted future-return targets are estimates. Replay is not a guarantee
+of protected retention or convergence of nonlinear Q-learning.
+
+| Method | Contract |
+| --- | --- |
+| `act(inputs, *, explore=True, budget=None)` | Supply every sensor except a declared action input. Query each action in conditioned mode, or all value outputs jointly in vector mode; require qualification, choose epsilon exploration or a maximum value, breaking ties uniformly; retain qualified activity with `step`. A pending action must receive feedback or be reset before another `act`. |
+| `feedback(reward, next_inputs=None, *, terminal=False, learn=True, budget=None)` | Record the pending action's actual outcome. Nonterminal outcomes require next inputs; terminal outcomes require `None`. Valid feedback consumes the pending action even if subsequent fitting refuses. `learn=False` records without fitting. Invalid arguments change nothing. |
+| `replay(*, budget=None)` | Attempt one sampled batch update from retained records. Other than the mandatory latest record, sample uniformly without replacement. Next-action query or fit refusal commits no parameters; retry this method rather than resubmitting feedback. |
+| `reset()` | Discard a pending action without inventing a reward or clearing retained records or the brain. |
+| `inspect()` | Copy `config`, current `records`, cumulative `transitions`, successful helper `updates`, and boolean `pending`. |
+| `snapshot()` | Save brain, replay records, pending action, RNG and counters in bounded JSON. |
+| `Reinforcement.from_snapshot(text)` | Validate the complete continuation, including the reinforcement source hash and the brain's own source identity. Text limit: 32 MiB. |
+
+Successful `act` returns `accepted=True`, integer `action`, candidate `values`,
+boolean `exploratory` and the selected `settlement`. Query or step refusal
+returns `accepted=False`, `action=None`, `values` and reason `"query_refused"`
+or `"step_refused"`; pending state and RNG stay unchanged. `explore=False`
+disables epsilon moves but still breaks exact ties randomly.
+
+A completed replay attempt returns the batch result plus sampled `indices`,
+derived `targets` and cumulative `updates`. Earlier refusals return
+`accepted=False` with `"empty_replay"` or `"bootstrap_refused"`. `feedback`
+adds `stored=True` and cumulative `transitions`; with learning disabled its
+reason is `"learning_disabled"` and `accepted=False`. A stored transition and
+an accepted parameter update are different events. Each `budget` applies to
+each underlying query/solve, not an aggregate interaction deadline. Measure
+every candidate/next-action query and the batch fit, not only the returned fit.
+
+## LiveController and actuator limits
+
+```text
+LiveController(callback, *, fallback, max_age=0.25, clock=time.monotonic)
+slew(current, target, *, rate, dt)
+```
+
+`callback` is called as `callback(observation)` on one daemon worker. It must return a mapping
+with exact boolean `qualified`. A qualified result needs a finite nonempty
+`command` sequence matching the length of `fallback`; a refused result may
+omit it. Extra fields are ignored, including `accepted`. Translate a policy's
+result into this protocol explicitly. Exceptions and malformed results become
+errors; later work can still run. The worker must exclusively own callback
+access to any brain, history or reinforcement helper it uses.
+
+`fallback` is a finite nonempty command vector. `max_age` is positive finite
+seconds. `clock` is a fast callable yielding finite nondecreasing seconds.
+This is best-effort scheduling: the Python GIL, locks, data copying and
+validation still consume time, and an active callback cannot be cancelled.
+
+| Method | Contract |
+| --- | --- |
+| `submit(observation)` | Copy finite JSON-like data and return a positive submission ID without waiting for a solve. At most one observation waits behind the active callback; a newer submission replaces that pending observation. Submission after closure raises `ValueError`. |
+| `read()` | Return a command tuple from the latest fresh qualified completion, or fallback before any completion, after refusal/error, after expiry or after closure. A fresh prior command remains available while newer work waits. |
+| `inspect()` | Copy counters, worker/queue state, decision status, result age and latest timing/error diagnostics; see below. |
+| `close(*, wait=True, timeout=1.0)` | Stop submissions, drop pending work and allow active work to finish. Wait at most finite nonnegative `timeout` seconds if requested; return whether the worker has exited. No solve cancellation occurs. |
+
+Age is measured from submission, not completion: queue and solve time count.
+The accepted observation data are string-keyed dictionaries, lists, tuples,
+strings, booleans, finite numbers and `None`; cycles and other types are rejected.
+The replaceable pending slot is for sensory refreshes. **Do not put reward or
+transition records that must be retained in this slot.** Store those losslessly
+and deliver them in order to the serial owner. Expiry or closing does not undo
+state changes made by a callback that is already running.
+
+Inspection counters are `submitted`, `dropped`, `started`, `completed`,
+`qualified`, `refused` and `errors`. Other fields are `closed`, `busy`, `pending`,
+`worker_alive`, `status`, `last_result_id`, `result_age`, `last_solve_seconds`,
+`last_latency_seconds` and `last_error`. Status is `"waiting"`, `"qualified"`,
+`"refused"`, `"error"`, `"stale"` or `"closed"`. Callback/result validation
+time is included in solve time; latency additionally includes queue time.
+Timing and result identity are `None` until available. Dropped counts pending
+replacements and pending work discarded by closing, not cancelled active work.
+
+`slew` returns a tuple moving each `current` coordinate toward `target` by at
+most `rate * dt`. Vectors must be finite, nonempty and equal length; `rate` is
+a nonnegative scalar or equal-length vector, and `dt` is finite nonnegative
+seconds. Nonfinite products are rejected. It limits actuator motion without
+choosing the target. See [live-system examples](LIVE.md).
 
 ## Checkpoints
 

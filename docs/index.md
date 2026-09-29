@@ -10,6 +10,7 @@ Both phases use the same mechanism; neither implies an automatic mode switch.
 | --- | --- |
 | [Quickstart](QUICKSTART.md) | Build, query, learn and save a small brain |
 | [Bootstrapping and size](BOOTSTRAP.md) | Starting configurations, individual/batch admissions and task checks |
+| [Memory, rewards and live control](LIVE.md) | Temporal history, reward credit, replay, curiosity and responsive bodies |
 | [GPU execution and parallel experience](ACCELERATION.md) | CPU/GPU selection, batch repair, numerical checks and independent lives |
 | [DRSN guide](DRSN.md) | Multimodal layouts and how recursive observation works |
 | [Layout variants](VARIANTS.md) | Width, parallel branches, depth and connection cost |
@@ -17,6 +18,6 @@ Both phases use the same mechanism; neither implies an automatic mode switch.
 | [API reference](REFERENCE.md) | Every public class, parameter, method and diagnostic |
 | [Specification](SPECIFICATION.md) | Qualification, refusal, witness admission and continuation |
 
-[Examples](https://github.com/muellerberndt/cadence-demos) ·
+[Demo](https://github.com/muellerberndt/cadence-demos) ·
 [Source](https://github.com/muellerberndt/cadence) ·
 [Release notes](../CHANGELOG.md)

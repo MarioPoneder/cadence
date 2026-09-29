@@ -52,14 +52,14 @@ mathematical modes. Actual witnesses can support learning in either phase.
 
 A query freezes parameters and computes repair derivatives for live state;
 unused parameter derivatives are not evaluated. `step` can retain that live
-state. `observe` fixes witnessed output coordinates and also repairs weights
+state. `observe` fixes supplied output coordinates and also repairs weights
 and biases, adding a prior anchored to the pre-experience parameters:
 
 ```text
 E_learning = E + parameter_prior/2 * ||parameters - anchor||²
 ```
 
-`observe_batch` uses the same relations for several witnessed experiences.
+`observe_batch` uses the same relations for several labeled experiences.
 Each row has private patch activity, initialized from the same retained live
 state, while weights and biases are shared:
 
@@ -71,14 +71,22 @@ The one anchor is fixed at the pre-batch parameters. All private states and
 shared parameters repair jointly. A successful batch retains parameters and
 one event identity while preserving live state; the private states are returned
 as diagnostics. Serial `observe` calls instead retain each solved state and
-reanchor after each witness, so batching changes the learning trajectory.
+reanchor after each admission, so batching changes the learning trajectory.
 
 The anchor stays fixed for the whole admission. Retained parameters are the
 memory used by later queries; warm live state is distinct from this durable
-learning. This engine does not claim that mere exposure to any stream discovers
-a useful task or supplies a reward-learning algorithm. During the live phase,
-the application can continue to call `observe` when actual outcomes arrive;
-parameters are frozen only for individual query or `step` calls.
+learning. These parameters remain plastic; the prior is not protected
+consolidation. `source="witness"` labels measured targets and
+`source="estimate"` labels derived targets without changing this equation.
+The `Reinforcement` helper computes one-step Q estimates from actual transition
+records and fits them through batch repair. It supplies an explicit reward
+algorithm rather than deriving task objectives from mere exposure. Parameters
+are frozen only for individual query or `step` calls.
+
+`History` is caller-fed sensory context, and `LearningProgress` is error-reduction
+bookkeeping. Neither adds a patch rule or claims learned recurrent memory.
+Live scheduling and actuator smoothing also remain outside the energy;
+see [the live-system guide](LIVE.md).
 
 Each sweep computes analytic derivatives, projects a candidate into configured
 state/parameter bounds, then backtracks until a sufficient energy decrease is

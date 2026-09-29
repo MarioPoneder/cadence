@@ -2,6 +2,7 @@
 
 import inspect
 import re
+import time
 from pathlib import Path
 
 import pytest
@@ -42,12 +43,23 @@ def test_public_exports_are_documented():
         assert re.search(rf"\b{re.escape(name)}\b", reference), name
 
 
-@pytest.mark.parametrize("name", ["Cortex", "bootstrap"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Cortex",
+        "bootstrap",
+        "History",
+        "LearningProgress",
+        "Reinforcement",
+        "LiveController",
+        "slew",
+    ],
+)
 def test_constructor_reference_matches_api(name):
     reference = (ROOT / "docs" / "REFERENCE.md").read_text()
     match = re.search(rf"(?ms)^{name}\(.*?\)", reference)
     assert match, f"Missing complete {name} constructor signature"
-    namespace = {}
+    namespace = {"time": time}
     exec(f"def {match.group()}:\n    pass\n", namespace)
     documented = inspect.signature(namespace[name]).parameters
     actual = inspect.signature(getattr(cadence, name)).parameters
@@ -60,7 +72,14 @@ def test_constructor_reference_matches_api(name):
 
 PUBLIC_METHODS = [
     (owner, name)
-    for owner in (cadence.Cortex, cadence.Brain)
+    for owner in (
+        cadence.Cortex,
+        cadence.Brain,
+        cadence.History,
+        cadence.LearningProgress,
+        cadence.Reinforcement,
+        cadence.LiveController,
+    )
     for name, member in inspect.getmembers(owner)
     if not name.startswith("_")
     and (inspect.isfunction(member) or inspect.ismethod(member))
@@ -75,7 +94,7 @@ PUBLIC_METHODS = [
 def test_public_method_reference_matches_api(owner, name):
     """Examples alone cannot detect misleading optional/required parameters."""
     reference = (ROOT / "docs" / "REFERENCE.md").read_text()
-    match = re.search(rf"`(?:Brain\.)?{name}(\([^`]*\))`", reference)
+    match = re.search(rf"`(?:{owner.__name__}\.)?{name}(\([^`]*\))`", reference)
     assert match, f"Missing exact {owner.__name__}.{name} signature"
     namespace = {}
     exec(f"def documented{match.group(1)}:\n    pass\n", namespace)

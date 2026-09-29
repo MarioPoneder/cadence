@@ -159,7 +159,7 @@ repair procedure. Entering the live phase does not automatically freeze
 parameters or enable a different solver: the application chooses when to query,
 retain activity with `step`, or admit witnesses with `observe`.
 
-`observe` clamps supplied output witnesses and jointly repairs live state and
+`observe` clamps supplied output targets and jointly repairs live state and
 local relation parameters. A proximal prior anchors the parameters to their
 values immediately before this experience:
 
@@ -169,11 +169,14 @@ E_learning = E + parameter_prior/2 * ||parameters - previous_parameters||²
 
 The anchor remains fixed throughout this solve. A qualified proposal commits
 its state, parameters and event identity atomically. A refused proposal commits
-nothing. This is native supervised witness learning. Reward-driven temporal
-credit, episodic retrieval, imagination policies and learned structural growth
-are further capabilities, not implied by this method.
+nothing. By default, targets are labeled `source="witness"`; derived teaching
+values require `source="estimate"`. The equation is the same, and the source
+label is caller-supplied provenance bound into the admission identity.
+`Reinforcement` uses this interface for discrete-action Q-learning with
+one-step reward credit and bounded replay. It does not make episodic retrieval,
+imagination policies or structural growth automatic.
 
-`observe_batch` groups witnessed experiences under one shared set of parameters.
+`observe_batch` groups labeled experiences under one shared set of parameters.
 Every example has private activity initialized from the same retained live
 state. Its processing and observing populations remain in the joint repair;
 the objective averages example energies and charges the parameter anchor once.
@@ -181,6 +184,15 @@ A qualified batch retains shared parameters and one event identity, preserving
 live state. Grouping changes learning compared with serial admissions and
 creates no implicit temporal connections. Use `bootstrap(..., batch_size=...)`
 for bounded replay through this interface; see [batch experience](REFERENCE.md#batch-experience).
+
+Retained relation parameters provide durable but plastic learned information;
+later learning can overwrite it. Replay helps revisit experiences but does not
+provide protected consolidation. `History` instead supplies a bounded explicit
+window of caller-provided observations, with presence masks. It can expose
+motion or a recently occluded object without claiming that the brain learned
+recurrent memory. `LearningProgress` tracks reductions in supplied predictor
+error; noisy decreases can also raise it, so it is neither information gain nor
+a settlement residual. See [live learning](LIVE.md) for composing these helpers.
 
 ```python
 teacher_layout = Cortex(seed=2)
@@ -242,7 +254,7 @@ read-only. `Cortex(device="mps")`, `Cortex(device="cuda")` or
 
 `brain.settle(inputs)` is a pure query; `brain.step(inputs)` retains qualified
 live state with parameters frozen. `brain.observe(inputs, targets)` also permits
-relation changes from witnessed outputs. Check `qualified` or `accepted` before
+relation changes from labeled targets. Check `qualified` or `accepted` before
 using a result. `brain.predict(inputs)` raises `SettlementError` on refusal.
 Serialize calls to each brain; there is no concurrent mutation contract.
 `observe_batch` is one atomic admission, not permission to mutate the same brain
@@ -262,7 +274,7 @@ assert restored.predict({"signal": [0.4]}) == learner.predict({"signal": [0.4]})
 Checkpoints bind the complete configuration, graph identity and the exact
 layout, repair, tensor and validation source hashes.
 `Brain.from_snapshot(saved, device="python")` explicitly transfers a compatible
-continuation to the reference engine while preserving its arrays and witness
+continuation to the reference engine while preserving its arrays and admission
 cursor. Device selection changes configuration identity; see
 [checkpoint transfer](ACCELERATION.md#move-a-continuation-between-devices). Loading requires these sources to
 match exactly, including across releases. A checkpoint is a continuation record,
