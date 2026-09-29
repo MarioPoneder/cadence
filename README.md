@@ -4,7 +4,7 @@
 
 # Cadence
 
-[Website](https://floatingpragma.io/cadence/) · [Examples](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/) · [Documentation](docs/index.md)
+[Website](https://floatingpragma.io/cadence/) · [Demo](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/) · [Documentation](docs/index.md)
 
 [![PyPI](https://img.shields.io/pypi/v/cadence-net)](https://pypi.org/project/cadence-net/)
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
@@ -43,6 +43,28 @@ patch rule and retained world model.
 
 Every core change is reviewed against all three. The
 [contributor instructions](AGENTS.md) define the checks.
+
+## The demo: a brain plays Doom
+
+The main Cadence demo is [Doom Lab](https://github.com/muellerberndt/cadence-demos/tree/main/doom-lab):
+a settling brain plays shareware Doom in your browser from pixels alone —
+two grayscale retinas in, eight settled motor states out, no policy network
+and no backpropagation. Take the controls yourself and your frame-and-button
+pairs are admitted as witnesses while you play; a live, rotatable 3D view
+shows the populations settling, the wiring carrying signal, and each
+committed batch as it changes the brain. Brains hot-swap mid-game and travel
+as single export files.
+
+```sh
+git clone https://github.com/muellerberndt/cadence-demos
+cd cadence-demos/doom-lab && ./get_wad.sh && python server.py
+```
+
+The complete training pipeline ships with it — scripted privileged teacher,
+witness corpora, conditioned batched bootstrap with matched controls, DAgger
+correction rounds, and a foresight variant trained on measured outcomes:
+[demo page](https://floatingpragma.io/cadence/demos/) ·
+[training tutorial](https://github.com/muellerberndt/cadence-demos/blob/main/doom-lab/TRAINING.md).
 
 ## Install
 
