@@ -7,7 +7,7 @@ an explicit record of recent observations. These are different mechanisms.
 Neither saved activity nor a larger observer population automatically provides
 working memory, episodic retrieval, or protection against forgetting.
 
-The helpers on this page are available in Cadence 0.50.0. They reuse
+Install `cadence-net>=0.50.0` for the helpers on this page. They reuse
 the same patch equation and qualified admission. They add no mandatory dependency
 and do not simulate neurotransmitter chemistry. See the [reference](REFERENCE.md)
 for every parameter and failure contract.
@@ -41,7 +41,10 @@ without consuming a frame; `reset` clears the window at an episode boundary.
 
 This is bounded **external history**, presented to the jointly settling brain.
 The brain must learn how to use it. After a cue leaves the window, this mechanism
-cannot recover it. Long-lived learned recurrent memory remains a distinct task.
+cannot recover it. The snippet above only constructs and queries a history-fed
+brain; it has not taught recall. See the [temporal qualification](#qualify-temporal-context-and-delayed-credit)
+for acquired recall on reserved sequences. Long-lived learned recurrent memory
+remains a distinct task.
 Do not call adding history alone a demonstrated recursive-memory advantage.
 
 ## Learn choices from consequences
@@ -57,7 +60,10 @@ per action from a single jointly settling brain**. Set `action_input=None` and
 pass those output names as `value_output`. A learning update clamps only the
 chosen action's output; the other patches remain free in that same solve. This
 avoids a separate query for every action and lets action ranks vary directly
-with the current sensory context. Cadence Pet uses this form.
+with the current sensory context. Cadence Pet uses this form. `act` still
+performs a separate `step` to retain qualified activity: vector mode uses two
+solves per successful decision, while action-conditioned mode uses one query
+per action plus that `step`.
 
 ```python
 from cadence import Reinforcement
@@ -129,6 +135,21 @@ before applying actions and after learning; `stored` alone does not mean learnin
 succeeded. `feedback(..., learn=False)` records a frozen-learning control.
 The stored record also survives an exception during the subsequent fit; it
 remains an actual experience even though no fitted update was admitted.
+
+`feedback` has no external event-ID or network retry interface. A body adapter
+must deduplicate incoming outcome messages and acknowledge which command was
+executed. Do not associate a delayed network packet with a newer pending action.
+`reset()` abandons a pending action without inventing feedback; it does not clear
+replay, parameters or retained activity. Start a new learner for a fresh life.
+
+`explore=False` disables epsilon exploration for a decision; it does not freeze
+learning, and exact value ties are still broken randomly. For a frozen-parameter
+evaluation, pair executed actions with `feedback(..., learn=False)` and omit
+`replay()` calls. Feedback still records transitions and changes the replay
+store; queries via `act` still retain activity and advance the helper's RNG.
+For a completely isolated assessment, evaluate a `Reinforcement.from_snapshot`
+copy. Call `replay()` explicitly if you want extra updates: nothing schedules
+background learning for you.
 
 ## Retain skills and predict the body
 
@@ -237,6 +258,29 @@ curiosity have their own validated snapshots; save them at the same paused
 boundary as the learner and the environment. A brain-only snapshot has no
 external sensory history, replay dataset or body state.
 
+A complete application save should include:
+
+| Owner | What to save |
+| --- | --- |
+| `Reinforcement` | Its snapshot, including the brain, replay, pending action and RNG |
+| `History` and `LearningProgress` | Their separate snapshots, if used |
+| Body/environment | Physical state, episode position, observation encoding, environment RNG and simulation clock |
+| Execution adapter | Command/outcome IDs, whether the pending action was executed, and any unprocessed consequences |
+
+Pause collection and drain or persist outcome messages under one serial owner
+before taking these snapshots. A learner's pending action records a choice; it
+does not certify execution. On restore, deliver saved consequences only for
+an action actually executed; abandon a discarded command with `reset`. Never
+re-execute an already acknowledged action. `LiveController` has no snapshot:
+stop its worker and check that `close()` returned true before accessing its
+brain elsewhere, then create a new controller for the resumed owner.
+
+Brain checkpoints and reinforcement checkpoints bind their implementation
+sources. An execution override exists on `Brain.from_snapshot`, but not on
+`Reinforcement.from_snapshot`; rebuilding only the brain does not transfer a
+whole learner's replay and pending-action state. Keep the original compatible
+package version for saved lives.
+
 Run the bounded examples from the repository:
 
 ```sh
@@ -250,7 +294,6 @@ delayed reward and reversal, replay retention, saved continuation, consequence
 prediction, numerical refusal and stale-command handling. Longer memory,
 continuous-action reinforcement, learned planning and a browser creature remain
 separate demonstrations.
-
 
 ## Qualify temporal context and delayed credit
 
@@ -314,7 +357,11 @@ one integrated autonomous life, learned episodic retrieval or evidence that
 observers outperform conventional recurrent models.
 
 The [source-bound confirmation receipt](../examples/receipts/temporal_credit.json)
-contains all 66 cases for seeds 2 and 7. All 18 memory cases pass, with maximum
+contains all 66 cases for seeds 2 and 7. It was produced at qualification commit
+`d9b592c`, before the 0.50.0 version bump. Of its hashed implementation files,
+only the package version string subsequently changed; the receipt retains its
+original hashes. Reruns on the release have different version-file hashes and
+timings, so do not expect byte-identical report JSON. All 18 memory cases pass, with maximum
 reserved full-history error 0.107. All 16 TD cases exceed the 0.65 executed-choice
 gate; their individual success rates range from 0.725 to 0.900. The following
 means pool both rewarded choices and both seeds (160 evaluation episodes per

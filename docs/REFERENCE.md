@@ -526,8 +526,8 @@ Reinforcement(
 )
 ```
 
-With the default action-conditioned form, the compiled `brain` needs an
-`action_input` sensor with exactly `actions` coordinates and a `value_output`
+Available since 0.50.0. With the default action-conditioned form, the compiled
+`brain` needs an `action_input` sensor with exactly `actions` coordinates and a `value_output`
 selecting one scalar patch state. With `action_input=None`, `value_output`
 must be a tuple/list of exactly `actions` scalar output names exposing distinct
 physical patches. These action values come from one jointly settled query;
@@ -566,13 +566,14 @@ of protected retention or convergence of nonlinear Q-learning.
 | `act(inputs, *, explore=True, budget=None)` | Supply every sensor except a declared action input. Query each action in conditioned mode, or all value outputs jointly in vector mode; require qualification, choose epsilon exploration or a maximum value, breaking ties uniformly; retain qualified activity with `step`. A pending action must receive feedback or be reset before another `act`. |
 | `feedback(reward, next_inputs=None, *, terminal=False, learn=True, budget=None)` | Record the pending action's actual outcome. Nonterminal outcomes require next inputs; terminal outcomes require `None`. Valid feedback consumes the pending action even if subsequent fitting refuses. `learn=False` records without fitting. Invalid arguments change nothing. |
 | `replay(*, budget=None)` | Attempt one sampled batch update from retained records. Other than the mandatory latest record, sample uniformly without replacement. Next-action query or fit refusal commits no parameters; retry this method rather than resubmitting feedback. |
-| `reset()` | Discard a pending action without inventing a reward or clearing retained records or the brain. |
+| `reset()` | Discard a pending action without inventing a reward or clearing retained records, RNG, parameters or live activity. |
 | `inspect()` | Copy `config`, current `records`, cumulative `transitions`, successful helper `updates`, and boolean `pending`. |
 | `snapshot()` | Save brain, replay records, pending action, RNG and counters in bounded JSON. |
 | `Reinforcement.from_snapshot(text)` | Validate the complete continuation, including the reinforcement source hash and the brain's own source identity. Text limit: 32 MiB. |
 
 Successful `act` returns `accepted=True`, integer `action`, candidate `values`,
-boolean `exploratory` and the selected `settlement`. Query or step refusal
+boolean `exploratory` and the selected `settlement`. Values are scaled return
+estimates, not probabilities or confidence scores. Query or step refusal
 returns `accepted=False`, `action=None`, `values` and reason `"query_refused"`
 or `"step_refused"`; pending state and RNG stay unchanged. `explore=False`
 disables epsilon moves but still breaks exact ties randomly.
@@ -583,8 +584,23 @@ derived `targets` and cumulative `updates`. Earlier refusals return
 adds `stored=True` and cumulative `transitions`; with learning disabled its
 reason is `"learning_disabled"` and `accepted=False`. A stored transition and
 an accepted parameter update are different events. Each `budget` applies to
-each underlying query/solve, not an aggregate interaction deadline. Measure
-every candidate/next-action query and the batch fit, not only the returned fit.
+each underlying query/solve, not an aggregate interaction deadline. An
+action-conditioned `act` performs `actions` value queries plus one retaining `step`; vector mode
+performs one value query plus one `step`. All successful decisions consume RNG,
+even with `explore=False`, because tie-breaking uses the private generator.
+Measure every candidate/next-action query and the batch fit, not only the returned fit.
+
+`act` stores a selected action, but cannot observe whether a body executed it.
+The caller acknowledges execution before `feedback`; a discarded command needs
+`reset`. There is no `event_id` on `feedback` and no external outcome-message
+deduplication. After valid feedback consumes a pending action, retry numerical
+learning with `replay`, never by resubmitting that outcome to a later action.
+
+`explore=False` changes selection only. `feedback(..., learn=False)` freezes
+parameters for that feedback, but still records a transition and can evict the
+oldest record. Extra `replay` calls still learn. Snapshot a separate learner for
+an evaluation that must not change the live replay, RNG or retained activity.
+`Reinforcement.from_snapshot` has no device/dtype override, unlike `Brain`.
 
 ## LiveController and actuator limits
 
@@ -611,7 +627,7 @@ validation still consume time, and an active callback cannot be cancelled.
 | `submit(observation)` | Copy finite JSON-like data and return a positive submission ID without waiting for a solve. At most one observation waits behind the active callback; a newer submission replaces that pending observation. Submission after closure raises `ValueError`. |
 | `read()` | Return a command tuple from the latest fresh qualified completion, or fallback before any completion, after refusal/error, after expiry or after closure. A fresh prior command remains available while newer work waits. |
 | `inspect()` | Copy counters, worker/queue state, decision status, result age and latest timing/error diagnostics; see below. |
-| `close(*, wait=True, timeout=1.0)` | Stop submissions, drop pending work and allow active work to finish. Wait at most finite nonnegative `timeout` seconds if requested; return whether the worker has exited. No solve cancellation occurs. |
+| `close(*, wait=True, timeout=1.0)` | Stop submissions, drop pending work and allow active work to finish. Wait at most finite nonnegative `timeout` seconds if requested; it must not exceed `threading.TIMEOUT_MAX`. Return whether the worker has exited. No solve cancellation occurs. |
 
 Age is measured from submission, not completion: queue and solve time count.
 The accepted observation data are string-keyed dictionaries, lists, tuples,
@@ -629,6 +645,12 @@ Inspection counters are `submitted`, `dropped`, `started`, `completed`,
 time is included in solve time; latency additionally includes queue time.
 Timing and result identity are `None` until available. Dropped counts pending
 replacements and pending work discarded by closing, not cancelled active work.
+
+Unlike brain inputs, runtime observations must already be ordinary JSON-like
+Python values: convert array objects to lists before submission. Command and
+fallback vectors must be nonempty Python sequences; no array conversion is
+performed. There is no runtime checkpoint. A false `close` result means the
+callback still owns its brain; do not transfer ownership until it exits.
 
 `slew` returns a tuple moving each `current` coordinate toward `target` by at
 most `rate * dt`. Vectors must be finite, nonempty and equal length; `rate` is

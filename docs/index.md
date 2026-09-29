@@ -5,6 +5,14 @@ recursive observers. All populations participate in one joint repair process.
 Prepare and check a brain during its **bootstrapping phase**, then use it during
 its **live phase**, continuing to admit actual witnesses when available.
 Both phases use the same mechanism; neither implies an automatic mode switch.
+The current documentation covers Cadence 0.50.0, including `History`,
+`Reinforcement`, `LearningProgress`, `LiveController` and `slew`.
+
+For a first project, follow the quickstart through learning and saving. Use
+`observe` for measured targets and `Reinforcement` for discrete choices from
+reward; add `History` when the latest observation omits relevant recent context.
+The live guide covers these choices and the responsibilities of a body adapter.
+For exact signatures, result fields and refusal behavior, use the API reference.
 
 | Read | Purpose |
 | --- | --- |

@@ -32,7 +32,7 @@ diagnostics and continuation.
 In the **bootstrapping phase**, guided experience teaches the brain its basic
 abilities. In the **live phase**, that same brain acts in its environment and
 can continue learning from actual new witnesses. Both phases use the same
-patch rule and retained world model.
+patch rule and retained parameters.
 
 ## Three pillars
 
@@ -71,7 +71,7 @@ correction rounds, and a foresight variant trained on measured outcomes:
 Python 3.11 or later; the default engine has no runtime dependencies:
 
 ```sh
-python -m pip install --upgrade "cadence-net>=0.49.0"
+python -m pip install --upgrade "cadence-net>=0.50.0"
 ```
 
 If your package index has not listed a new release yet, its wheel is also
@@ -80,7 +80,7 @@ available from [GitHub Releases](https://github.com/muellerberndt/cadence/releas
 For GPU execution, install the optional tensor extra:
 
 ```sh
-python -m pip install --upgrade "cadence-net[gpu]"
+python -m pip install --upgrade "cadence-net[gpu]>=0.50.0"
 ```
 
 Choose `Cortex(device="mps")` for an Apple Silicon GPU or
@@ -150,12 +150,13 @@ learner = bootstrap_layout.build()
 
 examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
 checks = [({"signal": [x]}, {"answer": [x]}) for x in (-0.4, 0.4)]
+starting_point = learner.snapshot()
 report = bootstrap(learner, examples, checks=checks, max_error=0.2)
 assert report["passed"], report
 
-# Fresh amplitudes, with no output targets supplied to the brain.
-assert learner.predict({"signal": [-0.4]})["answer"][0] < -0.2
-assert learner.predict({"signal": [0.4]})["answer"][0] > 0.2
+# Fresh amplitudes, absent from both teaching and readiness checks.
+assert learner.predict({"signal": [-0.6]})["answer"][0] < -0.3
+assert learner.predict({"signal": [0.6]})["answer"][0] > 0.3
 ```
 
 Actual witnesses clamp the supplied outputs and allow joint repair of live
@@ -167,10 +168,14 @@ This example establishes a small acquired relation, not a benefit from depth.
 Use **batch bootstrapping** to jointly learn from groups of examples:
 
 ```python
+from cadence import Brain
+
+# Start from the same untrained continuation, so this actually teaches a batch.
+batch_learner = Brain.from_snapshot(starting_point)
 batch_report = bootstrap(
-    learner, examples, checks=checks, max_error=0.2, batch_size=32,
+    batch_learner, examples, checks=checks, max_error=0.2, batch_size=2,
 )
-assert batch_report["passed"], batch_report
+assert batch_report["passed"] and batch_report["updates"] > 0, batch_report
 ```
 
 Each batch jointly settles private example states and shared parameters;
@@ -195,13 +200,14 @@ Applications supply sensory acquisition, witnesses, actuator interpretation
 and environment-specific behavior checks. The [guide](docs/BOOTSTRAP.md)
 explains calibration and staged bootstrapping for perception and body control.
 
-Development support for a continuing life adds explicit sensory `History`,
+Cadence 0.50.0 supports a continuing life with explicit sensory `History`,
 discrete reward learning with `Reinforcement`, an optional `LearningProgress`
 curiosity signal, and a `LiveController` that keeps rendering independent of
 brain work. Reward-derived action values are labeled estimates and learned by
 the same patch repair. Replay and checkpointing preserve experience for later
-use. These additions follow 0.49.0; see [memory, rewards and live control](docs/LIVE.md)
-for setup, examples and the boundary between learned decisions and body support.
+use. See [memory, rewards and live control](docs/LIVE.md) for setup, runnable
+examples, measured temporal tasks and the boundary between learned decisions
+and body support.
 
 ## Scope
 
@@ -225,6 +231,7 @@ depth require further controlled experiments. Follow the
 | [DRSN guide](docs/DRSN.md) | Population layouts, equations, learning, all configuration, diagnostics and checkpoints |
 | [Quickstart](docs/QUICKSTART.md) | Inputs, settlement, learning and saved continuation |
 | [Bootstrapping and live phases](docs/BOOTSTRAP.md) | Calibration, guided experience, small starting layouts and readiness checks |
+| [Memory, rewards and live control](docs/LIVE.md) | History, delayed credit, replay, curiosity, execution ownership and whole-life saves |
 | [GPU execution and parallel experience](docs/ACCELERATION.md) | Device selection, precision, checkpoint transfer and concurrent simulated lives |
 | [API reference](docs/REFERENCE.md) | Every public class, method and configuration parameter |
 | [Mathematical specification](docs/SPECIFICATION.md) | Guarantees, qualification and evidence boundaries |

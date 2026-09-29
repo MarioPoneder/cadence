@@ -2,12 +2,11 @@
 
 Cadence can accelerate repair with CPU or GPU tensors and run independent
 simulated lives in separate processes. The brain's interface stays the same:
-`settle` queries, `step` retains qualified activity, and `observe` admits an
+`settle` queries, `step` retains qualified activity, and `observe` admits a
 target through joint state/parameter repair, labeled as a witness or an estimate.
 `observe_batch` admits a group of labeled examples with shared parameters and
 private experience states. `bootstrap` replays witnesses, optionally in batches,
-and checks
-unclamped predictions.
+and checks unclamped predictions.
 
 More width or recursive depth increases capacity and cost. Whether it improves
 a task must be tested; adding layers does not guarantee successful learning.
@@ -180,6 +179,11 @@ A seed alone therefore does not guarantee bitwise GPU replay. Record hardware,
 library versions and execution settings alongside experiment receipts. Cadence
 does not change global deterministic flags; the default Python engine does
 not use these tensor reductions.
+
+Execution overrides above apply to a `Brain` checkpoint. A
+`Reinforcement` checkpoint also owns replay, RNG and pending-action state, and
+its loader has no device/dtype override. Choose the device when building its
+brain; do not replace a whole-life restore with a brain-only transfer.
 
 ## Parallel simulated lives
 
