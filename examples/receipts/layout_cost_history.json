@@ -1,0 +1,3097 @@
+{
+  "schema": "cadence-layout-cost-history-excerpts/1",
+  "scope": "Source-hashed excerpts of two historical experiments; not complete reproduction bundles, not new training or new evaluation. Original hashes identify unmodified source files, not this derived JSON.",
+  "derivation": "CartPole aggregates all nine original confirmation result JSONs. Stream aggregates all30 original confirmation records and checks those aggregate values against the original summary. No trial selection.",
+  "cartpole": {
+    "experiment": "Qualified CartPole-v1 supervised control",
+    "cadence_version": "0.43.0",
+    "source_protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+    "source_version_file_sha256": "dca7a6aef72e9904ddf6cb9e4ab1a392027455a0c48d87e40262260238c353ee",
+    "method": "128 supplied full numerical-state imitation targets per model; parameters frozen during 20 confirmation episodes for each of three model initializations per layout. No reward learning or teacher action fallback during evaluation.",
+    "timing_scope": "Measured learned action queries on shared Apple Silicon host; arithmetic mean of the three model means, each containing 10,000 actions. Learning timing is separate.",
+    "matching": "Same teacher examples, 20 environment seeds and numerical settings. flat6 and observer4_2 match six patch states but have 24 versus 40 edges and 30 versus 46 parameters; flat1 has one patch.",
+    "nonclaim": "No recursive-quality advantage: every trained model reaches the episode ceiling.",
+    "arms": {
+      "flat1": {
+        "patches": 1,
+        "edges": 4,
+        "parameters": 5,
+        "model_seeds": [
+          7,
+          17,
+          27
+        ],
+        "environment_seeds": [
+          2000,
+          2001,
+          2002,
+          2003,
+          2004,
+          2005,
+          2006,
+          2007,
+          2008,
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019
+        ],
+        "episodes": 60,
+        "episodes_at_500": 60,
+        "actions": 30000,
+        "refused_actions": 0,
+        "mean_action_ms": 0.03825420561479405,
+        "maximum_action_ms": 0.32724998891353607,
+        "mean_training_seconds": 0.03639187529915944,
+        "teaching_attempts": 384,
+        "accepted_teaching_events": 384,
+        "refused_teaching_events": 0,
+        "work": {
+          "backtracks": 0,
+          "edge_visits": 1199976,
+          "evaluations": 149997,
+          "patch_visits": 299994,
+          "proposals": 89997
+        },
+        "mean_accepted_repair_sweeps_per_action": 2.9999,
+        "repair_sweep_derivation": "(proposals - rejected backtracks) / actions, from the archived repair-counter contract",
+        "source_receipts": [
+          {
+            "name": "confirm_flat1_17_128.json",
+            "sha256": "c7242a0d950f3df1ddf3cc867eb62aa19b8ea65aa68bb4278d4e58c7c8a5df29",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 0.038224105490371585,
+            "learned_max_action_ms": 0.32724998891353607,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          },
+          {
+            "name": "confirm_flat1_27_128.json",
+            "sha256": "990b246109de55fc23917d743ea243afd999d4438846f7422393833faa6567b1",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 0.03861892288550734,
+            "learned_max_action_ms": 0.262417015619576,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          },
+          {
+            "name": "confirm_flat1_7_128.json",
+            "sha256": "78ef04da17c02faaab65fee07e4876b26263c1814ed4908e2bea13ffeddfa6a7",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 0.03791958846850321,
+            "learned_max_action_ms": 0.08358299965038896,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          }
+        ]
+      },
+      "flat6": {
+        "patches": 6,
+        "edges": 24,
+        "parameters": 30,
+        "model_seeds": [
+          7,
+          17,
+          27
+        ],
+        "environment_seeds": [
+          2000,
+          2001,
+          2002,
+          2003,
+          2004,
+          2005,
+          2006,
+          2007,
+          2008,
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019
+        ],
+        "episodes": 60,
+        "episodes_at_500": 60,
+        "actions": 30000,
+        "refused_actions": 0,
+        "mean_action_ms": 0.10923500443071438,
+        "maximum_action_ms": 14.354709011968225,
+        "mean_training_seconds": 1.211978611012455,
+        "teaching_attempts": 384,
+        "accepted_teaching_events": 383,
+        "refused_teaching_events": 1,
+        "work": {
+          "backtracks": 0,
+          "edge_visits": 7200000,
+          "evaluations": 150000,
+          "patch_visits": 1800000,
+          "proposals": 90000
+        },
+        "mean_accepted_repair_sweeps_per_action": 3.0,
+        "repair_sweep_derivation": "(proposals - rejected backtracks) / actions, from the archived repair-counter contract",
+        "source_receipts": [
+          {
+            "name": "confirm_flat6_17_128.json",
+            "sha256": "c83539a22e31c633560985fe73fa7993523789a6ffbf02c30f60810af35cefaa",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 0.09182272536563688,
+            "learned_max_action_ms": 0.4414999857544899,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          },
+          {
+            "name": "confirm_flat6_27_128.json",
+            "sha256": "ea5cf40b3efe1d491167e362a777faf6dc082ab757481d13de382b1b34f4d9db",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 0.13814030669745989,
+            "learned_max_action_ms": 14.354709011968225,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          },
+          {
+            "name": "confirm_flat6_7_128.json",
+            "sha256": "5fc11ca18c9c3dafe27e9a119ab7ae71b83041410a41bd7bc3e320183d892a25",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 0.09774198122904637,
+            "learned_max_action_ms": 3.9211660041473806,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          }
+        ]
+      },
+      "observer4_2": {
+        "patches": 6,
+        "edges": 40,
+        "parameters": 46,
+        "model_seeds": [
+          7,
+          17,
+          27
+        ],
+        "environment_seeds": [
+          2000,
+          2001,
+          2002,
+          2003,
+          2004,
+          2005,
+          2006,
+          2007,
+          2008,
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019
+        ],
+        "episodes": 60,
+        "episodes_at_500": 60,
+        "actions": 30000,
+        "refused_actions": 0,
+        "mean_action_ms": 6.166317052545492,
+        "maximum_action_ms": 160.42025003116578,
+        "mean_training_seconds": 3.0694983336725272,
+        "teaching_attempts": 384,
+        "accepted_teaching_events": 375,
+        "refused_teaching_events": 9,
+        "work": {
+          "backtracks": 3804849,
+          "edge_visits": 546119440,
+          "evaluations": 6826493,
+          "patch_visits": 81917916,
+          "proposals": 6766493
+        },
+        "mean_accepted_repair_sweeps_per_action": 98.72146666666667,
+        "repair_sweep_derivation": "(proposals - rejected backtracks) / actions, from the archived repair-counter contract",
+        "source_receipts": [
+          {
+            "name": "confirm_observer4_2_17_128.json",
+            "sha256": "21a9f0adc3d83897388ce9803de4f29def4cd84a2fcaa5af4edc8659b7cf390b",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 4.686244943848578,
+            "learned_max_action_ms": 159.15604104520753,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          },
+          {
+            "name": "confirm_observer4_2_27_128.json",
+            "sha256": "a656697a0cfb1781479bcca7dd66ad1316986834d16b1241dfce3fb3bd7d3514",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 7.318031051568687,
+            "learned_max_action_ms": 160.42025003116578,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          },
+          {
+            "name": "confirm_observer4_2_7_128.json",
+            "sha256": "3db853ceb11e267868c5bb25f1359a2de4254f6e56b1cfba11031e3a9a577a51",
+            "provenance": {
+              "cadence_commit": "3f0f34ff8661711158d500e4c111b5889460dfa5",
+              "gymnasium": "1.2.3",
+              "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+              "protocol_sha256": "65bc2b7a1a0d3b727f3d4e76db2a96de2d1ec3eb67870388ba86f6af89260bea",
+              "python": "3.13.0",
+              "runner_sha256": "9d251e54c66aea3790f0db7ab69ebe50d67f4eaa117d0921c1db8556dd9fbdb1"
+            },
+            "learned_mean_action_ms": 6.49467516221921,
+            "learned_max_action_ms": 124.5935830520466,
+            "learned_episode_rewards": [
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0,
+              500.0
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "changing_body": {
+    "experiment": "Changing scalar-body online consequence learning",
+    "cadence_version": "0.48.0",
+    "environment": {
+      "python": "3.12.6",
+      "platform": "macOS-15.3-arm64-arm-64bit",
+      "torch": "2.14.0",
+      "cadence": "0.48.0",
+      "threads": 1
+    },
+    "source_files": {
+      "protocol.json": "2ba1297807c38625cd999c671686c2ef7b93a940f2152284cccf258a8dab8416",
+      "results/receipt.json": "7f87b84eb45b6c709d1a42258ab3c9cb76ef4c062290c0162f8b2daa207f9c09",
+      "results/summary.json": "ae14552da060580d6fd6bfd5ac136a2196897ed3d429b14b232ae75c5fcba97e",
+      "results/verification.json": "4c3fad04c78816b32731d2a71dbb831549e494bb9df0cc8f83e99a4feccd04f4"
+    },
+    "matching": "Same observations, history, actual stream and replay presentations. Different parameters, optimizer steps and computation. Cadence uses Python float64; conventional controls use PyTorch CPU float64 and one Torch/BLAS thread.",
+    "conditions": {
+      "confirmation_seeds": [
+        11,
+        23,
+        37,
+        53,
+        71
+      ],
+      "events_per_stream": 288,
+      "presentations_per_stream": 1146,
+      "history_steps": 4,
+      "phases": [
+        "A",
+        "B",
+        "A restored"
+      ],
+      "control": "Private one-step goal probes every24events; behavior remains a common random-policy trajectory. No closed-loop control claim."
+    },
+    "timing_scope": "Construction, actual-input forecasts, learning/replay, hypothetical action queries and final checkpoint probes. Excludes import, common stream generation and receipt I/O; shared host and unequal work.",
+    "nonclaims": [
+      "Not matched capacity or compute; broader intelligence or a causal recursive-depth advantage is unestablished.",
+      "MLP is faster and lower on squared forecast error and goal error.",
+      "Restored A initially incurs more error than first acquisition; no protected old-skill recall."
+    ],
+    "arms": {
+      "cadence_flat": {
+        "parameters": 21,
+        "confirmation_streams": 5,
+        "actual_events": 1440,
+        "presentations": 5730,
+        "accepted_presentations": 5730,
+        "forecast_mae": 0.15313506364335622,
+        "forecast_mse": 0.07194936475320247,
+        "goal_error": 0.13985569416612925,
+        "control_cases": 180,
+        "mean_model_seconds": 0.1782517148181796,
+        "mean_timing_seconds": {
+          "construction": 0.00012051640078425407,
+          "forecast": 0.010280525789130478,
+          "learning": 0.16432481401134283,
+          "control_queries": 0.003429983416572213,
+          "verification_probes": 9.587520034983754e-05
+        },
+        "phase_mae": [
+          {
+            "all": 0.11892590927532279,
+            "first16": 0.3311621410285249,
+            "last32": 0.05375788347742873
+          },
+          {
+            "all": 0.15696395490319034,
+            "first16": 0.47294110221035857,
+            "last32": 0.03705508303365572
+          },
+          {
+            "all": 0.18351532675155552,
+            "first16": 0.5275919072973037,
+            "last32": 0.0558817255365037
+          }
+        ],
+        "seed_records": [
+          {
+            "seed": 11,
+            "stream_sha256": "10ffcc2f12d31d3aafc4ad2570b0913115bf162cb65d016e04899cb15da8dc1d",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.06592334819001236,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.12620471514875428,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.3307274357767861,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04769255985877765,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.15936982387688367,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4327341216212048,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.043681580142325704,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.18049672246535467,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5021087232866307,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.0654268946355148,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.0973813923056012,
+              "control_regret": 0.05069885848931926,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00011162500595673919,
+              "forecast": 0.010184007172938436,
+              "learning": 0.16439083457225934,
+              "control_queries": 0.0033898339606821537,
+              "verification_probes": 9.654200403019786e-05
+            },
+            "total_seconds": 0.17817284271586686
+          },
+          {
+            "seed": 23,
+            "stream_sha256": "f90b4461bb0cfb9289bc8630cfa1bdb368bdb43024f1b3c20b5390a33d67b8b5",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.0729002727669562,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.1187833976258152,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.279209119884238,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05007222004666943,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.13373275328585835,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.45072005664210407,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.028068959597115313,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.19427818473073508,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.600499761622819,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05487665300553183,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.14203967961731,
+              "control_regret": 0.08666234925982029,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00011833303142338991,
+              "forecast": 0.010300750727765262,
+              "learning": 0.1638792640878819,
+              "control_queries": 0.0034319580299779773,
+              "verification_probes": 9.67920059338212e-05
+            },
+            "total_seconds": 0.17782709788298234
+          },
+          {
+            "seed": 37,
+            "stream_sha256": "ae68e37744a9b5417b850258a3d467ee90b23e810f7b07904d4f500745bb064f",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.07865021336509827,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.12120072313066871,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.3583691391240345,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05573004635427354,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1713210686889228,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5810407042358128,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.0356635003074061,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.18369264511832836,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5264287845455448,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04825405834248659,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.20132209970474255,
+              "control_regret": 0.14431491292659543,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00011829100549221039,
+              "forecast": 0.010241629322990775,
+              "learning": 0.16543258732417598,
+              "control_queries": 0.0034826669725589454,
+              "verification_probes": 9.583402425050735e-05
+            },
+            "total_seconds": 0.17937100864946842
+          },
+          {
+            "seed": 53,
+            "stream_sha256": "ca7060369821bf5d2ef41426191365eea94eca4d3fc2a44b078feedcc77509d2",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.07278268586675421,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.1152141866925661,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.34404344746648197,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05129009753882728,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.16999091080602027,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4586967557827685,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.036485658401569525,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1662306150604366,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.46245976874166456,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05489929002394615,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.15480510854372975,
+              "control_regret": 0.1086883816267503,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00012224999954923987,
+              "forecast": 0.010310415993444622,
+              "learning": 0.16465263010468334,
+              "control_queries": 0.003412085061427206,
+              "verification_probes": 9.337498340755701e-05
+            },
+            "total_seconds": 0.17859075614251196
+          },
+          {
+            "seed": 71,
+            "stream_sha256": "5eb79b7bc8783743339a14fe7d9f38c72410c3940255d4df5c58b37b730acbd6",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.06949030357719134,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.11322652377880965,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.343461562891084,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06400449358859571,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.15040521785826663,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4415138727699026,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04137571671986197,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1928784663829228,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5464624982898593,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.055951731675039154,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.10373019065926276,
+              "control_regret": 0.04809426020588977,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.000132082961499691,
+              "forecast": 0.0103658257285133,
+              "learning": 0.16326875396771356,
+              "control_queries": 0.0034333730582147837,
+              "verification_probes": 9.683298412710428e-05
+            },
+            "total_seconds": 0.17729686870006844
+          }
+        ]
+      },
+      "cadence_composed": {
+        "parameters": 161,
+        "confirmation_streams": 5,
+        "actual_events": 1440,
+        "presentations": 5730,
+        "accepted_presentations": 5730,
+        "forecast_mae": 0.15061718479095598,
+        "forecast_mse": 0.07027518202086513,
+        "goal_error": 0.13988059081023918,
+        "control_cases": 180,
+        "mean_model_seconds": 20.922172889101784,
+        "mean_timing_seconds": {
+          "construction": 0.0002354832016862929,
+          "forecast": 0.15684555004118012,
+          "learning": 20.7038952304516,
+          "control_queries": 0.05783630058867857,
+          "verification_probes": 0.003360324818640947
+        },
+        "phase_mae": [
+          {
+            "all": 0.11543328751081527,
+            "first16": 0.31425647958622294,
+            "last32": 0.054022204325485115
+          },
+          {
+            "all": 0.15498818001097642,
+            "first16": 0.47430090465906716,
+            "last32": 0.03738280394827644
+          },
+          {
+            "all": 0.18143008685107626,
+            "first16": 0.5277584970420921,
+            "last32": 0.05834879132724793
+          }
+        ],
+        "seed_records": [
+          {
+            "seed": 11,
+            "stream_sha256": "10ffcc2f12d31d3aafc4ad2570b0913115bf162cb65d016e04899cb15da8dc1d",
+            "parameters": 161,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.0626868015039652,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.11937159034564086,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.30145722096766214,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04736681229706404,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.15735611797301244,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.42652230961172133,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04380886745542263,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1769419154523868,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5034746497393228,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06834612301438121,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.0967303833819936,
+              "control_regret": 0.05004784956571166,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00022849999368190765,
+              "forecast": 0.12438058917177841,
+              "learning": 20.133152955095284,
+              "control_queries": 0.04514491680311039,
+              "verification_probes": 0.002860667009372264
+            },
+            "total_seconds": 20.305767628073227
+          },
+          {
+            "seed": 23,
+            "stream_sha256": "f90b4461bb0cfb9289bc8630cfa1bdb368bdb43024f1b3c20b5390a33d67b8b5",
+            "parameters": 161,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.07010490433928131,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.10992380504102824,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.23422700831603974,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.0507903675221753,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1297021295991534,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4502204944479972,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.028529926591082878,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1935480101889064,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.6017306753958505,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.056868997858479584,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.14444793052522598,
+              "control_regret": 0.08907060016773627,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00022833299590274692,
+              "forecast": 0.15454517130274326,
+              "learning": 20.34304733830504,
+              "control_queries": 0.056367376062553376,
+              "verification_probes": 0.003353166044689715
+            },
+            "total_seconds": 20.55754138471093
+          },
+          {
+            "seed": 37,
+            "stream_sha256": "ae68e37744a9b5417b850258a3d467ee90b23e810f7b07904d4f500745bb064f",
+            "parameters": 161,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.07761246588659179,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.12002384977022545,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.34655155736730303,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05703854455162842,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.17237895679549,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5905725193392272,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.03568734591015784,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.179214584274524,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5262003893533733,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05037139664289822,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.2010753710417455,
+              "control_regret": 0.14406818426359835,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00023408298147842288,
+              "forecast": 0.16101116576464847,
+              "learning": 22.510189969150815,
+              "control_queries": 0.05755054403562099,
+              "verification_probes": 0.004369792004581541
+            },
+            "total_seconds": 22.733355553937145
+          },
+          {
+            "seed": 53,
+            "stream_sha256": "ca7060369821bf5d2ef41426191365eea94eca4d3fc2a44b078feedcc77509d2",
+            "parameters": 161,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.07235827138339952,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.11297644818677012,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.33168211598048103,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05246028446607314,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1690788194041349,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.46310840690124006,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.03731648108672247,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1656171014266011,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.46185027842159915,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05751818662663061,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.15779577305400921,
+              "control_regret": 0.11167904613702977,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0002514999941922724,
+              "forecast": 0.1972678266465664,
+              "learning": 20.655741583323106,
+              "control_queries": 0.07721729011973366,
+              "verification_probes": 0.0033317910274490714
+            },
+            "total_seconds": 20.933809991111048
+          },
+          {
+            "seed": 71,
+            "stream_sha256": "5eb79b7bc8783743339a14fe7d9f38c72410c3940255d4df5c58b37b730acbd6",
+            "parameters": 161,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.06861346699108783,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.1148707442104117,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.3573644952996287,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06245501279048468,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.14642487628309125,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.44108079299515013,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.0415713986979964,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.19182882291296288,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5455364923003151,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05863925249385004,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.09935349604822158,
+              "control_regret": 0.04371756559484859,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00023500004317611456,
+              "forecast": 0.147022997320164,
+              "learning": 19.877344306383748,
+              "control_queries": 0.05290137592237443,
+              "verification_probes": 0.0028862080071121454
+            },
+            "total_seconds": 20.080389887676574
+          }
+        ]
+      },
+      "cadence_recursive": {
+        "parameters": 175,
+        "confirmation_streams": 5,
+        "actual_events": 1440,
+        "presentations": 5730,
+        "accepted_presentations": 5730,
+        "forecast_mae": 0.15120449348252196,
+        "forecast_mse": 0.0708436225653528,
+        "goal_error": 0.13808701085488664,
+        "control_cases": 180,
+        "mean_model_seconds": 23.93538872729987,
+        "mean_timing_seconds": {
+          "construction": 0.00026426679687574506,
+          "forecast": 0.15313326228642837,
+          "learning": 23.72144924796885,
+          "control_queries": 0.05747030823258683,
+          "verification_probes": 0.0030716420151293278
+        },
+        "phase_mae": [
+          {
+            "all": 0.11751108436067963,
+            "first16": 0.32543741166921014,
+            "last32": 0.053329470179983886
+          },
+          {
+            "all": 0.15507254749722402,
+            "first16": 0.47057314006865186,
+            "last32": 0.037177600729503456
+          },
+          {
+            "all": 0.1810298485896622,
+            "first16": 0.5271128664994311,
+            "last32": 0.05790846764049218
+          }
+        ],
+        "seed_records": [
+          {
+            "seed": 11,
+            "stream_sha256": "10ffcc2f12d31d3aafc4ad2570b0913115bf162cb65d016e04899cb15da8dc1d",
+            "parameters": 175,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.06512893755278532,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.1254342554448368,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.32203367417178286,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04763336131574634,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.15796727795871413,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4268869087691323,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.043040037343092113,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1764948409875442,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5014782208433748,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06818803738427916,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.10222882952309192,
+              "control_regret": 0.055546295706809995,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0002519169938750565,
+              "forecast": 0.13196891982806846,
+              "learning": 23.323810242465697,
+              "control_queries": 0.04773625003872439,
+              "verification_probes": 0.002500500006135553
+            },
+            "total_seconds": 23.5062678293325
+          },
+          {
+            "seed": 23,
+            "stream_sha256": "f90b4461bb0cfb9289bc8630cfa1bdb368bdb43024f1b3c20b5390a33d67b8b5",
+            "parameters": 175,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.07092960894591711,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.11477677129978826,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.26654120635625556,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.050464334927099064,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1310394559654792,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.44574606119186866,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.028303323898057973,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1925209534118205,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.6004982093454712,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.056521226870396235,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.13571607332676852,
+              "control_regret": 0.08033874296927883,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00026062503457069397,
+              "forecast": 0.14688183460384607,
+              "learning": 24.17654617410153,
+              "control_queries": 0.055793294101022184,
+              "verification_probes": 0.0028395840199664235
+            },
+            "total_seconds": 24.382321511860937
+          },
+          {
+            "seed": 37,
+            "stream_sha256": "ae68e37744a9b5417b850258a3d467ee90b23e810f7b07904d4f500745bb064f",
+            "parameters": 175,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.07676613853827367,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.11917230780655057,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.3407811632399639,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.056018060097817055,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1689871643681856,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5825267922331944,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.03577061981239371,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1796068078508417,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5253459435540226,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05006400900219063,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.2010753710417455,
+              "control_regret": 0.14406818426359835,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00029399996856227517,
+              "forecast": 0.16480634518666193,
+              "learning": 24.66380060330266,
+              "control_queries": 0.060891622968483716,
+              "verification_probes": 0.003887500031851232
+            },
+            "total_seconds": 24.89368007145822
+          },
+          {
+            "seed": 53,
+            "stream_sha256": "ca7060369821bf5d2ef41426191365eea94eca4d3fc2a44b078feedcc77509d2",
+            "parameters": 175,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.07301082603768833,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.11518365229981804,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.34308527249880233,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.050955635917702975,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.16911991194172737,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4569588507762207,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.037282508687186015,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.16568274051472967,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4640336348332043,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05677367994707876,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.15480510854372975,
+              "control_regret": 0.1086883816267503,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00025629199808463454,
+              "forecast": 0.18705841689370573,
+              "learning": 23.94315967382863,
+              "control_queries": 0.07177179103018716,
+              "verification_probes": 0.0030944590107537806
+            },
+            "total_seconds": 24.205340632761363
+          },
+          {
+            "seed": 71,
+            "stream_sha256": "5eb79b7bc8783743339a14fe7d9f38c72410c3940255d4df5c58b37b730acbd6",
+            "parameters": 175,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {
+              "admission": 0,
+              "query": 0
+            },
+            "metrics": {
+              "selection_mse": 0.06838260175209955,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.11298843495240452,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.35474574207924625,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06157595864155396,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.14824892725201377,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4407470873728431,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.041491513906787486,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.19084390018337496,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5442083239210826,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05799538499851613,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.09660967183909754,
+              "control_regret": 0.040973741385724544,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0002584999892860651,
+              "forecast": 0.13495079491985962,
+              "learning": 22.499929546145722,
+              "control_queries": 0.0511585830245167,
+              "verification_probes": 0.0030361670069396496
+            },
+            "total_seconds": 22.689333591086324
+          }
+        ]
+      },
+      "mlp": {
+        "parameters": 1129,
+        "confirmation_streams": 5,
+        "actual_events": 1440,
+        "presentations": 5730,
+        "accepted_presentations": 5730,
+        "forecast_mae": 0.16029017169359006,
+        "forecast_mse": 0.06879861582066252,
+        "goal_error": 0.12309043969585665,
+        "control_cases": 180,
+        "mean_model_seconds": 0.05706607656320557,
+        "mean_timing_seconds": {
+          "construction": 0.002061275206506252,
+          "forecast": 0.007824685680679977,
+          "learning": 0.04667278209235519,
+          "control_queries": 0.0004785167868249118,
+          "verification_probes": 2.8816796839237212e-05
+        },
+        "phase_mae": [
+          {
+            "all": 0.18545107721195006,
+            "first16": 0.42921560976905193,
+            "last32": 0.06153472766057314
+          },
+          {
+            "all": 0.1268166986162062,
+            "first16": 0.4243060709016329,
+            "last32": 0.038914167761129326
+          },
+          {
+            "all": 0.16860273925261388,
+            "first16": 0.4852728885248646,
+            "last32": 0.05594596381356359
+          }
+        ],
+        "seed_records": [
+          {
+            "seed": 11,
+            "stream_sha256": "10ffcc2f12d31d3aafc4ad2570b0913115bf162cb65d016e04899cb15da8dc1d",
+            "parameters": 1129,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.07951882534297802,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.23635388057960563,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.3905425809582954,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.057495101855032635,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.11946918970017756,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4205589258858775,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.03465065522112186,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.18041003580676315,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4562037966031062,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05979148965932797,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.16637343907148922,
+              "control_regret": 0.11969090525520729,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00043462502071633935,
+              "forecast": 0.007709924655500799,
+              "learning": 0.04622787400148809,
+              "control_queries": 0.00047699897550046444,
+              "verification_probes": 2.800003858283162e-05
+            },
+            "total_seconds": 0.054877422691788524
+          },
+          {
+            "seed": 23,
+            "stream_sha256": "f90b4461bb0cfb9289bc8630cfa1bdb368bdb43024f1b3c20b5390a33d67b8b5",
+            "parameters": 1129,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.06712506711332418,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.1886810453292986,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4586113322203596,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06872928139229104,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.10934198961849508,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4016978618563472,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.039581320119867446,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.17783709726897967,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5170284717990776,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.0632744884232937,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.10942605518112437,
+              "control_regret": 0.05404872482363465,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00043949997052550316,
+              "forecast": 0.008410369220655411,
+              "learning": 0.04874212923459709,
+              "control_queries": 0.0004887100076302886,
+              "verification_probes": 3.062497125938535e-05
+            },
+            "total_seconds": 0.058111333404667675
+          },
+          {
+            "seed": 37,
+            "stream_sha256": "ae68e37744a9b5417b850258a3d467ee90b23e810f7b07904d4f500745bb064f",
+            "parameters": 1129,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.07403623503067612,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.1895288073192836,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5131698699627228,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06850919401786691,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1487484629641989,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.49598644987293944,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04318929775034592,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.15766416673650632,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5065529023465601,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04566863578382526,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.14044594167104946,
+              "control_regret": 0.08343875489290234,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.008550375001505017,
+              "forecast": 0.007766504480969161,
+              "learning": 0.0465357864741236,
+              "control_queries": 0.0004807909135706723,
+              "verification_probes": 2.8292008209973574e-05
+            },
+            "total_seconds": 0.06336174887837842
+          },
+          {
+            "seed": 53,
+            "stream_sha256": "ca7060369821bf5d2ef41426191365eea94eca4d3fc2a44b078feedcc77509d2",
+            "parameters": 1129,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.06892929521818031,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.14905386752314728,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.335592580677738,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05121529216135012,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.144866974731219,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4423182116194979,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.045876231795881794,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.17745357573999884,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5030657373147018,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.07054267048273362,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.12439184273687262,
+              "control_regret": 0.07827511581989319,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0004337920108810067,
+              "forecast": 0.00752479414222762,
+              "learning": 0.045695370354223996,
+              "control_queries": 0.00046874803956598043,
+              "verification_probes": 2.804200630635023e-05
+            },
+            "total_seconds": 0.054150746553204954
+          },
+          {
+            "seed": 71,
+            "stream_sha256": "5eb79b7bc8783743339a14fe7d9f38c72410c3940255d4df5c58b37b730acbd6",
+            "parameters": 1129,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.054383656398153964,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.1636377853084152,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4481616850261438,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06172476887632502,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.11165687606694057,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.36096890527350234,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.03127333391842961,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.14964882071082133,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4435135345608773,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.0404525347186374,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.07481491981874756,
+              "control_regret": 0.019178989365374564,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00044808402890339494,
+              "forecast": 0.007711835904046893,
+              "learning": 0.04616275039734319,
+              "control_queries": 0.0004773359978571534,
+              "verification_probes": 2.9124959837645292e-05
+            },
+            "total_seconds": 0.054829131287988275
+          }
+        ]
+      },
+      "transformer": {
+        "parameters": 2433,
+        "confirmation_streams": 5,
+        "actual_events": 1440,
+        "presentations": 5730,
+        "accepted_presentations": 5730,
+        "forecast_mae": 0.20214384419020023,
+        "forecast_mse": 0.09857966543387903,
+        "goal_error": 0.18078799554030398,
+        "control_cases": 180,
+        "mean_model_seconds": 0.17154754287330434,
+        "mean_timing_seconds": {
+          "construction": 0.0008651916054077446,
+          "forecast": 0.0230301451170817,
+          "learning": 0.14616441337857394,
+          "control_queries": 0.0013950675842352212,
+          "verification_probes": 9.272518800571561e-05
+        },
+        "phase_mae": [
+          {
+            "all": 0.14615129773979502,
+            "first16": 0.4219522368819491,
+            "last32": 0.036068533126656685
+          },
+          {
+            "all": 0.16921786839372846,
+            "first16": 0.4119210674565589,
+            "last32": 0.07417509660415932
+          },
+          {
+            "all": 0.29106236643707717,
+            "first16": 0.5231713996133159,
+            "last32": 0.12841205628777663
+          }
+        ],
+        "seed_records": [
+          {
+            "seed": 11,
+            "stream_sha256": "10ffcc2f12d31d3aafc4ad2570b0913115bf162cb65d016e04899cb15da8dc1d",
+            "parameters": 2433,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.08196261799844638,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.10474469499258465,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.2784962410903472,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.03196274002844949,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1540130201624057,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.38691893152353235,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.043371384821017656,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.2863093342938302,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5339120704187861,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05317276695238968,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.15612636734963203,
+              "control_regret": 0.1094438335333501,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0008197080460377038,
+              "forecast": 0.023040920204948634,
+              "learning": 0.1449154475121759,
+              "control_queries": 0.00139420892810449,
+              "verification_probes": 9.1583002358675e-05
+            },
+            "total_seconds": 0.1702618676936254
+          },
+          {
+            "seed": 23,
+            "stream_sha256": "f90b4461bb0cfb9289bc8630cfa1bdb368bdb43024f1b3c20b5390a33d67b8b5",
+            "parameters": 2433,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.08096862367324269,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.16488935248843128,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.42390265864378107,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06334179669573448,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.12721763333708544,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.3547889042179134,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.07218976716669491,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.21933107374432978,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5785942244046183,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.036090074276837775,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.13134355223086877,
+              "control_regret": 0.07596622187337905,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0008730000117793679,
+              "forecast": 0.022843246872071177,
+              "learning": 0.14649170998018235,
+              "control_queries": 0.0013774170656688511,
+              "verification_probes": 9.133398998528719e-05
+            },
+            "total_seconds": 0.17167670791968703
+          },
+          {
+            "seed": 37,
+            "stream_sha256": "ae68e37744a9b5417b850258a3d467ee90b23e810f7b07904d4f500745bb064f",
+            "parameters": 2433,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.17841137373185545,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.20890701579049265,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.6399935673490909,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.02471215353292474,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.2514661379673694,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5468388149581416,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.12101083624237205,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.45627081409047077,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5442135382487899,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.40389666685035186,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.3148391140084659,
+              "control_regret": 0.2578319272303188,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0009053749963641167,
+              "forecast": 0.02322363300481811,
+              "learning": 0.14598036493407562,
+              "control_queries": 0.0014210428926162422,
+              "verification_probes": 9.366701124235988e-05
+            },
+            "total_seconds": 0.17162408283911645
+          },
+          {
+            "seed": 53,
+            "stream_sha256": "ca7060369821bf5d2ef41426191365eea94eca4d3fc2a44b078feedcc77509d2",
+            "parameters": 2433,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.08849467212045566,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.1328320942283079,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.45154970365778924,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.02736478292019151,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.1501598872268044,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.3843121461044099,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06467516652035253,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.2856575980715819,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4789539456576781,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.09959388023519064,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.1263231031068523,
+              "control_regret": 0.08020637618987286,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0008249999955296516,
+              "forecast": 0.0226080872816965,
+              "learning": 0.1441944687976502,
+              "control_queries": 0.0013756259577348828,
+              "verification_probes": 9.379198309034109e-05
+            },
+            "total_seconds": 0.16909697401570156
+          },
+          {
+            "seed": 71,
+            "stream_sha256": "5eb79b7bc8783743339a14fe7d9f38c72410c3940255d4df5c58b37b730acbd6",
+            "parameters": 2433,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.06306103964539495,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.11938333119915867,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.31581901366873705,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.032961192455983224,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.16323266327497735,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.38674654047879725,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.06962832827035943,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.2077430119851732,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.48018321933670705,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.049306893124113245,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.1753078410057009,
+              "control_regret": 0.11967191055232791,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0009028749773278832,
+              "forecast": 0.023434838221874088,
+              "learning": 0.14924007566878572,
+              "control_queries": 0.0014070430770516396,
+              "verification_probes": 9.324995335191488e-05
+            },
+            "total_seconds": 0.17507808189839125
+          }
+        ]
+      },
+      "linear": {
+        "parameters": 21,
+        "confirmation_streams": 5,
+        "actual_events": 1440,
+        "presentations": 5730,
+        "accepted_presentations": 5730,
+        "forecast_mae": 0.260423561776409,
+        "forecast_mse": 0.1481844320741981,
+        "goal_error": 0.23914831705600592,
+        "control_cases": 180,
+        "mean_model_seconds": 0.028112217073794455,
+        "mean_timing_seconds": {
+          "construction": 0.0003207668079994619,
+          "forecast": 0.004010053083766252,
+          "learning": 0.023524889163672923,
+          "control_queries": 0.0002409496228210628,
+          "verification_probes": 1.55583955347538e-05
+        },
+        "phase_mae": [
+          {
+            "all": 0.2020875742998344,
+            "first16": 0.39467178333238895,
+            "last32": 0.09593312564002685
+          },
+          {
+            "all": 0.2712690644809147,
+            "first16": 0.5469023743786512,
+            "last32": 0.06439358325092681
+          },
+          {
+            "all": 0.3079140465484781,
+            "first16": 0.6306046332652023,
+            "last32": 0.12293441628712146
+          }
+        ],
+        "seed_records": [
+          {
+            "seed": 11,
+            "stream_sha256": "10ffcc2f12d31d3aafc4ad2570b0913115bf162cb65d016e04899cb15da8dc1d",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.12423873321387391,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.18594487986535382,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.30754476690616206,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.09378513851911635,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.22572737865422032,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5168015405363602,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.05350110585767132,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.2805455558491616,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.6275219907112569,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.10410848885225901,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.23974818578999693,
+              "control_regret": 0.19306565197371497,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0003095000283792615,
+              "forecast": 0.004009667900390923,
+              "learning": 0.02367532067000866,
+              "control_queries": 0.0002410420565865934,
+              "verification_probes": 1.550000160932541e-05
+            },
+            "total_seconds": 0.028251030656974763
+          },
+          {
+            "seed": 23,
+            "stream_sha256": "f90b4461bb0cfb9289bc8630cfa1bdb368bdb43024f1b3c20b5390a33d67b8b5",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.14097689251045825,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.21901757018424486,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.33298016196832725,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.10806047199316483,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.27688927678409714,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.533252451720915,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.0860155898345053,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.29405542234560766,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.7345121462124112,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.09850542235478199,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.2491848573217729,
+              "control_regret": 0.19380752696428322,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00031999999191612005,
+              "forecast": 0.003951235965359956,
+              "learning": 0.023068164358846843,
+              "control_queries": 0.00023774796864017844,
+              "verification_probes": 1.491699367761612e-05
+            },
+            "total_seconds": 0.027592065278440714
+          },
+          {
+            "seed": 37,
+            "stream_sha256": "ae68e37744a9b5417b850258a3d467ee90b23e810f7b07904d4f500745bb064f",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.19876417895417206,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.22714023285350396,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.49765486512388507,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.07428300302691329,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.329274832179073,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.6828650570774479,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.09116446178277379,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.37620131801337875,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.6210850513716848,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.17788443857106478,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.2664270492944071,
+              "control_regret": 0.20941986251625996,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.0003297500079497695,
+              "forecast": 0.00404603045899421,
+              "learning": 0.023863415990490466,
+              "control_queries": 0.0002416230272501707,
+              "verification_probes": 1.5833997167646885e-05
+            },
+            "total_seconds": 0.028496653481852263
+          },
+          {
+            "seed": 53,
+            "stream_sha256": "ca7060369821bf5d2ef41426191365eea94eca4d3fc2a44b078feedcc77509d2",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.15659365822544066,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.19767539165671058,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.40486019909237797,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.08862437817861588,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.2987662328659973,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.49965424317371115,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.04478907981195381,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.30045728517164383,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5921353678426897,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.09619397517176845,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.22985976830493485,
+              "control_regret": 0.18374304138795539,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00031320902053266764,
+              "forecast": 0.0039253258728422225,
+              "learning": 0.023174502071924508,
+              "control_queries": 0.00023900088854134083,
+              "verification_probes": 1.5249999705702066e-05
+            },
+            "total_seconds": 0.02766728785354644
+          },
+          {
+            "seed": 71,
+            "stream_sha256": "5eb79b7bc8783743339a14fe7d9f38c72410c3940255d4df5c58b37b730acbd6",
+            "parameters": 21,
+            "presentations": 1146,
+            "accepted_presentations": 1146,
+            "refusals": {},
+            "metrics": {
+              "selection_mse": 0.12034869746704564,
+              "phases": [
+                {
+                  "all": {
+                    "mae": 0.18065979693935877,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.4303189235711923,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.11491263648232387,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.22568760192118553,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5019385793848213,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.046497678967729814,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                },
+                {
+                  "all": {
+                    "mae": 0.2883106513625985,
+                    "refused": 0,
+                    "cases": 96
+                  },
+                  "first16": {
+                    "mae": 0.5777686101879691,
+                    "refused": 0,
+                    "cases": 16
+                  },
+                  "last32": {
+                    "mae": 0.13797975648573307,
+                    "refused": 0,
+                    "cases": 32
+                  }
+                }
+              ],
+              "control_mae": 0.21052172456891782,
+              "control_regret": 0.15488579411554482,
+              "control_cases": 36,
+              "control_refused": 0
+            },
+            "seconds": {
+              "construction": 0.00033137499121949077,
+              "forecast": 0.004118005221243948,
+              "learning": 0.023843042727094144,
+              "control_queries": 0.00024533417308703065,
+              "verification_probes": 1.6290985513478518e-05
+            },
+            "total_seconds": 0.02855404809815809
+          }
+        ]
+      }
+    }
+  }
+}

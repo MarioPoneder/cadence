@@ -667,6 +667,15 @@ bind the exact source hashes of `brain.py`, `cortex.py`, `column.py`, `ports.py`
 different hashes even if package version labels match; compatibility is
 therefore stricter than version compatibility.
 
+Preserve the exact compatible source artifact with saved models; even a
+comment-only edit to a hashed module changes checkpoint identity. Do not
+rewrite stored hashes to make a different implementation load. Application
+continuation also needs its observation encoding/normalizer, action decoder,
+external history, per-call query-budget overrides, action timing and environment
+identity. Those are outside a `Brain` snapshot (the configured default
+`settle_budget` is saved): the same weights with changed adapter settings
+need not implement the same policy. See [whole-life saves](LIVE.md#save-a-whole-life-and-run-the-small-gates).
+
 Loading checks structure, configuration, deterministic topology, array lengths,
 finite values, bounds and event-ownership consistency. Restoration builds and
 validates a complete proposal before replacing continuation. Newly loaded brains

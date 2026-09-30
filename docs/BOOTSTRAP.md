@@ -6,6 +6,12 @@ a body, and retaining those abilities together. The **live phase** uses that
 same brain in a continuing environment. Both phases use the same patch rule;
 actual new witnesses can keep changing learned relations during the live phase.
 
+These phases apply to all three [settlement design patterns](VARIANTS.md):
+flat, state-coupled and recursive observer layouts. Choose the layout separately
+from the training method. The same `bootstrap`, `observe` and `observe_batch`
+interfaces teach each pattern; compare acquired behavior and learning cost
+before increasing depth.
+
 Cadence supplies supervised witness learning and an explicit `Reinforcement`
 helper for discrete choices, one-step Q credit and replay. The application
 provides sensors, measured outcomes or rewards, and the environment used to

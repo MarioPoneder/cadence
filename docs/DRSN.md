@@ -7,6 +7,20 @@ roles. Each patch has live state, incoming ports, exact prediction-error
 readback and retained local relation parameters. Feedback repairs one coupled
 state. Performance evaluations and comparisons remain ongoing.
 
+## Choose observation depth deliberately
+
+**Flat settlement, state-coupled settlement and recursive observer settlement**
+are three supported design patterns. All use the same patch law and
+qualification check; recursion is optional wiring. The
+[design-pattern guide](VARIANTS.md) provides a runnable example of each.
+Input-only fixed-parameter queries have a separable state objective; coupling
+adds dependencies to joint repair. Recursive depth adds state-and-error
+constraints, but does not guarantee
+better reasoning or a particular increase in elapsed time. Start with the
+smallest useful layout and measure task quality, settling work and complete
+command latency. The [performance guide](PERFORMANCE.md) explains the
+closed-form flat case, the older fast browser demos and controlled comparisons.
+
 ## Build the layout
 
 ```python

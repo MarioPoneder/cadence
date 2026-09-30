@@ -6,6 +6,11 @@ is also available when a package index has not listed the new version yet. Caden
 mandatory runtime dependencies. A `Cortex` declares a layout; `build()` returns its
 persistent `Brain`.
 
+Choose **flat settlement**, **state-coupled settlement** or **recursive observer
+settlement**. All three support the query, learning and save operations below.
+This quickstart illustrates an observer; the [design-pattern guide](VARIANTS.md)
+has minimal runnable layouts for all three, including a flat starting point.
+
 ## Connect populations
 
 ```python

@@ -11,8 +11,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
 
-**Build Deep Recursive Settlement Networks: processing populations and their
-observers, learning and settling together.**
+**Build learning brains with flat, state-coupled or recursive settlement.**
 
 Cadence explores a simple idea: a brain can be a persistent system of local
 relations that repairs its state as experience arrives. An observer reads
@@ -34,6 +33,22 @@ abilities. In the **live phase**, that same brain acts in its environment and
 can continue learning from actual new witnesses. Both phases use the same
 patch rule and retained parameters.
 
+## Three settlement design patterns
+
+| Pattern | Wiring | Useful starting point |
+| --- | --- | --- |
+| **Flat settlement** | Patches read fixed sensory inputs | Small, fast sensor-to-answer mappings |
+| **State-coupled settlement** | Populations read other populations' live states | Learned intermediate representations and sensory fusion |
+| **Recursive observer settlement** | Observers read states and exact prediction errors, including other observers' | Tasks where internal state-and-error feedback may improve decisions |
+
+All three use the same patch/repair rule, learning API and final qualification.
+They are supported choices in Cadence 0.50.0 and can be combined in one brain.
+Start with the least expensive layout that learns the behavior and add depth
+when a measured capability gain justifies its settling and learning cost.
+The [design-pattern guide](docs/VARIANTS.md) has runnable examples of each;
+the [performance guide](docs/PERFORMANCE.md) explains the mechanism, versioned
+demo evidence and a reproducible query-cost comparison.
+
 ## Three pillars
 
 - **Minimalism:** one patch rule, a small public API, no required runtime dependencies.
@@ -47,7 +62,9 @@ Every core change is reviewed against all three. The
 ## Demos
 
 The [cadence-demos](https://github.com/muellerberndt/cadence-demos) repository
-shows Cadence brains that learn in the web browser.
+shows embodied, game-playing and music applications. The
+[Python examples](examples/README.md) cover learning, live control and layout
+costs with the current library.
 
 ## Install
 
@@ -215,6 +232,8 @@ depth require further controlled experiments. Follow the
 | [Quickstart](docs/QUICKSTART.md) | Inputs, settlement, learning and saved continuation |
 | [Bootstrapping and live phases](docs/BOOTSTRAP.md) | Calibration, guided experience, small starting layouts and readiness checks |
 | [Memory, rewards and live control](docs/LIVE.md) | History, delayed credit, replay, curiosity, execution ownership and whole-life saves |
+| [Three settlement design patterns](docs/VARIANTS.md) | Flat, state-coupled and recursive layouts with runnable examples |
+| [Depth, latency and useful work](docs/PERFORMANCE.md) | Flat/composed/recursive costs, historical demos and capability comparisons |
 | [GPU execution and parallel experience](docs/ACCELERATION.md) | Device selection, precision, checkpoint transfer and concurrent simulated lives |
 | [API reference](docs/REFERENCE.md) | Every public class, method and configuration parameter |
 | [Mathematical specification](docs/SPECIFICATION.md) | Guarantees, qualification and evidence boundaries |

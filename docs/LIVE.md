@@ -153,44 +153,55 @@ background learning for you.
 
 ## Decode discrete actions from settled scores
 
-Under imbalanced ±targets, each output's settled score is pulled toward
-that output's base-rate target mean: an action pressed on a quarter of
-the teaching frames rests near −0.3, and a fixed zero threshold then
-decodes it as never chosen while the score still ranks the right
-moments highly. Decode discrete choices against per-output thresholds
-taken from the teaching base rates (the matching score quantiles), or
-select the largest mean-relative score, and recalibrate after further
-learning because admission moves the score distribution. Judge such a
-policy by ranking quality and pressed recall on held-out rows; raw
-per-frame accuracy mostly restates the base rates.
+Action decoding belongs to the application contract. Independent button
+scores, preferences over legal compound actions, and estimated action values
+have different meanings. Imbalanced button targets can make a zero threshold
+miss rare actions, but per-button calibration can improve recall while making
+complete actions worse. Compare thresholds or mean-relative decoding with
+their controls on separate calibration data, then check legal joint actions
+and actual behavior on held-out episodes. For mutually exclusive choices,
+argmax over declared action scores is another adapter choice, not a core rule.
+Learning can change score distributions, so keep the decoder with the model
+and recheck the complete policy after updates. Ranking, agreement and pressed
+recall are diagnostics, not substitutes for performed skill.
 
 ## A bootstrap, then a life
 
-A workable live loop has two stages under one serial owner. First the
-learner watches a demonstrator act, admits witness batches, and its
-decoded agreement with the demonstrator is probed on the side; it takes
-over when agreement clears a gate that reflects what the demonstrator's
-policy makes visible in the supplied inputs. A demonstrator habit keyed
-to hidden state, such as an internal clock, caps attainable agreement
-and belongs out of the gate. After takeover, `Reinforcement` selects
-actions; record outcomes with `feedback(..., learn=False)` and run
-`replay()` as separate budgeted pulses every few transitions, so
-decisions stay frequent while learning arrives in rhythm. Keep the
-environment loop in its own thread repeating the last selected action
-while the owner thread thinks; a stalled decision then holds a pose
-instead of freezing the world.
+One live-loop pattern starts with demonstrations, checks acquisition, then
+continues learning from consequences. Readiness checks must exercise the
+**deployed action path**: agreement from an imitation output does not qualify
+a separate action-value output used after takeover. Check subsequent unclamped
+decisions on withheld inputs or before admitting each new target, and confirm
+behavior in the environment. A teacher's hidden clock or privileged state may
+make its choices unlearnable from the supplied sensors. Reaching a training
+allowance is a stopping condition, not a readiness pass.
+
+For discrete Q-learning, `Reinforcement` can record outcomes with
+`feedback(..., learn=False)` and fit them in separate budgeted `replay()` calls.
+Simulator-assisted practice can instead derive targets for `observe_batch`
+and train a separate candidate. Both use the common repair law; applications
+own target construction and scheduling. Keep one serial owner per brain.
+If physics continues while the learner works, bound how long commands remain
+valid and record their actual duration, rewards and episode boundaries.
+Repeating a command changes the executed transition; rendering FPS does not
+measure decision frequency. See [responsive control](#keep-the-body-responsive).
 
 ## Watch the equilibrium, not a relaxation film
 
-A query settle reaches its equilibrium in one numerical repair: repeated
-small-budget settles on the same clamped inputs show one state change
-and then none, and the settled per-patch errors are near zero whenever
-qualification succeeds. There is no sweep-by-sweep relaxation to
-display, and settled error is not a skill measure. Instrument live
-behavior with the state difference between successive settles as the
-inputs change, the qualification rate at the deployment budget, and the
-admission sweeps a new batch needs; falling admission sweeps are the
-visible signature of a world already understood.
+The public solve returns a final proposal and diagnostics, not intermediate
+patch states for a relaxation animation. One call can require many repair
+sweeps or refuse at its budget. `settle` is a pure query: repeating it from
+unchanged continuation does not advance a partial solve. Use `step` to solve
+and retain qualified activity; refused activity is never retained.
+
+Qualification measures constrained stationarity. Prediction errors can remain
+nonzero at a qualified equilibrium, and neither quantity measures task skill.
+Show changes between qualified endpoint states as inputs change, refusals at
+the deployment budget, and complete solve work and latency. Fewer admission
+sweeps can reflect conditioning, initialization or batch composition; they do
+not demonstrate understanding. Even an admitted repair that lowers its clamped
+objective can worsen later free predictions on the teaching inputs. Measure
+unclamped prediction quality and executed behavior separately.
 
 ## Retain skills and predict the body
 
@@ -201,6 +212,31 @@ the same repair law; always measure old-skill recall after learning the new one.
 The reinforcement store is bounded FIFO, so experiences eventually leave it.
 Its latest transition is always included; the remaining batch is sampled without
 replacement. `replay()` can run between decisions, with a declared work budget.
+
+When continued learning must preserve an existing skill, use a frozen actor
+and a separately owned candidate restored from its snapshot. Check both old
+skills and new behavior before an explicit replacement, and retain the actor
+for rollback. Better mean return can coexist with lost successful episodes.
+Repeated gates are development selection; reserve unused episodes for final
+confirmation. This orchestration belongs in the application and requires no
+new patch primitive. Direct online learning should likewise be compared with
+a frozen continuation on matched environment cases.
+
+Count replay's actual coverage of tasks and actions, not only an old/new ratio.
+Old demonstrations need not preserve the improved actor's present behavior.
+Rehearsing frozen own-score targets uses `source="estimate"` and is not an
+exact no-op: joint repair can still move parameters. Test retained behavior.
+Batch size and update frequency change the anchor schedule as described in
+[batch experience](REFERENCE.md#batch-experience).
+
+For simulator-derived targets, keep measured outcomes separate from the
+transformation into preferences. A hard rank discards return magnitude, so
+shrinking a reward bonus need not shrink a teaching update. Bind cached action
+comparisons to the actual context, action duration, horizon and frozen
+continuation that produced them. They answer “this action, then that policy”;
+a repaired policy needs its own behavioral evaluation. Fit these derived
+targets with `source="estimate"`; hypothetical brain predictions alone are
+not new environment witnesses.
 
 Action-conditioned consequence learning already uses witnessed targets:
 

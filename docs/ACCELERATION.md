@@ -13,6 +13,12 @@ a task must be tested; adding layers does not guarantee successful learning.
 Acceleration changes execution, not the information supplied, the learning
 objective or the need for a useful teaching stream.
 
+Choose the layout before assuming a faster device will solve the latency
+problem. Input-only flat queries can require very little repair; ordinary
+composition and recursive observation introduce different coupling costs.
+See [depth, latency and useful work](PERFORMANCE.md) for versioned demo evidence,
+a bounded query comparison and the distinction between answering and learning.
+
 ## Select execution explicitly
 
 The default `Cortex()` uses Python float64 and has no runtime dependencies.
@@ -60,9 +66,10 @@ Construction and checkpoint loading do not import PyTorch or reserve a device;
 the first solve does. Missing PyTorch raises `ImportError`, and unavailable
 hardware raises `ValueError`. Cadence does not silently choose another device.
 
-CPU float64 and Apple MPS float32 have been exercised through bootstrapping,
-held-out predictions and live continuation. The CUDA path is implemented, but
-this release has not been validated on NVIDIA hardware.
+The device comparison below exercised CPU float64 and Apple MPS float32.
+Application campaigns also report CUDA float64 repair measurements; retain
+their exact source, hardware and workload when interpreting them. Neither
+those measurements nor the table below qualifies every deployment workload.
 
 ## Batch experience on one device
 
@@ -187,10 +194,10 @@ brain; do not replace a whole-life restore with a brain-only transfer.
 
 ## Parallel simulated lives
 
-Worker processes that import torch must start with the spawn context;
-a forked worker inherits the parent's OpenMP state and can deadlock
-before its first batch.
-
+Use the spawn context for workers that use torch. A forked worker can inherit
+initialized OpenMP state and deadlock before its first batch. Bound each
+worker's tensor/BLAS threads as well as the process count; otherwise independent
+lives can oversubscribe the same CPU or accelerator.
 
 From the repository with Cadence installed, run:
 
@@ -250,10 +257,11 @@ a speed comparison.
 
 ## Measured starting points
 
-CPU thread counts saturate: on a 64-core host, identical `observe_batch`
-work ran fastest near 64 threads and measurably slower at 128. Measure
-per-sweep time at two thread counts before assuming more cores help.
-
+One three-batch `observe_batch` comparison took 934.0 seconds with 64 Torch
+threads and 1,118.9 seconds with 128, with identical accepted sweep counts.
+This establishes about 1.20× for those two settings on that workload, not an
+optimal thread count or a physical-core count. Benchmark thread and worker
+counts on complete calls, including reference qualification, before scaling.
 
 The measurements below use individual witness admissions. They are not batch
 benchmarks and do not predict a speedup from changing `batch_size`.
