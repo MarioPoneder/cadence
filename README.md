@@ -44,26 +44,10 @@ patch rule and retained parameters.
 Every core change is reviewed against all three. The
 [contributor instructions](AGENTS.md) define the checks.
 
-## The demo: a brain plays Doom
+## Demos
 
-The main Cadence demo is [Doom Lab](https://github.com/muellerberndt/cadence-demos/tree/main/doom-lab):
-a settling brain plays shareware Doom in your browser from pixels alone —
-two grayscale retinas in, eight settled motor states out, with no separate
-policy network. The repair engine uses analytic derivatives. Take the controls yourself and your frame-and-button
-pairs are admitted as witnesses while you play; a live, rotatable 3D view
-shows the populations settling, the wiring carrying signal, and each
-committed batch as it changes the brain. Brains hot-swap mid-game and travel
-as single export files.
-
-```sh
-git clone https://github.com/muellerberndt/cadence-demos
-cd cadence-demos/doom-lab && ./get_wad.sh && python server.py
-```
-
-The complete training pipeline ships with it — scripted privileged teacher,
-witness corpora, conditioned batched bootstrap with matched controls, DAgger
-correction rounds, and a foresight variant trained on measured outcomes:
-[training tutorial](https://github.com/muellerberndt/cadence-demos/blob/main/doom-lab/TRAINING.md).
+The [cadence-demos](https://github.com/muellerberndt/cadence-demos) repository
+shows Cadence brains that learn in the web browser.
 
 ## Install
 
