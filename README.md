@@ -1,241 +1,172 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: recursive settling populations with local state, readback and repair" width="100%">
+  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: learning through flat, state-coupled and recursive settlement" width="100%">
 </p>
 
 # Cadence
 
-[Website](https://floatingpragma.io/cadence/) · [Demo](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/) · [Documentation](docs/index.md)
+[Interactive overview](https://floatingpragma.io/cadence/) · [Public demos](https://github.com/muellerberndt/cadence-demos) · [Preprint](https://philpapers.org/rec/MUECAP-2) · [Documentation](docs/index.md) · [Pragma Research / investors](https://floatingpragma.io/investors/)
 
 [![PyPI](https://img.shields.io/pypi/v/cadence-net)](https://pypi.org/project/cadence-net/)
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
-[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 
-**Build learning brains with flat, state-coupled or recursive settlement.**
+**A deep real-time brain that learns from experience.**
 
-Cadence explores a simple idea: a brain can be a persistent system of local
-relations that repairs its state as experience arrives. An observer reads
-what other patches are doing and influences them while remaining part of the
-same equilibrium. Another observer can read that enlarged system in turn.
+Cadence is an experimental learning architecture from
+[Pragma Research](https://floatingpragma.io/), with embodied AI as a target
+application. Its building blocks are bounded patches with local state, sensory
+and output ports, prediction errors and a shared repair rule. Connected patches
+settle together to produce an answer; experience can change their retained
+parameters. Recursive observers read other patches' states and exact errors,
+feeding back into the same solve. This makes the brain an observer-like,
+self-reading system.
 
-The aim is a straightforward replacement for legacy deep neural networks,
-including transformers, built around persistent recursive settlement.
-Performance comparisons are ongoing.
+The research goal is an alternative to transformers that learns throughout a
+continuing life. The library supplies supervised learning, reward-learning
+helpers and saved continuation. The evidence below covers small simulated tasks;
+broad capability, physical-robot deployment and comparative energy efficiency
+require separate validation.
 
-Cadence implements this population architecture with a standard-library Python
-engine and optional tensor execution on CPU, Apple Silicon GPU or NVIDIA GPU.
-Every processing and observer patch uses one local prediction relation. The
-compiled brain supports joint settlement, supervised witness learning,
-diagnostics and continuation.
+## Demonstrated behavior
 
-In the **bootstrapping phase**, guided experience teaches the brain its basic
-abilities. In the **live phase**, that same brain acts in its environment and
-can continue learning from actual new witnesses. Both phases use the same
-patch rule and retained parameters.
+| Result | Evidence and interpretation |
+| --- | --- |
+| **Doom Basic: 63/64 and 64/64 wins** | Two selected descendants improved native return over their respective founder comparisons in separate reserved confirmations. This is single-room combat after finite teaching and simulator practice, without a demonstrated benefit from recursive depth. [Experiment record and receipts](https://github.com/muellerberndt/cadence-demos/blob/main/doom-lab/docs/EXPERIMENTS.md). |
+| **CartPole: 180/180 episodes at the 500-step ceiling** | One-patch flat, six-patch flat and four-plus-two observer layouts, with three seeds each. Each model received 128 numerical-state teaching examples on Cadence 0.43.0. Even one flat patch reached the ceiling. [Source-hashed receipt excerpts](https://floatingpragma.io/evidence/cadence/cartpole-confirmations.json). |
+| **Learning and continuation in the core library** | Small tests check acquired relations on unclamped inputs across flat, composed and recursive layouts, including restored checkpoints. The [runnable examples](examples/README.md) cover live control, explicit history, replay and layout costs. |
+
+These results use their declared versions and task interfaces. The
+[performance guide](docs/PERFORMANCE.md) separates query cost, learning work
+and complete control decisions. It does not establish a general speed or
+capability advantage over other architectures.
+
+For an application to explore, start with
+[Doom Lab](https://github.com/muellerberndt/cadence-demos/tree/main/doom-lab)
+or compare all three layouts on a changed simulated body in
+[Rover Lab](https://github.com/muellerberndt/cadence-demos/tree/main/rover-lab).
+Both have local setup instructions. The
+[browser explorer](https://floatingpragma.io/cadence/#inside-the-brain) illustrates the
+settlement mechanism with a small deterministic model.
 
 ## Three settlement design patterns
 
-| Pattern | Wiring | Useful starting point |
+| Pattern | What patches read | Useful starting point |
 | --- | --- | --- |
-| **Flat settlement** | Patches read fixed sensory inputs | Small, fast sensor-to-answer mappings |
-| **State-coupled settlement** | Populations read other populations' live states | Learned intermediate representations and sensory fusion |
-| **Recursive observer settlement** | Observers read states and exact prediction errors, including other observers' | Tasks where internal state-and-error feedback may improve decisions |
+| **Flat settlement** | Fixed sensory inputs | Small direct sensor-to-answer relations and an inexpensive baseline |
+| **State-coupled settlement** | Other populations' live states, optionally with sensory inputs | Learned intermediate representations and sensory fusion |
+| **Recursive observer settlement** | Live states and exact prediction errors, including other observers' | Testing whether internal state-and-error feedback improves decisions |
 
-All three use the same patch/repair rule, learning API and final qualification.
-They are supported choices in Cadence 0.50.0 and can be combined in one brain.
-Start with the least expensive layout that learns the behavior and add depth
-when a measured capability gain justifies its settling and learning cost.
-The [design-pattern guide](docs/VARIANTS.md) has runnable examples of each;
-the [performance guide](docs/PERFORMANCE.md) explains the mechanism, versioned
-demo evidence and a reproducible query-cost comparison.
-
-## Three pillars
-
-- **Minimalism:** one patch rule, a small public API, no required runtime dependencies.
-  Focused modules keep each responsibility easy to find.
-- **User-friendliness:** explicit layouts, sensible defaults and runnable examples.
-- **Agent-friendliness:** exact contracts, inspectable state and explicit refusal.
-
-Every core change is reviewed against all three. The
-[contributor instructions](AGENTS.md) define the checks.
-
-## Demos
-
-The [cadence-demos](https://github.com/muellerberndt/cadence-demos) repository
-shows embodied, game-playing and music applications. The
-[Python examples](examples/README.md) cover learning, live control and layout
-costs with the current library.
+**All three settle.** They share the patch rule, learning API and numerical
+qualification, and can be combined in one brain. Coupled populations participate
+in one solve; they do not chain completed predictions. Start with the smallest
+layout that learns the behavior and measure the benefit of added coupling.
+The [design-pattern guide](docs/VARIANTS.md) has runnable constructions of each.
 
 ## Install
 
-Python 3.11 or later; the default engine has no runtime dependencies:
+Python 3.11 or later. The default engine uses only the standard library.
+This README and its examples describe Cadence 0.50.0:
 
 ```sh
-python -m pip install --upgrade "cadence-net>=0.50.0"
+python -m pip install "cadence-net==0.50.0"
 ```
 
-If your package index has not listed a new release yet, its wheel is also
-available from [GitHub Releases](https://github.com/muellerberndt/cadence/releases/latest).
-
-For GPU execution, install the optional tensor extra:
+Packages are also available from
+[GitHub Releases](https://github.com/muellerberndt/cadence/releases).
+For optional PyTorch execution on CPU, Apple Silicon GPU or NVIDIA GPU:
 
 ```sh
-python -m pip install --upgrade "cadence-net[gpu]>=0.50.0"
+python -m pip install "cadence-net[gpu]==0.50.0"
 ```
 
-Choose `Cortex(device="mps")` for an Apple Silicon GPU or
-`Cortex(device="cuda")` for a compatible NVIDIA GPU. The same brain methods
-and learning rule apply. Final admission is checked against the original
-float64 objective. Small brains can be faster with the default Python engine;
-see [GPU execution and parallel experience](docs/ACCELERATION.md) for precision,
-measurement and independent simulated lives.
+Choose `Cortex(device="mps")` or `Cortex(device="cuda")` for the corresponding
+GPU. Execution uses the same learning rule and final float64 admission check.
+Small brains can be faster with the default Python engine; see
+[execution and precision](docs/ACCELERATION.md).
 
-## Declare the brain
+## Learn a relation and keep learning
 
-```python
-from cadence import Cortex
-
-cortex = Cortex(seed=7)
-eyes = cortex.input("eyes", shape=(8, 8))
-ears = cortex.input("ears", shape=(2, 16))
-body = cortex.input("sensory_nerves", shape=(8,))
-senses = (eyes, ears, body)
-
-c1 = cortex.column("perception", patches=16, inputs=senses)
-c2 = cortex.observer(
-    "integration", patches=8, inputs=senses, observes=(c1,),
-)
-c3 = cortex.observer(
-    "reflection", patches=8, inputs=senses, observes=(c1, c2),
-)
-cortex.output("motor_nerves", shape=(8,), reads=c3)
-brain = cortex.build()
-
-assert brain.inspect()["patches"] == 32
-assert brain.inspect()["sensor_coverage"] == 104
-```
-
-`inputs` supplies sensory or represented data. `observes` adds readback of
-**live patch states and exact current prediction errors**. Observer constraints
-feed back into the observed states through the same energy and repair process.
-They are not a separate decision made after the lower system finishes.
-
-Population size counts processing patches. Sensor shape counts input samples;
-a larger camera shape does not supply learned visual understanding. The eight
-outputs expose eight settled patch values, without a separate policy network.
-The guide also shows parallel sensory branches and inspection of actual wiring.
-Every patch reads all coordinates of its declared sources by default; explicit
-`fan_in` opts into sparse sampling. This is a layout example, not a pretrained
-vision/audio model. For a first learning task, start smaller using the
-[bootstrapping guide](docs/BOOTSTRAP.md).
-Inspection also reports sensor coverage for each output coordinate, so you can
-check the decision's connections before bootstrapping.
-
-## Bootstrapping phase
-
-This inexpensive example bootstraps a small brain's signed input/output relation.
-It uses the same population primitive, with fewer patches for a quick run.
+A `Cortex` declares a layout; `build()` returns its persistent `Brain`.
+This small observer layout learns a signed input/output relation. It illustrates
+the API, without measuring an advantage from depth.
 
 ```python
-from cadence import bootstrap
+from cadence import Brain, Cortex, bootstrap
 
-bootstrap_layout = Cortex(seed=2)
-signal = bootstrap_layout.input("signal", shape=(1,))
-base = bootstrap_layout.column("base", patches=4, inputs=signal)
-reflection = bootstrap_layout.observer(
+layout = Cortex(seed=2)
+signal = layout.input("signal", shape=(1,))
+base = layout.column("perception", patches=4, inputs=signal)
+observer = layout.observer(
     "reflection", patches=2, inputs=signal, observes=base,
 )
-bootstrap_layout.output("answer", shape=(1,), reads=reflection)
-learner = bootstrap_layout.build()
+layout.output("answer", shape=(1,), reads=observer)
+brain = layout.build()
 
+# Bootstrapping phase: learn from supplied outcomes, then check without clamps.
 examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
 checks = [({"signal": [x]}, {"answer": [x]}) for x in (-0.4, 0.4)]
-starting_point = learner.snapshot()
-report = bootstrap(learner, examples, checks=checks, max_error=0.2)
+report = bootstrap(brain, examples, checks=checks, max_error=0.2)
 assert report["passed"], report
 
-# Fresh amplitudes, absent from both teaching and readiness checks.
-assert learner.predict({"signal": [-0.6]})["answer"][0] < -0.3
-assert learner.predict({"signal": [0.6]})["answer"][0] > 0.3
+# Fresh inputs, absent from teaching and readiness checks.
+assert brain.predict({"signal": [-0.6]})["answer"][0] < -0.3
+assert brain.predict({"signal": [0.6]})["answer"][0] > 0.3
+
+# Live phase: retain qualified activity and learn when an actual outcome arrives.
+assert brain.step({"signal": [0.3]})["accepted"]
+assert brain.observe({"signal": [0.3]}, {"answer": [0.3]})["accepted"]
+
+# A JSON snapshot preserves state and learned parameters for continuation.
+saved = brain.snapshot()
+restored = Brain.from_snapshot(saved)
+assert restored.predict({"signal": [0.6]}) == brain.predict({"signal": [0.6]})
 ```
 
-Actual witnesses clamp the supplied outputs and allow joint repair of live
-state and retained relation parameters. Only qualified proposals are committed.
-Queries hold learned parameters fixed; hypothetical clamps never become
-experience. Learning is evaluated on later unclamped predictions, as above.
-This example establishes a small acquired relation, not a benefit from depth.
+`settle` and `predict` are pure queries. `step` retains qualified live state;
+`observe` also learns from supplied output witnesses. Check `qualified` or
+`accepted`; `predict` raises `SettlementError` on refusal. A clamped teaching
+output is not evidence of learning: evaluate later predictions without targets.
 
-Use **batch bootstrapping** to jointly learn from groups of examples:
+The **bootstrapping phase** and **live phase** use the same patch rule and
+retained parameters. Applications supply sensors, teaching evidence and actuator
+interpretation. Batch learning, explicit sensory `History`, discrete
+`Reinforcement` and `LiveController` are documented below.
 
-```python
-from cadence import Brain
+## Scope and reproducibility
 
-# Start from the same untrained continuation, so this actually teaches a batch.
-batch_learner = Brain.from_snapshot(starting_point)
-batch_report = bootstrap(
-    batch_learner, examples, checks=checks, max_error=0.2, batch_size=2,
-)
-assert batch_report["passed"] and batch_report["updates"] > 0, batch_report
-```
+The reference engine uses analytic derivatives and bounded descent to repair
+a nonlinear residual energy. Qualification checks constrained stationarity;
+it does not guarantee zero prediction error or a unique global minimum.
+Budget exhaustion can cause refusal. Numerical qualification, useful behavior
+and control-loop deadlines are separate measurements.
 
-Each batch jointly settles private example states and shared parameters;
-CPU/GPU tensors vectorize the examples. `brain.observe_batch(examples)` admits
-one batch directly. Batch commits preserve live activity and update parameters
-atomically. The default `batch_size=1` keeps ordered single-experience learning.
-See [batch bootstrapping](docs/BOOTSTRAP.md) for the objective and resource tradeoffs.
+Checkpoints bind implementation sources. Use the runtime and reproduction
+instructions associated with each receipt; a package version alone does not
+identify every experimental artifact. Explicit history is external memory,
+and retention tests with replay do not establish indefinite learned memory.
+The [specification](docs/SPECIFICATION.md) states the exact contract.
 
-## Live phase
-
-```python
-activity = learner.step({"signal": [0.3]})
-assert activity["accepted"]
-print(activity["outputs"]["answer"])
-
-# When an actual teaching signal arrives, the same brain can keep learning.
-assert learner.observe({"signal": [0.3]}, {"answer": [0.3]})["accepted"]
-```
-
-`bootstrap` supplies reproducible replay and unclamped readiness checks.
-Applications supply sensory acquisition, witnesses, actuator interpretation
-and environment-specific behavior checks. The [guide](docs/BOOTSTRAP.md)
-explains calibration and staged bootstrapping for perception and body control.
-
-Cadence 0.50.0 supports a continuing life with explicit sensory `History`,
-discrete reward learning with `Reinforcement`, an optional `LearningProgress`
-curiosity signal, and a `LiveController` that keeps rendering independent of
-brain work. Reward-derived action values are labeled estimates and learned by
-the same patch repair. Replay and checkpointing preserve experience for later
-use. See [memory, rewards and live control](docs/LIVE.md) for setup, runnable
-examples, measured temporal tasks and the boundary between learned decisions
-and body support.
-
-## Scope
-
-The reference engine repairs a nonlinear residual energy using analytic
-derivatives and a bounded descent procedure. Every participating population is
-included in the final constrained-stationarity check. Prediction errors can
-remain nonzero at a qualified compromise; different starting states can reach
-different stationary points. A solver can refuse when its budget is exhausted.
-
-Performance evaluations and comparisons remain ongoing. Tests cover layouts,
-derivatives through recursive error readback, reciprocal
-interventions, actual acquisition, refusal and checkpoint custody. The goal is
-a reusable learner across perception, memory, reasoning and embodied action.
-Discrete Q-learning and bounded temporal history have small behavioral checks;
-long-lived learned memory, broader capability and advantages from recursive
-depth require further controlled experiments. Follow the
-[DRSN completion epic](https://github.com/muellerberndt/cadence/issues/51).
-
-| Documentation | Scope |
+| Documentation | Start here for |
 | --- | --- |
-| [DRSN guide](docs/DRSN.md) | Population layouts, equations, learning, all configuration, diagnostics and checkpoints |
-| [Quickstart](docs/QUICKSTART.md) | Inputs, settlement, learning and saved continuation |
-| [Bootstrapping and live phases](docs/BOOTSTRAP.md) | Calibration, guided experience, small starting layouts and readiness checks |
-| [Memory, rewards and live control](docs/LIVE.md) | History, delayed credit, replay, curiosity, execution ownership and whole-life saves |
-| [Three settlement design patterns](docs/VARIANTS.md) | Flat, state-coupled and recursive layouts with runnable examples |
-| [Depth, latency and useful work](docs/PERFORMANCE.md) | Flat/composed/recursive costs, historical demos and capability comparisons |
-| [GPU execution and parallel experience](docs/ACCELERATION.md) | Device selection, precision, checkpoint transfer and concurrent simulated lives |
-| [API reference](docs/REFERENCE.md) | Every public class, method and configuration parameter |
-| [Mathematical specification](docs/SPECIFICATION.md) | Guarantees, qualification and evidence boundaries |
+| [Quickstart](docs/QUICKSTART.md) | Queries, teaching, diagnostics and saved continuation |
+| [Bootstrapping](docs/BOOTSTRAP.md) | Calibration, individual/batch learning and readiness checks |
+| [Live operation](docs/LIVE.md) | History, reward credit, replay and control callbacks |
+| [Architecture guide](docs/DRSN.md) | Population layouts, recursive observation and equations |
+| [Performance](docs/PERFORMANCE.md) | Layout costs, versioned evidence and capability comparisons |
+| [API reference](docs/REFERENCE.md) | Public methods, configuration and refusal behavior |
 
-GPL-3.0-or-later license.
+## Development
+
+Core changes follow three principles: **minimalism**, **user-friendliness** and
+**agent-friendliness**. A small public API, runnable examples and inspectable
+state keep the mechanism usable. See the [contributor instructions](AGENTS.md).
+
+```sh
+python -m pip install -e ".[dev]"
+python -m pytest -q
+```
+
+The test suite executes the README and documentation examples and checks
+learning, mathematical derivatives, refusal and checkpoint continuation.
+Licensed under [GPL-3.0-or-later](LICENSE).

@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "cadence-net"
 version = "0.50.0"
-description = "Deep Recursive Settlement Networks: processing populations and observers learning and settling together."
+description = "Learning through flat, state-coupled and recursive patch-net settlement."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Bernhard Mueller" }]
-keywords = ["cortical column", "settling", "local learning", "observer", "recursive observation", "supervised learning"]
+keywords = ["machine learning", "online learning", "equilibrium networks", "embodied AI", "recursive observation", "local learning"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
@@ -26,6 +26,8 @@ dependencies = []
 [project.urls]
 Homepage = "https://floatingpragma.io/cadence/"
 Documentation = "https://github.com/muellerberndt/cadence/blob/main/docs/index.md"
+Demos = "https://github.com/muellerberndt/cadence-demos"
+Preprint = "https://philpapers.org/rec/MUECAP-2"
 Repository = "https://github.com/muellerberndt/cadence"
 Issues = "https://github.com/muellerberndt/cadence/issues"
 
