@@ -270,6 +270,35 @@ library versions, individual CUDA outcomes, and unchanged source hashes before
 and after testing. MPS and additional CUDA device indices were unavailable on
 this single-GPU laptop.
 
+Runtime is also part of the evidence. In that final full run, the pytest
+invocation took **297.72 seconds**, including collection but excluding the
+collector's imports and CUDA preflight. Its JUnit test-case durations include
+the complete fixture, setup/teardown and assertions:
+
+| Acquisition fixture | CUDA float64 | CUDA float32 |
+| --- | ---: | ---: |
+| Single-example bootstrap, held-out recall and live learning (6 patches) | 3.479 s | 124.874 s |
+| Batch bootstrap, recall, checkpoint transfer and live learning (3 patches) | 1.961 s | 2.045 s |
+
+These are `test_bootstrap_held_out_recall_and_live_learning_on_device` in
+`test_tensor_math.py` and
+`test_public_batch_bootstrap_recall_checkpoint_transfer_and_live_learning` in
+`test_batch_tensor.py`. Both precisions passed, but float32 took about **36
+times as long** in the single-example fixture. That is a performance concern
+to investigate. The receipt does not retain per-solve work or phase timings,
+so it does not establish the cause or equal work across precision trajectories.
+The batch fixture uses a different graph and task; comparing the two rows
+does not measure a batching speedup.
+
+The four retained runs also show substantial variation: this single-example
+fixture ranged from **3.479 to 16.280 seconds** in float64 and **124.874 to
+347.800 seconds** in float32. Those runs used different suite selections or
+revisions and uncontrolled timing conditions. They are observations, not a
+latency distribution. A performance follow-up needs repeated matched Python,
+CPU tensor and CUDA workloads, separate initialization and complete-call
+timings, and per-solve work/refinement counts alongside qualification and
+unclamped prediction error.
+
 The checks cover independent scalar finite-difference derivatives, recursive
 feedback, original frozen parameters and witness clamps, strict reference
 qualification, overflow/refusal, checkpoint transfer, batch admission/retry
