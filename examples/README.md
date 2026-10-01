@@ -83,6 +83,14 @@ an unavailable requested device fails explicitly.
 - [Historical comparison excerpts](receipts/layout_cost_history.json):
   source-hashed summaries of older CartPole and changing-body runs, with their
   versions and conditions. These are excerpts, not full reproduction bundles.
+- [CUDA qualification receipt](receipts/cuda_audit_verified.json): the audited
+  full-suite run on an NVIDIA RTX 4000 Ada laptop GPU at commit `8892927`,
+  with source hashes before and after the run, hardware and library versions
+  and every CUDA case outcome. Two earlier runs,
+  [cuda_qualification.json](receipts/cuda_qualification.json) and
+  [cuda_audit_encoding_failure.json](receipts/cuda_audit_encoding_failure.json),
+  are retained for their failures: a platform-dependent sweep cap and a Windows
+  subprocess encoding fault. They are history, not current results.
 
 The [performance guide](../docs/PERFORMANCE.md) explains what these comparisons
 support. Prefer a trained task comparison with declared information, capacity,

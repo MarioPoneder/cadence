@@ -284,9 +284,9 @@ These are `test_bootstrap_held_out_recall_and_live_learning_on_device` in
 `test_tensor_math.py` and
 `test_public_batch_bootstrap_recall_checkpoint_transfer_and_live_learning` in
 `test_batch_tensor.py`. Both precisions passed, but float32 took about **36
-times as long** in the single-example fixture. That is a performance concern
-to investigate. The receipt does not retain per-solve work or phase timings,
-so it does not establish the cause or equal work across precision trajectories.
+times as long** in the single-example fixture. The receipt does not retain
+per-solve work or phase timings, so it does not establish the cause or equal
+work across precision trajectories.
 The batch fixture uses a different graph and task; comparing the two rows
 does not measure a batching speedup.
 
@@ -302,8 +302,8 @@ unclamped prediction error.
 The checks cover independent scalar finite-difference derivatives, recursive
 feedback, original frozen parameters and witness clamps, strict reference
 qualification, overflow/refusal, checkpoint transfer, batch admission/retry
-custody, and subsequent unclamped recall and live learning. Existing CPU/MPS
-checks now also select CUDA when available. Run the current CUDA subset from
+custody, and subsequent unclamped recall and live learning. The CPU/MPS
+checks also select CUDA when available. Run the current CUDA subset from
 a clean, committed development checkout installed with
 `python -m pip install -e ".[dev]"` and a CUDA-enabled PyTorch build:
 
@@ -326,18 +326,20 @@ tails, and matched-workload performance comparisons remain unmeasured here.
 Test durations are not production p50/p95/p99 latency measurements.
 
 The [original receipt](../examples/receipts/cuda_qualification.json) retains
-the earlier full-suite run's one reference-only test failure:
-a supposedly capped solve qualified in 476 of 512 sweeps on this machine.
-The rollback fixture now uses a one-sweep cap and keeps its default-budget
-retry; all 17 learning tests passed on follow-up. No repair rule or admission
-tolerance changed.
+one reference-engine failure from the first full run. The deep learning
+fixture in `test_learning_basics.py` qualified after 476 sweeps on this
+Windows machine, while the same sources need 777 sweeps on an Apple M4 with
+Python 3.13, so a 512-sweep cap refused the example on one platform and
+admitted it on the other. Sweep counts near a cap are platform-dependent; the
+rollback test therefore uses a one-sweep cap and keeps its default-budget
+retry. The repair rule and admission tolerance are the same on both platforms.
 
 An [intermediate collector failure](../examples/receipts/cuda_audit_encoding_failure.json)
 is also retained: Python's `-X utf8` setting did not reach CLI subprocesses on
 Windows. The collector now propagates that setting, and the final full run
 above passed with the correction.
 
-### Earlier performance measurements
+### Thread, device and worker measurements
 
 One three-batch `observe_batch` comparison took 934.0 seconds with 64 Torch
 threads and 1,118.9 seconds with 128, with identical accepted sweep counts.
