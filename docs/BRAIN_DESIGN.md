@@ -259,6 +259,14 @@ throughout live learning.
 
 ## Spend compute according to measured need
 
+The intended 0.60 architecture makes **routine cheap and changes expensive**.
+Specialized fast populations should maintain learned skills, including coherent
+musical performance, while deeper general recursive populations provide steering
+when surprise or missing long-term success requires it. Both should progress at
+their own speeds behind one brain/body interface. Repeated successful correction
+should become routine, with retained competence and less subsequent work.
+This is the target design; the current implementation boundary follows below.
+
 “System 1” and “System 2” can describe cheap familiar responses and more costly
 context-dependent correction. They are not Cadence modes or constructor flags.
 They also do not specify layer count or distinct patch types. The current

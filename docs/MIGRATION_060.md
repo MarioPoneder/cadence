@@ -1,11 +1,16 @@
 # Preparing an application for 0.60
 
-This page describes the **unreleased development candidate**, identified as
+This page describes the **development line on main**, identified as
 `0.60.0.dev0` in package metadata and `cadence.__version__`. The published
 baseline remains 0.50.0; installing it does not install these changes. Use the
 exact reviewed development source when executing this page's examples. A
 development version is not a 0.60.0 release or evidence that its gates passed.
 Final release notes must identify the selected implementation and tested revision.
+
+Merging this development version and its documentation into `main` does not
+publish stable 0.60.0. The stable release still requires learned routine →
+actual disturbance → useful correction → inexpensive routine, retained skill,
+and a measured behavioral contribution from recursive observation.
 
 The candidate currently adds query-local reuse of fixed sensory predictions
 and explicit ownership of executed outcomes in `Reinforcement`. Its bounded
@@ -19,6 +24,19 @@ and repair budget solve different problems; increasing all four is not a
 general recipe for a better brain.
 
 ## Keep the application boundary small
+
+The intended architecture makes **routine cheap and changes expensive**:
+specialized fast populations maintain learned skills, while deeper general
+recursive populations steer when surprise or missing long-term success calls
+for correction. Both should progress at their own speeds inside one brain.
+For music, equilibrium means a coherent evolving performance, not a fixed note;
+for a game or robot, it means competent ongoing behavior. Successful correction
+should become familiar enough to need less work when encountered again.
+
+These are design requirements, not features enabled by `0.60.0.dev0`. The current
+patch types and qualification contract below are unchanged. Independent clocks
+require an explicit dependency, state-ownership and qualification design;
+running two callbacks does not supply that architecture.
 
 Applications provide observations, execute qualified actions and report actual
 outcomes. The intended integrated architecture manages attention and correction

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.60.0.dev0 — unreleased candidate
+## 0.60.0.dev0 — development line
 
 - Identify development installations separately from the published 0.50.0 API.
   This is not a stable release; integrated attention and useful recursive
@@ -12,6 +12,9 @@
   candidate remains experimental. See [migration](docs/MIGRATION_060.md).
 - Add flat, deep ordinary and recursive learning quickstarts with shared
   query/teaching/continuation contracts and explicit capability boundaries.
+- Document installation from `main` and the intended specialized routine /
+  recursive steering architecture. Independent internal clocks remain future
+  work; the development merge does not change whole-graph qualification.
 
 ## 0.50.0 — 2026-09-29
 

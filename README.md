@@ -85,10 +85,18 @@ For optional PyTorch execution on CPU, Apple Silicon GPU or NVIDIA GPU:
 python -m pip install "cadence-net[gpu]==0.50.0"
 ```
 
-This checkout identifies as the unreleased `0.60.0.dev0` candidate. Its changed
-outcome API requires installing the reviewed checkout with `python -m pip install -e .`;
-see [migration](docs/MIGRATION_060.md). Automatic internal attention and the
-complete routine–disturbance–correction cycle are not yet supplied.
+The development line on `main` identifies as `0.60.0.dev0`. Install it directly
+to use the updated outcome API and documentation:
+
+```sh
+python -m pip install "cadence-net @ git+https://github.com/muellerberndt/cadence.git@main"
+```
+
+For reproducible experiments, replace `main` with the reviewed commit hash.
+For an editable checkout, use `python -m pip install -e .`. See
+[migration](docs/MIGRATION_060.md). This development rollout is not the stable
+0.60.0 release; automatic internal attention and the complete
+routine–disturbance–correction cycle are not yet supplied.
 
 Choose `Cortex(device="mps")` or `Cortex(device="cuda")` for the corresponding
 GPU. Execution uses the same learning rule and final float64 admission check.

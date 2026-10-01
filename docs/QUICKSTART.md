@@ -9,7 +9,14 @@ API, install the checkout itself from its root:
 python -m pip install -e .
 ```
 
-The [migration guide](MIGRATION_060.md) separates the unreleased candidate from
+Without a local checkout, install the `0.60.0.dev0` development line from `main`:
+
+```sh
+python -m pip install "cadence-net @ git+https://github.com/muellerberndt/cadence.git@main"
+```
+
+Pin a reviewed commit instead of `main` when preserving an experiment.
+The [migration guide](MIGRATION_060.md) separates this development rollout from
 the published package. Nothing here enables automatic System 1/System 2 attention.
 
 ## Build a flat brain
