@@ -1,10 +1,11 @@
 # Preparing an application for 0.60
 
-This page describes the **unreleased development candidate**. The package
-version remains 0.50.0; installing the released package does not install these
-changes. Use the exact reviewed development source when executing this page's
-examples. Final release notes must identify the selected implementation and its
-tested source revision.
+This page describes the **unreleased development candidate**, identified as
+`0.60.0.dev0` in package metadata and `cadence.__version__`. The published
+baseline remains 0.50.0; installing it does not install these changes. Use the
+exact reviewed development source when executing this page's examples. A
+development version is not a 0.60.0 release or evidence that its gates passed.
+Final release notes must identify the selected implementation and tested revision.
 
 The candidate currently adds query-local reuse of fixed sensory predictions
 and explicit ownership of executed outcomes in `Reinforcement`. Its bounded

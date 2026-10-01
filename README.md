@@ -85,8 +85,8 @@ For optional PyTorch execution on CPU, Apple Silicon GPU or NVIDIA GPU:
 python -m pip install "cadence-net[gpu]==0.50.0"
 ```
 
-This checkout also contains an unreleased 0.60 candidate. Its changed outcome
-API requires installing the reviewed checkout with `python -m pip install -e .`;
+This checkout identifies as the unreleased `0.60.0.dev0` candidate. Its changed
+outcome API requires installing the reviewed checkout with `python -m pip install -e .`;
 see [migration](docs/MIGRATION_060.md). Automatic internal attention and the
 complete routine–disturbance–correction cycle are not yet supplied.
 

@@ -311,10 +311,12 @@ Tests check numerical derivatives independently against finite differences,
 analytic optima on small cases, causal feedback into observed populations,
 energy descent, constrained boundaries, source coverage, witnessed acquisition,
 unclamped recall, refusal rollback, event custody and continuation. Executable
-documentation uses the same released API.
+documentation uses this checkout's public API; candidate-only contracts are
+identified in the [migration guide](MIGRATION_060.md).
 
 The engine supplies labeled-target learning and persistent joint activity;
-the reinforcement helper adds explicit one-step discrete Q credit and replay.
+the reinforcement helper adds explicit discrete action-value credit and replay,
+including the bounded candidate return described above.
 These do not establish autonomous task discovery, general long-horizon credit,
 learned structural growth or a biological physiology model. Performance and
 advantages from recursive depth remain empirical questions. Biological

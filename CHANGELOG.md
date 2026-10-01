@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.60.0.dev0 — unreleased candidate
+
+- Identify development installations separately from the published 0.50.0 API.
+  This is not a stable release; integrated attention and useful recursive
+  correction still require the declared behavioral and release checks.
+- Reuse invariant sensory predictions within reference queries while retaining
+  fresh full-graph qualification; no new public cache control.
+- Bind reward feedback to an issued decision and the action actually executed,
+  preserving retry and outcome ownership. A bounded multi-transition credit
+  candidate remains experimental. See [migration](docs/MIGRATION_060.md).
+- Add flat, deep ordinary and recursive learning quickstarts with shared
+  query/teaching/continuation contracts and explicit capability boundaries.
+
 ## 0.50.0 — 2026-09-29
 
 - Add bounded temporal qualification at delays 2/4/8 with retained/reset-state

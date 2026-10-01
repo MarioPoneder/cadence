@@ -539,7 +539,9 @@ Reinforcement(
 )
 ```
 
-Available since 0.50.0. With the default action-conditioned form, the compiled
+The helper originated in 0.50.0; `credit_horizon` and explicit executed-outcome
+acknowledgments below belong to this development candidate. With the default
+action-conditioned form, the compiled
 `brain` needs an `action_input` sensor with exactly `actions` coordinates and a `value_output`
 selecting one scalar patch state. With `action_input=None`, `value_output`
 must be a tuple/list of exactly `actions` scalar output names exposing distinct
