@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -47,6 +48,10 @@ def main():
     if git("status", "--porcelain"):
         parser.error("Commit changes before recording evidence; checkout must be clean")
 
+    # Python's -X utf8 flag is not inherited by subprocesses. Match child
+    # stdout encoding to this process's decoding on Windows as well.
+    os.environ["PYTHONUTF8"] = str(sys.flags.utf8_mode)
+
     import pytest
     import torch
 
@@ -66,6 +71,7 @@ def main():
     environment = {
         "python": sys.version,
         "utf8_mode": sys.flags.utf8_mode,
+        "child_python_utf8": os.environ["PYTHONUTF8"],
         "platform": platform.platform(),
         "processor": platform.processor(),
         "torch": torch.__version__,
