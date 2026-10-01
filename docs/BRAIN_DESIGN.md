@@ -15,6 +15,7 @@ unique answer or the global energy minimum.
 This guide uses the public API. The [quickstart](QUICKSTART.md) introduces its
 operations; [migration notes](MIGRATION_060.md) describe the 0.60 candidate and
 checkpoint compatibility. The [reference](REFERENCE.md) gives exact signatures.
+The [agent recipe](AGENTS.md) condenses the construction and verification steps.
 
 ## Define the body's information and outcomes
 
@@ -51,7 +52,7 @@ supply teaching targets; they must not enter the inputs used to forecast them.
 | Input-only flat population | Independent scalar relations or a small immediate control mapping | One connected patch per required output may suffice. Unused neighboring patches supply no hidden representation. |
 | Ordinary composition | A learned combination of intermediate features | Later populations read earlier live states; returning energy derivatives already provide feedback. |
 | Recursive observation | Testing whether current representation errors help a downstream relation | An observer reads both states and exact errors. Compare with ordinary composition at declared information, parameter count and work. |
-| Parallel branches with fusion | Sensors with different local structure or update meaning | Every output must have a useful path to the observations it needs. |
+| Parallel branches with fusion | Sensors with different local structure or update meaning | Every output must have a useful path to its observations. These are branches of one jointly solved graph, not independently clocked workers. |
 
 Fast routine behavior does not imply a single input-only layer. A familiar
 skill may require learned intermediate features and temporal memory even when
@@ -259,7 +260,11 @@ throughout live learning.
 
 ## Spend compute according to measured need
 
-The intended 0.60 architecture makes **routine cheap and changes expensive**.
+The intended 0.60 architecture makes **routine cheap and recruits more work
+when needed**. Maintaining equilibrium must serve competent ongoing behavior:
+a coherent groove can keep evolving, and navigation can keep making progress.
+Numerical stationarity alone does not establish that competence. Holding the
+outputs still or eliminating every novel event is not the goal.
 Specialized fast populations should maintain learned skills, including coherent
 musical performance, while deeper general recursive populations provide steering
 when surprise or missing long-term success requires it. Both should progress at
@@ -269,23 +274,37 @@ This is the target design; the current implementation boundary follows below.
 
 “System 1” and “System 2” can describe cheap familiar responses and more costly
 context-dependent correction. They are not Cadence modes or constructor flags.
-They also do not specify layer count or distinct patch types. The current
-library uses the same patch rule in ordinary and observing populations; this
-design choice does not establish that it can replace every specialized memory
-or processing mechanism at an acceptable cost.
+They also do not specify layer count, distinct patch types or bootstrapping/live
+phases. Ordinary deep populations can supply System 1's learned intermediate
+features; recursive readback needs measured corrective benefit before it
+establishes System 2 behavior. The current library uses the same patch rule in
+ordinary and observing populations; this design choice does not establish that
+it can replace every specialized memory or processing mechanism at an acceptable
+cost. Future specialization needs explicit bounded state, ports, readback,
+learning/repair and qualification semantics, supported by measured behavior.
 Flat and observing populations can coexist in one brain, with the same input
 and output boundary. Every participating population remains in the whole-brain
 energy, and qualification checks every eligible free coordinate. Adding a slow
-observer does not automatically let a fast
-branch issue actions while that observer sleeps.
+observer does not automatically let a fast branch issue actions while that
+observer sleeps. Current calls solve synchronously. `LiveController` can move
+that work to a serial callback; it does not introduce asynchronous settlement
+between populations.
 
 > **Current capability boundary.** The intended cycle is learned routine →
 > actual disturbance → useful corrective processing → restored, inexpensive
-> routine, while retaining the skill. Automatic internal allocation of attention
-> and shared long-term outcome responsibility are not yet implemented and
-> validated as that integrated cycle. No extra application attention flag or
-> per-population evaluator should be needed for the intended design. The body
-> still has to supply observations and actual outcomes.
+> routine, while retaining the skill. Automatic internal allocation of attention,
+> independently progressing populations and shared long-term outcome
+> responsibility are not yet implemented and validated as that integrated cycle.
+> No extra application attention flag or per-population evaluator should be
+> needed for the intended design. The body still has to supply observations and
+> actual outcomes.
+
+Internal safeguards may check that routine remains valid without running
+expensive reflection on every fixed tick. Quiet observations cannot erase an
+outstanding need: a predictable failure still needs correction, while an
+unexpected beneficial result is not a bad outcome. A future implementation
+must distinguish those signals and specify when reused work remains valid.
+Until then, use the current complete solve and measure its actual cost.
 
 Test the whole cycle before claiming that a correction mechanism works. First
 establish autonomous routine competence with teaching disconnected. Apply a
