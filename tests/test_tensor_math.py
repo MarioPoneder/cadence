@@ -102,6 +102,7 @@ def test_tensor_derivatives_against_independent_scalar_energy(
         True,
     )
     assert energy.device.type == torch.device(device).type
+    assert energy.dtype == getattr(torch, dtype)
     if device.startswith("cuda:"):
         assert energy.device == torch.device(device)
     atol = 3e-6 if dtype == "float32" else 2e-9
@@ -109,6 +110,7 @@ def test_tensor_derivatives_against_independent_scalar_energy(
     assert float(energy) == pytest.approx(expected_energy, rel=atol, abs=atol)
     for group_index, gradient in enumerate(gradients):
         assert gradient.device == energy.device
+        assert gradient.dtype == energy.dtype
         for coordinate, analytic in enumerate(gradient.cpu().tolist()):
             plus, minus = [list(g) for g in groups], [list(g) for g in groups]
             h = 2e-6
@@ -438,8 +440,9 @@ def test_refused_tensor_admission_does_not_consume_event(device, dtype):
     brain = make_brain(device, dtype)
     before = brain.snapshot()
     inputs, targets = {"sensor": [0.3]}, {"answer": [0.8]}
-    result = brain.observe(inputs, targets, event_id=5, budget=0)
-    assert not result["accepted"]
+    result = brain.observe(inputs, targets, event_id=5, budget=1)
+    assert not result["accepted"] and result["reason"] == "budget"
+    assert result["execution"]["tensor_sweeps"] == 1
     assert brain.snapshot() == before
     result = brain.observe(inputs, targets, event_id=5)
     assert result["accepted"]

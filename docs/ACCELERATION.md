@@ -272,12 +272,20 @@ The checks cover independent scalar finite-difference derivatives, recursive
 feedback, original frozen parameters and witness clamps, strict reference
 qualification, overflow/refusal, checkpoint transfer, batch admission/retry
 custody, and subsequent unclamped recall and live learning. Existing CPU/MPS
-checks now also select CUDA when available. Reproduce the CUDA subset from an
-installed development checkout with a CUDA-enabled PyTorch build:
+checks now also select CUDA when available. Run the current CUDA subset from
+a clean, committed development checkout with a CUDA-enabled PyTorch build:
 
 ```sh
-python -c "import torch; assert torch.cuda.is_available(), 'CUDA hardware required'; torch.set_num_threads(1); import pytest; raise SystemExit(pytest.main(['-q', 'tests/test_tensor_math.py', 'tests/test_batch_tensor.py', '-k', 'cuda']))"
+python -X utf8 examples/cuda_qualification.py --out data/cuda-qualification.json
 ```
+
+The [collector](../examples/cuda_qualification.py) requires actual CUDA and
+both precision cases, records the tested Git commit and source hashes before
+and after testing, and fails on skipped CUDA cases or changed sources. Use
+`--full` for the complete test suite. Choose a new output path for each run;
+existing receipts are never overwritten. The historical receipt above predates
+the audit correction that makes refusal tests perform a tensor sweep before
+checking rollback. Derivative checks now also assert actual tensor dtypes.
 
 This is correctness and small-fixture acquisition evidence for
 [issue #64](https://github.com/muellerberndt/cadence/issues/64), not a speedup or

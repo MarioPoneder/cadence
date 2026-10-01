@@ -110,6 +110,7 @@ def test_batch_derivatives_match_independent_finite_differences(
     )
     tolerance = 4e-6 if dtype == "float32" else 2e-9
     assert energy.device.type == torch.device(device).type
+    assert energy.dtype == getattr(torch, dtype)
     if device.startswith("cuda:"):
         assert energy.device == torch.device(device)
     assert float(energy) == pytest.approx(
@@ -118,6 +119,7 @@ def test_batch_derivatives_match_independent_finite_differences(
     )
     for group_index, gradient in enumerate(gradients):
         assert gradient.device == energy.device
+        assert gradient.dtype == energy.dtype
         assert gradient.numel() == len(groups[group_index])
         for coordinate, actual in enumerate(gradient.cpu().tolist()):
             plus, minus = (
@@ -627,8 +629,9 @@ def test_public_batch_refusal_and_retry_preserve_order_and_source_custody(
     examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
     before = brain.snapshot()
     live_state = brain.state
-    refused = brain.observe_batch(examples, event_id=7, source="estimate", budget=0)
+    refused = brain.observe_batch(examples, event_id=7, source="estimate", budget=1)
     assert not refused["accepted"] and refused["reason"] == "budget"
+    assert refused["execution"]["tensor_sweeps"] == 1
     assert brain.snapshot() == before
     admitted = brain.observe_batch(examples, event_id=7, source="estimate")
     assert admitted["accepted"] and admitted["execution"]["device"] == device
