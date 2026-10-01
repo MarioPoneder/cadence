@@ -155,14 +155,25 @@ def _evaluate(
     visits=None,
     *,
     parameter_gradients=True,
+    _query_cache=None,
 ):
     predictions = [0.0] * graph.n_patches
     errors = [0.0] * graph.n_patches
-    signals = [0.0] * len(graph.edges)
+    signals = (
+        [0.0] * len(graph.edges) if _query_cache is None else list(_query_cache[1])
+    )
     try:
         for target in graph.residual_order:
             if visits is not None:
                 visits["patch_visits"] += 1
+            # Only input-only predictions are constant within a frozen-parameter
+            # query. Their errors are still live and participate in every
+            # returning derivative below. Initial and final evaluations never
+            # use this solve-local cache.
+            if _query_cache is not None and _query_cache[0][target] is not None:
+                predictions[target] = _query_cache[0][target]
+                errors[target] = state[target] - predictions[target]
+                continue
             terms = [biases[target]]
             for edge_index in graph.incoming[target]:
                 if visits is not None:
@@ -586,8 +597,9 @@ def settle(
         )
     evaluations, proposals, rejected = 0, 0, 0
     visits = {"edge_visits": 0, "patch_visits": 0}
+    query_cache = None
 
-    def compute(x, w, b):
+    def compute(x, w, b, *, fresh=False):
         nonlocal evaluations
         evaluations += 1
         evaluator = _evaluate if _batch_size == 1 else _evaluate_batch
@@ -604,6 +616,11 @@ def settle(
             visits,
             parameter_gradients=learn,
             **({"batch_size": _batch_size} if _batch_size > 1 else {}),
+            **(
+                {"_query_cache": query_cache}
+                if query_cache is not None and not fresh
+                else {}
+            ),
         )
 
     current = compute(state, weights, biases)
@@ -627,6 +644,15 @@ def settle(
         ):
             reason = "qualified"
             break
+        if proposals == 0 and not learn and _batch_size == 1:
+            invariant = tuple(
+                current["predictions"][target]
+                if all(graph.edges[edge][0] == "input" for edge in incoming)
+                else None
+                for target, incoming in enumerate(graph.incoming)
+            )
+            if any(prediction is not None for prediction in invariant):
+                query_cache = invariant, current["signals"]
         trial_step, accepted = next_step, False
         for _attempt in range(backtracks):
             proposals += 1
@@ -712,7 +738,7 @@ def settle(
         if not accepted:
             reason = "line_search"
             break
-    final = compute(state, weights, biases)
+    final = compute(state, weights, biases, fresh=True)
     residual = _stationarity(
         state,
         weights,

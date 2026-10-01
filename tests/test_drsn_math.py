@@ -412,7 +412,11 @@ def test_work_charges_rejected_proposals_and_final_equation_recomputation(monkey
     assert work["evaluations"] == len(calls) == work["proposals"] + 2
     assert work["proposals"] == result["sweeps"] + work["backtracks"]
     assert len(result["energy_history"]) == result["sweeps"] + 1
-    assert work["edge_visits"] == 2 * len(graph.edges) * len(calls)
+    # Every proposal reuses input-only predictions computed on the initial
+    # traversal. Reverse derivatives and final qualification still visit all.
+    assert work["edge_visits"] == len(graph.edges) * (
+        2 * len(calls) - work["proposals"]
+    )
     assert work["patch_visits"] == 2 * graph.n_patches * len(calls)
 
 

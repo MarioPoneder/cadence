@@ -22,11 +22,14 @@ a bounded query comparison and the distinction between answering and learning.
 ## Select execution explicitly
 
 The default `Cortex()` uses Python float64 and has no runtime dependencies.
-Install the optional tensor backend when needed:
+Install the optional tensor backend from the same reviewed checkout when needed:
 
 ```sh
-python -m pip install "cadence-net[gpu]"
+python -m pip install -e ".[gpu]"
 ```
+
+For the published baseline instead, install `cadence-net[gpu]==0.50.0`.
+That package does not include the [development candidate's contracts](MIGRATION_060.md).
 
 | `device` | Proposal arithmetic | Default `dtype` |
 | --- | --- | --- |

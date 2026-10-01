@@ -7,10 +7,34 @@ an explicit record of recent observations. These are different mechanisms.
 Neither saved activity nor a larger observer population automatically provides
 working memory, episodic retrieval, or protection against forgetting.
 
-Install `cadence-net>=0.50.0` for the helpers on this page. They reuse
-the same patch equation and qualified admission. They add no mandatory dependency
-and do not simulate neurotransmitter chemistry. See the [reference](REFERENCE.md)
-for every parameter and failure contract.
+The helpers originated in `cadence-net` 0.50.0. This development copy uses the
+unreleased candidate's explicit `decision_id` and `executed_action` feedback
+arguments; installing released 0.50.0 does not supply that signature. See the
+[candidate migration guide](MIGRATION_060.md) before running these examples.
+The helpers reuse the same patch equation and qualified admission. They add
+no mandatory dependency and do not simulate neurotransmitter chemistry. See
+the [reference](REFERENCE.md) for every parameter and failure contract.
+
+## Keep one body interface
+
+A flat, deep ordinary or recursively observing brain receives named observations
+and returns named outputs through the same calls. One body adapter executes a
+qualified command and reports what happened. Internal observers require no
+separate evaluator or attention signal from the application.
+
+Keep three records distinct: the original forecast before execution, the command
+actually applied, and the later measured outcome. Feed back actual body state;
+a requested motor movement can be blocked and a requested sound can have ended.
+Current patch residuals compare current states with current predictions; they
+do not store the error of an earlier forecast. Preserve that forecast and its
+context before learning from the outcome.
+
+The desired routine → disturbance → correction → inexpensive routine cycle is
+an integrated capability still to be established. The helpers below provide
+explicit history, action/outcome ownership and learning calls; they do not
+implement automatic internal attention or choose the task objective. See
+[brain design](BRAIN_DESIGN.md#spend-compute-according-to-measured-need) for
+behavioral checks that distinguish successful recovery from mere settlement.
 
 ## Remember a recent observation
 
@@ -93,12 +117,20 @@ decision = learner.act({"senses": [0.3, 0.1, 0.0]})
 assert decision["accepted"]
 action_index = decision["action"]
 # The environment executes action_index and returns its actual consequence.
-admission = learner.feedback(0.0, {"senses": [0.2, 0.1, 0.0]})
+admission = learner.feedback(
+    0.0, {"senses": [0.2, 0.1, 0.0]},
+    decision_id=decision["decision_id"], executed_action=action_index,
+)
 assert admission["stored"]
 ```
 
-Call `act` only when there is no pending action; call `feedback` once for that
-action's actual consequence. `feedback(..., terminal=True)` has no next inputs
+Call `act` only when there is no pending action. Pass its `decision_id` and the
+action actually executed to `feedback` with that action's consequence. An
+actuator override must report the executed action instead of the proposal.
+An identical retry of the latest outcome is acknowledged without recording or
+learning twice, including while a newer decision is pending. A conflicting or
+older outcome is rejected without changing the brain or pending decision.
+`feedback(..., terminal=True)` has no next inputs
 and no future-value term. An arbitrary collection timeout is not necessarily
 terminal: use the next observation when future rewards continue. If reward arrives
 later, intervening transitions can have zero reward; subsequent replay propagates
@@ -127,8 +159,8 @@ the caller's evidence. Real reward and next sensing are observed; the fitted
 action value is an estimate. Ordinary witnessed demonstrations still use
 `observe` or `observe_batch` with their default `source="witness"`.
 
-Invalid feedback does not consume the pending action. Valid feedback **does**
-store the transition and consume the action even if its subsequent learning
+Invalid feedback does not consume the pending action. A first valid
+acknowledgment stores the transition and consumes the action even if its learning
 attempt refuses. Retry with `replay`, not by pretending the outcome happened
 twice. Query/fit refusals do not change learned parameters. Check `accepted`
 before applying actions and after learning; `stored` alone does not mean learning
@@ -136,9 +168,10 @@ succeeded. `feedback(..., learn=False)` records a frozen-learning control.
 The stored record also survives an exception during the subsequent fit; it
 remains an actual experience even though no fitted update was admitted.
 
-`feedback` has no external event-ID or network retry interface. A body adapter
-must deduplicate incoming outcome messages and acknowledge which command was
-executed. Do not associate a delayed network packet with a newer pending action.
+`feedback` binds the outcome to the issued decision and deduplicates an identical
+retry of the latest acknowledgment. A body adapter must retain that decision ID
+and report which command it actually executed. Earlier identities are rejected;
+Cadence does not retain an unlimited network-message history.
 `reset()` abandons a pending action without inventing feedback; it does not clear
 replay, parameters or retained activity. Start a new learner for a fresh life.
 
@@ -252,6 +285,13 @@ learn an accurate visual model of the body. The `live_control.py` example learns
 a small body relation, queries actions, and chooses by predicted need reduction;
 that comparison is an application controller, explicitly separate from neural
 settlement. `live_learning.py` exercises reward-based choice and reversal.
+
+An executed motor command is a factual record, but using it as a motor teaching
+target trains imitation of that choice regardless of its consequence. Repeating
+this with the brain's own choices can overwrite a useful routine. Preserve the
+action in the causal record, distinguish consequence prediction from preference
+learning, and check retained behavior after online updates. Connected populations
+alone do not guarantee that outcome quality changes the motor parameters.
 
 ## Drives and curiosity
 

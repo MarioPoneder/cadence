@@ -24,8 +24,11 @@ existing brain methods; it adds no solver or phase state. `memory.py` holds
 explicit history and error-progress bookkeeping; `reinforcement.py` supplies
 discrete-action Q-learning orchestration; `runtime.py` supplies serial live
 scheduling and actuator rate limits. These helpers preserve the patch equation.
-See the [quickstart](QUICKSTART.md) for a first example and the
-[architecture guide](DRSN.md) for equations and layout patterns.
+See the [quickstart](QUICKSTART.md) for a first learned relation, the
+[layout quickstarts](VARIANTS.md) for flat/deep/recursive construction, and the
+[architecture guide](DRSN.md) for equations. This development reference includes
+the unreleased candidate's outcome-ownership interface; consult
+[migration](MIGRATION_060.md) when using an installed release.
 
 ## Cortex: declare a layout
 
@@ -104,6 +107,11 @@ Sources must already exist. `inputs` reads sensor values or population states;
 `observes` accepts populations only and additionally reads their errors.
 Declaring a population in both fields does not duplicate its state connection.
 Empty-input columns are permitted for internal-state controls.
+Both kinds of population contacts follow declaration order. All eligible
+states are solved jointly: ordinary state contacts already return influence
+through the energy derivatives, and observation adds an exact current-error
+channel. Neither construction supplies a separately scheduled critic,
+external attention flag or learned recurrent state cycle.
 
 `shape` accepts a positive integer or a tuple/list of at most eight positive
 integer dimensions. `shape=()` denotes one scalar. Shape describes data layout,
@@ -304,6 +312,10 @@ traversals, including partial work before numeric failure. Proposals count
 line-search attempts; backtracks count rejected proposals, including the last
 rejection when line search fails. These are not CPU instruction counts or
 complete memory/latency measurements.
+Query-local reuse of invariant sensory predictions reduces the forward edge
+visits actually performed, while live error and reverse derivative traversals
+remain counted. Cache construction and copying are not edge visits; measure
+complete elapsed time separately.
 
 Tensor `execution` contains `device`, `dtype`, `torch` (library version),
 `tensor_sweeps`, `reference_sweeps`, `reference_evaluations` and
@@ -522,11 +534,14 @@ Reinforcement(
     value_scale=0.9,
     capacity=1024,
     batch_size=16,
+    credit_horizon=1,
     seed=0,
 )
 ```
 
-Available since 0.50.0. With the default action-conditioned form, the compiled
+The helper originated in 0.50.0; `credit_horizon` and explicit executed-outcome
+acknowledgments below belong to this development candidate. With the default
+action-conditioned form, the compiled
 `brain` needs an `action_input` sensor with exactly `actions` coordinates and a `value_output`
 selecting one scalar patch state. With `action_input=None`, `value_output`
 must be a tuple/list of exactly `actions` scalar output names exposing distinct
@@ -546,6 +561,7 @@ settled outputs, not a separate policy head. `brain` remains accessible and
 | `value_scale` | Positive finite target scale, strictly below both `state_bound` and `1 / (1 + state_prior)`. This check does not establish that a chosen architecture learns the value function. |
 | `capacity` | Positive integer bound on stored transition records; oldest records are discarded when full. |
 | `batch_size` | Positive integer no greater than capacity. Replay samples up to this many records, always including the latest. |
+| `credit_horizon` | Experimental 0.60 candidate: positive integer no greater than capacity; maximum actual consecutive transitions used per return. One preserves the original one-step target. |
 | `seed` | Nonnegative integer for private exploration, tie-breaking and replay sampling. |
 
 For reward `r`, the target is a normalized discounted-return estimate:
@@ -561,27 +577,50 @@ repair, preserving current live activity. Actual rewards and observations are
 records; fitted future-return targets are estimates. Replay is not a guarantee
 of protected retention or convergence of nonlinear Q-learning.
 
+In the unreleased temporal-credit candidate, `credit_horizon > 1` follows the
+next recorded transition only if its observation exactly matches the preceding
+next observation, it belongs to the same episode, and its executed action is
+greedy under the same frozen pre-update values. Exact ties count as greedy.
+At an off-policy action, missing future, context gap or horizon bound, bootstrap
+from the preceding next observation instead. At a terminal record use zero
+future value. For a path of length `n`, the target is
+
+```text
+sum(k=0..n-1, discount**k * (1-discount) * value_scale * reward[k]/reward_scale)
+    + discount**n * bootstrap
+```
+
+This is a finite greedy-cut return in the spirit of Watkins traces, not a second
+learning rule. See [Munos et al. (2016)](https://arxiv.org/abs/1606.02647) for
+off-policy return operators; its tabular guarantees are not guarantees for
+Cadence's approximate nonlinear repair. No future outcome is invented when
+collection stops. `reset()` cuts temporal links without clearing past replay.
+
 | Method | Contract |
 | --- | --- |
 | `act(inputs, *, explore=True, budget=None)` | Supply every sensor except a declared action input. Query each action in conditioned mode, or all value outputs jointly in vector mode; require qualification, choose epsilon exploration or a maximum value, breaking ties uniformly; retain qualified activity with `step`. A pending action must receive feedback or be reset before another `act`. |
-| `feedback(reward, next_inputs=None, *, terminal=False, learn=True, budget=None)` | Record the pending action's actual outcome. Nonterminal outcomes require next inputs; terminal outcomes require `None`. Valid feedback consumes the pending action even if subsequent fitting refuses. `learn=False` records without fitting. Invalid arguments change nothing. |
+| `feedback(reward, next_inputs=None, *, decision_id, executed_action, terminal=False, learn=True, budget=None)` | Acknowledge an issued decision and record the action actually executed, which may differ from the proposal. Nonterminal outcomes require next inputs; terminal outcomes require `None`. A first valid acknowledgment consumes the pending decision even if subsequent fitting refuses. An identical retry of the latest outcome does not record or learn again. `learn=False` records without fitting. Invalid or conflicting arguments change nothing. |
 | `replay(*, budget=None)` | Attempt one sampled batch update from retained records. Other than the mandatory latest record, sample uniformly without replacement. Next-action query or fit refusal commits no parameters; retry this method rather than resubmitting feedback. |
-| `reset()` | Discard a pending action without inventing a reward or clearing retained records, RNG, parameters or live activity. |
-| `inspect()` | Copy `config`, current `records`, cumulative `transitions`, successful helper `updates`, and boolean `pending`. |
-| `snapshot()` | Save brain, replay records, pending action, RNG and counters in bounded JSON. |
+| `reset()` | End the current episode/credit segment and discard a pending action without inventing a reward or clearing retained records, RNG, parameters or live activity. |
+| `inspect()` | Copy `config`, current `records`, cumulative `transitions`, successful helper `updates`, boolean `pending`, current `episode`, `issued_decisions`, `pending_decision_id`, `pending_action` and `last_feedback_id`. Absent pending/receipt identities are `None`. |
+| `snapshot()` | Save brain, replay records with episode/decision identifiers, pending proposal, issued-decision counter, latest outcome receipt, RNG and counters in bounded JSON. The unreleased candidate uses `reinforcement/3`; old source-bound checkpoints are not silently migrated. |
 | `Reinforcement.from_snapshot(text)` | Validate the complete continuation, including the reinforcement source hash and the brain's own source identity. Text limit: 32 MiB. |
 
-Successful `act` returns `accepted=True`, integer `action`, candidate `values`,
+Successful `act` returns `accepted=True`, integer `action`, positive integer
+`decision_id`, candidate `values`,
 boolean `exploratory` and the selected `settlement`. Values are scaled return
 estimates, not probabilities or confidence scores. Query or step refusal
-returns `accepted=False`, `action=None`, `values` and reason `"query_refused"`
+returns `accepted=False`, `action=None`, `decision_id=None`, `values` and reason `"query_refused"`
 or `"step_refused"`; pending state and RNG stay unchanged. `explore=False`
 disables epsilon moves but still breaks exact ties randomly.
 
 A completed replay attempt returns the batch result plus sampled `indices`,
-derived `targets` and cumulative `updates`. Earlier refusals return
+derived `targets`, `credit_horizons`, `credit_stops` and cumulative `updates`.
+Stop reasons are `terminal`, `horizon`, `pending_future`, `discontinuity` and
+`off_policy`. Earlier refusals return
 `accepted=False` with `"empty_replay"` or `"bootstrap_refused"`. `feedback`
-adds `stored=True` and cumulative `transitions`; with learning disabled its
+on a first acknowledgment adds `stored=True`, `duplicate=False`, the `decision_id` and
+cumulative `transitions`; with learning disabled its
 reason is `"learning_disabled"` and `accepted=False`. A stored transition and
 an accepted parameter update are different events. Each `budget` applies to
 each underlying query/solve, not an aggregate interaction deadline. An
@@ -590,11 +629,28 @@ performs one value query plus one `step`. All successful decisions consume RNG,
 even with `explore=False`, because tie-breaking uses the private generator.
 Measure every candidate/next-action query and the batch fit, not only the returned fit.
 
-`act` stores a selected action, but cannot observe whether a body executed it.
-The caller acknowledges execution before `feedback`; a discarded command needs
-`reset`. There is no `event_id` on `feedback` and no external outcome-message
-deduplication. After valid feedback consumes a pending action, retry numerical
-learning with `replay`, never by resubmitting that outcome to a later action.
+`act` stores a proposal, but cannot observe whether a body executed it. Pass its
+`decision_id` and the actual `executed_action` to `feedback`; a discarded command
+needs `reset`. IDs increase only after accepted decisions and are never reused
+after reset. `decision_id` must be a positive integer and `executed_action` an
+integer in `[0, actions)`; booleans are rejected. Feedback stores the executed
+action for credit assignment, including
+an actuator override. Only the latest acknowledged outcome can be retried:
+identical action, reward, next context and terminal status return `stored=False`
+and `duplicate=True`, leaving even a newer pending decision intact. Changed
+payloads and older, canceled or unissued IDs are rejected atomically. `learn`
+and `budget` are execution options, so changing them on a duplicate never
+triggers learning. Retry a refused fit with `replay()`.
+
+A duplicate returns `accepted=False`, `stored=False`, `duplicate=True`,
+`decision_id`, cumulative `transitions`, `reason="duplicate_feedback"` and
+`work={}`. It has no settlement or `qualified` field because it performs no solve.
+
+The latest outcome receipt survives replay eviction and saved continuation.
+Decision identity is separate from a brain's learning-event identity: several
+replay admissions can use the same actual experience, and direct observations
+can interleave with replay. These are acknowledgment guarantees, not proof that
+caller-supplied actions or rewards actually occurred in the environment.
 
 `explore=False` changes selection only. `feedback(..., learn=False)` freezes
 parameters for that feedback, but still records a transition and can evict the

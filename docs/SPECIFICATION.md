@@ -75,6 +75,17 @@ query. Learning and the mathematical `evaluate` function compute and validate
 the full parameter derivatives. Finite energy and all computed derivatives
 remain mandatory; input validation is never skipped.
 
+Within a single-row reference query, predictions whose incoming contacts are
+all fixed sensory inputs (including bias-only predictions) may be reused across
+repair proposals. Their state-dependent errors, recursive consumers and all
+returning derivatives are recomputed on every proposal. Cache setup occurs only
+when a nonstationary state needs repair. The initial evaluation and final
+whole-graph qualification always recompute every prediction from the original
+inputs and parameters. The cache is private to the solve and is neither retained
+nor serialized. Learning and batch solves do not use it. Tensor proposal
+arithmetic is unchanged; single-row Python reference refinement after a tensor
+proposal can use the same optimization.
+
 The first trial uses `step`. After acceptance, let `s` be the change in eligible
 coordinates and `y` the change in their exact gradient under the same objective.
 The next trial uses the scalar secant estimate `dot(s,s) / dot(s,y)` when its
@@ -222,7 +233,39 @@ latest record; all targets use the same pre-update brain. One
 `observe_batch(source="estimate")` fits them with ordinary joint repair.
 There is no second optimizer or convergence guarantee for this nonlinear
 Q approximation. Valid feedback records remain stored and consume the pending
-action even if fitting later refuses; retry fitting with `replay()`.
+decision even if fitting later refuses; retry fitting with `replay()`.
+
+An accepted decision issues a monotonically increasing identifier. Feedback
+must name that identifier and the action actually executed; the recorded action
+may differ from the proposal. Validation precedes any mutation. The record and
+latest outcome receipt commit before replay starts, so a refused or exceptional
+fit cannot lose the outcome. The same latest identifier and normalized outcome
+payload acknowledge a retry without changing records, RNG, parameters, live
+state or a newer pending decision. A conflicting payload or any other identifier
+without matching pending ownership is rejected. Reset discards pending ownership
+without reusing identifiers. The latest receipt is bounded independently of replay
+eviction. These receipts are caller-supplied execution evidence, not authenticated
+measurements; they are distinct from the brain's parameter-admission events.
+
+The unreleased temporal-credit candidate extends the same estimated targets
+to at most `credit_horizon` adjacent records. It crosses a record boundary only
+when the observed next context equals the next record's context, their episode
+identifiers agree, and the next recorded action attains the current pre-update
+maximum action value. All queries in the return and batch use unchanged
+parameters and the same retained activity. Each traversed reward is scaled by
+`(1-gamma)*v/r`; rewards are discounted along the actual recorded path. A
+terminal tail has zero bootstrap; a missing, reset, off-policy or horizon-cut
+tail uses the clipped next value. A time limit is not automatically terminal.
+
+Starting with a bootstrap in `[-v,v]`, each reverse return step is the convex
+combination `(1-gamma)*v*reward/r + gamma*tail`, so induction bounds every target
+by `[-v,v]` in real arithmetic. This target bound does not prove that the
+nonlinear learner converges or improves behavior. Numerical qualification
+still covers every private batch state and shared parameter. A refused query
+or fit preserves learner parameters and replay RNG; actual already-recorded
+outcomes remain retained. Source-bound `reinforcement/3` snapshots preserve
+credit horizon, episode/decision ordering, outstanding proposal ownership and
+the latest acknowledged outcome for exact retry continuation.
 
 `History` retains a caller-fed window of samples and slot-validity masks.
 It exposes temporal context but does not learn recurrent memory. Relation
@@ -268,10 +311,12 @@ Tests check numerical derivatives independently against finite differences,
 analytic optima on small cases, causal feedback into observed populations,
 energy descent, constrained boundaries, source coverage, witnessed acquisition,
 unclamped recall, refusal rollback, event custody and continuation. Executable
-documentation uses the same released API.
+documentation uses this checkout's public API; candidate-only contracts are
+identified in the [migration guide](MIGRATION_060.md).
 
 The engine supplies labeled-target learning and persistent joint activity;
-the reinforcement helper adds explicit one-step discrete Q credit and replay.
+the reinforcement helper adds explicit discrete action-value credit and replay,
+including the bounded candidate return described above.
 These do not establish autonomous task discovery, general long-horizon credit,
 learned structural growth or a biological physiology model. Performance and
 advantages from recursive depth remain empirical questions. Biological

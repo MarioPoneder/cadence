@@ -228,6 +228,16 @@ both prediction quality and complete playing strength.
 
 ## Choosing a layout for a real-time application
 
+The experimental query implementation reuses predictions that depend only on
+fixed sensory inputs during one repair. This also applies to sensory populations
+inside a recursive graph: their predictions are constant, while their states,
+errors and feedback remain live. Initial and final checks still traverse the
+complete graph. Reuse changes neither the patch law nor the number of required
+repair sweeps. It introduces no caller configuration and keeps no cache between
+observations. Measure elapsed time as well as edge visits: cache setup and copies
+cost time but are not edge traversals. This numerical optimization is not learned
+attention or evidence of improved behavior.
+
 1. Establish a small flat baseline with the actual available sensors. Measure
    useful behavior after bootstrapping, including refusal and failure cases.
 2. Add ordinary composition if the direct mapping lacks a useful representation.
@@ -242,9 +252,12 @@ both prediction quality and complete playing strength.
    policy explicitly. Retaining a useful state can change subsequent settling
    cost; it is not a weight update or evidence of protected long-term memory.
 
-A fast action loop with slower recursive deliberation is an application design
-worth testing. It requires explicit interfaces, scheduling, state ownership and
-behavior checks. Cadence does not automatically route easy queries to a flat
-brain or interrupt a coupled solve at a hard deadline. `LiveController` keeps
-rendering responsive; it does not make an unfinished brain answer ready sooner.
-See [live control](LIVE.md) for the execution contract.
+The intended fast/slow design keeps one brain and one body interface: familiar
+behavior stays inexpensive, and internal correction receives more work when
+needed. The current candidate does not implement that automatic allocation.
+Every query must still qualify the complete connected brain; an application
+scheduler cannot certify a partially solved branch. `LiveController` keeps
+rendering responsive while a serial worker owns the brain; it does not make an
+unfinished answer ready sooner. See
+[brain design](BRAIN_DESIGN.md#spend-compute-according-to-measured-need) for the
+capability boundary and [live control](LIVE.md) for execution.

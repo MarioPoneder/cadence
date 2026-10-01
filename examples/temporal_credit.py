@@ -226,13 +226,23 @@ def credit_case(seed, delay, mode, *, episodes=60, preferred=1):
             following = None if terminal else context(stage + 1, chosen, delay)
             update = work.add(
                 learner.feedback(
-                    reward, following, terminal=terminal, learn=mode != "frozen"
+                    reward,
+                    following,
+                    terminal=terminal,
+                    learn=mode != "frozen",
+                    decision_id=decision["decision_id"],
+                    executed_action=decision["action"],
                 )
             )
             if twin is not None:
                 resumed_equal &= update == work.add(
                     twin.feedback(
-                        reward, following, terminal=terminal, learn=mode != "frozen"
+                        reward,
+                        following,
+                        terminal=terminal,
+                        learn=mode != "frozen",
+                        decision_id=decision["decision_id"],
+                        executed_action=decision["action"],
                     )
                 )
                 resumed_equal &= learner.snapshot() == twin.snapshot()
@@ -263,6 +273,8 @@ def credit_case(seed, delay, mode, *, episodes=60, preferred=1):
                 learner.feedback(
                     reward,
                     None if terminal else context(stage + 1, chosen, delay),
+                    decision_id=decision["decision_id"],
+                    executed_action=decision["action"],
                     terminal=terminal,
                     learn=False,
                 )

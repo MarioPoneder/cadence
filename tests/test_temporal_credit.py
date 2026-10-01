@@ -74,12 +74,18 @@ def test_hypothetical_or_abandoned_choice_cannot_receive_credit():
     initial = learner.snapshot()
     assert brain.settle(experiment.context(0, 0, 2))["qualified"]
     assert learner.snapshot() == initial
-    with pytest.raises(ValueError, match="preceding accepted act"):
-        learner.feedback(1, terminal=True)
-    assert learner.act(experiment.context(0, 0, 2))["accepted"]
+    with pytest.raises(ValueError, match="pending accepted act"):
+        learner.feedback(1, terminal=True, decision_id=1, executed_action=0)
+    decision = learner.act(experiment.context(0, 0, 2))
+    assert decision["accepted"]
     learner.reset()  # body rejected the command; no executed transition
-    with pytest.raises(ValueError, match="preceding accepted act"):
-        learner.feedback(1, terminal=True)
+    with pytest.raises(ValueError, match="pending accepted act"):
+        learner.feedback(
+            1,
+            terminal=True,
+            decision_id=decision["decision_id"],
+            executed_action=decision["action"],
+        )
     assert learner.inspect()["transitions"] == 0
     assert learner.inspect()["updates"] == 0
 

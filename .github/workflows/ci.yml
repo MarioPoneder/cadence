@@ -35,8 +35,13 @@ jobs:
           python -m pip check
       - name: Learn and restore a population brain without optional extras
         run: |
-          python - <<'PY'
+          python -I - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+          import tomllib
           from cadence import Brain, Cortex, bootstrap, __version__
+          declared = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          assert version("cadence-net") == __version__ == declared
           layout = Cortex(seed=2)
           signal = layout.input("signal", shape=(1,))
           base = layout.column("base", patches=4, inputs=signal)
@@ -62,6 +67,28 @@ jobs:
           assert resumed.observe_batch(examples, event_id=1000)["duplicate"]
           assert resumed.snapshot() == batch_saved
           print("cadence", __version__, "population learning and continuation passed")
+          PY
+      - name: Check installed outcome ownership contract
+        run: |
+          python -I - <<'PY'
+          from cadence import Cortex, Reinforcement
+          layout = Cortex(seed=2)
+          sensor = layout.input("signal", shape=1)
+          values = layout.column(patches=2, inputs=sensor)
+          for index, name in enumerate(("left", "right")):
+              layout.output(name, shape=(), reads=values, indices=(index,))
+          learner = Reinforcement(layout.build(), actions=2, action_input=None,
+                                  value_output=("left", "right"))
+          choice = learner.act({"signal": [0.25]}, explore=False)
+          assert choice["accepted"]
+          outcome = dict(reward=1, next_inputs=None, terminal=True,
+                         decision_id=choice["decision_id"],
+                         executed_action=choice["action"])
+          assert learner.feedback(**outcome, learn=False)["stored"]
+          saved = learner.snapshot()
+          assert learner.feedback(**outcome, learn=False)["duplicate"]
+          assert learner.snapshot() == saved
+          assert Reinforcement.from_snapshot(saved).snapshot() == saved
           PY
 
   test:

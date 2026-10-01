@@ -1,8 +1,8 @@
 # Three settlement design patterns
 
-Cadence 0.50.0 supports three design patterns: **flat settlement**,
-**state-coupled settlement**, and **recursive observer settlement**. All three
-use the same patch law, repair engine, learning operations and qualification
+Cadence supports three design patterns: **flat settlement**,
+**deep ordinary (state-coupled) settlement**, and **recursive observer settlement**.
+All three use the same patch law, repair engine, learning operations and qualification
 check. Recursive observation is a wiring choice, not a prerequisite for
 settlement.
 
@@ -17,9 +17,17 @@ brain: sensory columns, state-reading populations and nested observers can
 participate in one joint settlement. This does not automatically give the flat
 part an independent deadline; the full query must qualify before it returns.
 
-The examples below declare small layouts and run unclamped queries. Their
-initial answers are untrained. Use [bootstrapping](BOOTSTRAP.md) to teach a
-behavior and check it on later free predictions.
+Choose a construction below, then use the shared learning/query/save loop.
+All three expose `signal` and `answer`; the body interface does not change.
+These are teaching examples with different capacities and contact counts, not
+a controlled comparison of architecture quality. The complete runnable version
+is [layout_learning.py](../examples/layout_learning.py):
+
+```sh
+python examples/layout_learning.py --layout flat
+python examples/layout_learning.py --layout deep
+python examples/layout_learning.py --layout recursive
+```
 
 ## 1. Flat settlement
 
@@ -32,12 +40,12 @@ simple prediction tasks.
 from cadence import Cortex
 
 flat = Cortex(seed=7)
-signal = flat.input("signal", shape=(2,))
+signal = flat.input("signal", shape=1)
 response = flat.column("response", patches=1, inputs=signal)
-flat.output("action", shape=(1,), reads=response)
+flat.output("answer", shape=1, reads=response)
 flat_brain = flat.build()
 
-result = flat_brain.settle({"signal": [0.2, -0.4]})
+result = flat_brain.settle({"signal": [0.4]})
 assert result["qualified"]
 ```
 
@@ -46,7 +54,7 @@ repair and final stationarity check. The [performance guide](PERFORMANCE.md)
 derives the special flat query's exact optimum and explains why learning can
 cost more than querying it.
 
-## 2. State-coupled settlement
+## 2. Deep ordinary settlement
 
 Pass a population through `inputs` to read its states. This ordinary composition
 lets output patches use a learned intermediate representation. Populations
@@ -57,13 +65,14 @@ the joint energy's derivatives, even without any error-reading observer.
 from cadence import Cortex
 
 composed = Cortex(seed=7)
-signal = composed.input("signal", shape=(2,))
-representation = composed.column("representation", patches=2, inputs=signal)
-response = composed.column("response", patches=1, inputs=representation)
-composed.output("action", shape=(1,), reads=response)
+signal = composed.input("signal", shape=1)
+representation = composed.column("representation", patches=4, inputs=signal)
+integration = composed.column("integration", patches=2, inputs=representation)
+response = composed.column("response", patches=1, inputs=integration)
+composed.output("answer", shape=1, reads=response)
 composed_brain = composed.build()
 
-result = composed_brain.settle({"signal": [0.2, -0.4]})
+result = composed_brain.settle({"signal": [0.4]})
 assert result["qualified"]
 ```
 
@@ -83,18 +92,18 @@ ones to finish and then issue a separate correction.
 from cadence import Cortex
 
 recursive = Cortex(seed=7)
-signal = recursive.input("signal", shape=(2,))
-representation = recursive.column("representation", patches=2, inputs=signal)
+signal = recursive.input("signal", shape=1)
+representation = recursive.column("representation", patches=4, inputs=signal)
 integration = recursive.observer(
     "integration", patches=2, observes=representation,
 )
 reflection = recursive.observer(
-    "reflection", patches=1, observes=(representation, integration),
+    "reflection", patches=1, observes=integration,
 )
-recursive.output("action", shape=(1,), reads=reflection)
+recursive.output("answer", shape=1, reads=reflection)
 recursive_brain = recursive.build()
 
-result = recursive_brain.settle({"signal": [0.2, -0.4]})
+result = recursive_brain.settle({"signal": [0.4]})
 assert result["qualified"]
 ```
 
@@ -103,6 +112,37 @@ tasks where that extra information could help resolve competing constraints.
 Its usefulness must be learned and measured against the state-coupled control;
 more observer levels alone do not establish better reasoning. The
 [DRSN guide](DRSN.md) explains the coupled equations and returning influence.
+
+## Teach and save through the same interface
+
+Only the construction changes. This task is `answer = 0.6 * signal`; it needs no
+recursive observer. Training witnesses and development checks are distinct from
+the final free query, and all answer values are absent from query inputs.
+
+```python
+from cadence import Brain, bootstrap
+
+examples = [
+    ({"signal": [x]}, {"answer": [0.6 * x]})
+    for x in (-0.8, -0.4, 0.4, 0.8)
+]
+checks = [
+    ({"signal": [x]}, {"answer": [0.6 * x]}) for x in (-0.6, 0.6)
+]
+for brain in (flat_brain, composed_brain, recursive_brain):
+    report = bootstrap(
+        brain, examples, checks=checks, epochs=20,
+        max_error=0.1, batch_size=4, seed=2,
+    )
+    assert report["passed"], report
+    saved = brain.snapshot()
+    result = brain.settle({"signal": [0.5]})
+    assert result["qualified"]
+    assert abs(result["outputs"]["answer"][0] - 0.3) < 0.1
+    restored = Brain.from_snapshot(saved)
+    assert restored.settle({"signal": [0.5]}) == result
+    assert brain.snapshot() == saved
+```
 
 ## One execution and learning contract
 
@@ -117,6 +157,20 @@ quality, query latency, learning cost and refusals separately. Coupling can add
 substantial work, but recursive layouts do not have a universal speed ordering
 relative to ordinary composition. See the [performance guide](PERFORMANCE.md)
 and [runnable examples](../examples/README.md) for measured comparisons.
+
+## Choose routine competence separately from observation
+
+A familiar skill can require a deep learned representation. “System 1” does
+not mean one flat layer, and “System 2” does not mean any population named
+`reflection`. Ordinary composition already has returning influence during joint
+repair. An observer adds the exact **current** error signal, not an independent
+critic, a recorded past failure or a built-in long-term objective.
+
+The public builder reads previously declared sources only. Its read graph is
+acyclic even though solving the common energy returns influence upstream.
+`step` preserves activity; that alone does not demonstrate learned recurrent
+memory. See [brain design](BRAIN_DESIGN.md#spend-compute-according-to-measured-need)
+for the current attention boundary and temporal controls.
 
 ## Width, branches and readouts
 
@@ -157,7 +211,7 @@ reflection = cortex.observer(
     "reflection", patches=8, observes=(vision, hearing, fusion),
 )
 meta = cortex.observer("meta", patches=4, observes=(fusion, reflection))
-cortex.output("move", shape=(2,), reads=meta)
+cortex.output("move", shape=2, reads=meta)
 brain = cortex.build()
 assert brain.inspect()["patches"] == 36
 assert brain.inspect()["sensor_coverage"] == 20
