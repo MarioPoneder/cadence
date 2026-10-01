@@ -263,17 +263,20 @@ On 2026-10-01, an NVIDIA RTX 4000 Ada Generation Laptop GPU with 12,282 MiB
 of VRAM passed all 67 selected CUDA cases in `test_tensor_math.py` and
 `test_batch_tensor.py`, with no skips. The Windows run used Python 3.13.2,
 driver 595.95, PyTorch 2.11.0+cu128 (CUDA runtime 12.8), and both float64 and
-float32 proposals. The [hardware receipt](../examples/receipts/cuda_qualification.json)
-records exact implementation/test source hashes, package versions and individual
-CUDA outcomes. MPS and additional CUDA device indices were unavailable on this
-single-GPU laptop.
+float32 proposals. The final [audited receipt](../examples/receipts/cuda_audit_verified.json)
+records a full run with **937 passed and 34 MPS skips**, including all 67 CUDA
+cases, on commit `8892927`. It identifies the tested Git tree, hardware and
+library versions, individual CUDA outcomes, and unchanged source hashes before
+and after testing. MPS and additional CUDA device indices were unavailable on
+this single-GPU laptop.
 
 The checks cover independent scalar finite-difference derivatives, recursive
 feedback, original frozen parameters and witness clamps, strict reference
 qualification, overflow/refusal, checkpoint transfer, batch admission/retry
 custody, and subsequent unclamped recall and live learning. Existing CPU/MPS
 checks now also select CUDA when available. Run the current CUDA subset from
-a clean, committed development checkout with a CUDA-enabled PyTorch build:
+a clean, committed development checkout installed with
+`python -m pip install -e ".[dev]"` and a CUDA-enabled PyTorch build:
 
 ```sh
 python -X utf8 examples/cuda_qualification.py --out data/cuda-qualification.json
@@ -283,9 +286,8 @@ The [collector](../examples/cuda_qualification.py) requires actual CUDA and
 both precision cases, records the tested Git commit and source hashes before
 and after testing, and fails on skipped CUDA cases or changed sources. Use
 `--full` for the complete test suite. Choose a new output path for each run;
-existing receipts are never overwritten. The historical receipt above predates
-the audit correction that makes refusal tests perform a tensor sweep before
-checking rollback. Derivative checks now also assert actual tensor dtypes.
+existing receipts are never overwritten. Refusal tests require a tensor sweep
+before checking rollback; derivative checks also assert actual tensor dtypes.
 
 This is correctness and small-fixture acquisition evidence for
 [issue #64](https://github.com/muellerberndt/cadence/issues/64), not a speedup or
@@ -294,11 +296,17 @@ growth, real allocation-failure recovery, full perception-to-action latency
 tails, and matched-workload performance comparisons remain unmeasured here.
 Test durations are not production p50/p95/p99 latency measurements.
 
-The receipt also retains the full-suite run's one reference-only test failure:
+The [original receipt](../examples/receipts/cuda_qualification.json) retains
+the earlier full-suite run's one reference-only test failure:
 a supposedly capped solve qualified in 476 of 512 sweeps on this machine.
 The rollback fixture now uses a one-sweep cap and keeps its default-budget
 retry; all 17 learning tests passed on follow-up. No repair rule or admission
 tolerance changed.
+
+An [intermediate collector failure](../examples/receipts/cuda_audit_encoding_failure.json)
+is also retained: Python's `-X utf8` setting did not reach CLI subprocesses on
+Windows. The collector now propagates that setting, and the final full run
+above passed with the correction.
 
 ### Earlier performance measurements
 

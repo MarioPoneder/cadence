@@ -1,0 +1,751 @@
+{
+  "issue": "https://github.com/muellerberndt/cadence/issues/64",
+  "scope": "Full suite",
+  "started_utc": "2026-10-01T03:47:35.730350+00:00",
+  "commit": "8892927ba7f9345cbbb705e560cfb289ccf10db3",
+  "source_sha256_before": {
+    "AGENTS.md": "9492fcf4882fb731bbfd0af0f731bfbdcbbfe52253c0df10175add6f2e64097b",
+    "CHANGELOG.md": "994c0253b5209b9451d837f8b0588b84383a2e7d193af1a3b0c932fa7af09a0c",
+    "README.md": "dc7ff39c3a9aa071c33df2597774e8b6a61ec4c227dac6f6d90ec70914a45db2",
+    "docs/ACCELERATION.md": "9fab38e940ecdbe4ad05eeacb05eb7932cbe8a2f1a526418cfbc1c6728d2762f",
+    "docs/BOOTSTRAP.md": "c1327862598167723b881e1d7aac6fd48c852f30407527d12010664622f89269",
+    "docs/DRSN.md": "f4487c13ed5df31a06af38c497cd04221e73a94f3981dbb63c264761665c0aa1",
+    "docs/ELEMENT.md": "821f53e9bb80483a0326d977d3da225da469110727a895b8d32c027f209f945d",
+    "docs/LIVE.md": "73a04d94fa01c5a6eb1a2da5e90875a9096254351fea9ab92e62ca0ca14c01a0",
+    "docs/PERFORMANCE.md": "4e0edbbed04d6215c8543650ff53674831c9385f0b0ec4a283ca687b877ebf72",
+    "docs/QUICKSTART.md": "29b694ca341fabce81faf51207a58cb509c7da9c04f6d50701bff77ff364f89a",
+    "docs/REFERENCE.md": "5b556c2e986f2e7fbd58374173d9b46afb2e0f4ddf091ba0a71d46607647a0a7",
+    "docs/SPECIFICATION.md": "05e966d970467fe05663e8a048923a8ebf6655610acf0d534600963869d3137c",
+    "docs/VARIANTS.md": "3834238902bf69914681658394c0c84f8b5acf0ade975fb2b850787888c78281",
+    "docs/index.md": "6366d0377f85d81f5da31e8a29f812e0b9d3fec14fda6d8ec16e6b5e3347a0c5",
+    "examples/README.md": "7aefb98af903c31f43553735285ed284de7ea7ea6ca62c3e33a5f7a6208f9725",
+    "examples/batch_bootstrap.py": "17148ff2dc231dc46b6759f0369ae3b7f8d9b8dc2d964edd49f48fa2b067a722",
+    "examples/cuda_qualification.py": "b5a503dfe9837ab0678464ea8ff63f36f47c5c73a65ee8c7aa43c5f4c116f731",
+    "examples/layout_cost.py": "a9c566986164cfded60a250e5c6d81c14e594e6bd4354d7ac09fd3c672d593b7",
+    "examples/live_control.py": "38b055a7de1e5c4531ef1c9b9724eb235dd7e850849e6f94a9c5fd115e52a645",
+    "examples/live_learning.py": "d47a0816ad0e33c44ab03ff63988c4c8ec3361d5f0793dab639cde796ef31d20",
+    "examples/parallel_bootstrap.py": "594d281b1c2d51ba31b614bd0559ab5fa8c21bc8b185f06112bb117e86cd7de1",
+    "examples/temporal_credit.py": "8fd10233fa37ecfce008ce41815467299cf3aeb6cddbdbaf821120f4714cd817",
+    "pyproject.toml": "126ffe29029603d0410a9cf9014a21048e11b4c03b6d561e678cb83c893e67a5",
+    "src/cadence/__init__.py": "1516f46b722d8d64f06db47c25aa58fa784b3218841cda788e84640e7a056e7e",
+    "src/cadence/_repair.py": "74b7d6463f2b2714d7546b80ecd7a42a54cbc3d15628751244bde851e3f71fc6",
+    "src/cadence/_tensor.py": "2184726c150fd770cbf1d149917200e40b06c48a2b6d340447feda774f636fe4",
+    "src/cadence/_validation.py": "865713b9095f64f93b678855127b6564a89d692f86345e6103d21b0d883382f2",
+    "src/cadence/bootstrap.py": "20f85c2fc75981f666dfc03af486406a7bd64d0e77b3c3c4649f77b2c11399a1",
+    "src/cadence/brain.py": "f22952d56b9b5fb3b77832d0b7a909b51034425e327928927814f7424a0a40b1",
+    "src/cadence/column.py": "82b425f6657019ef937e68d52981ea05ffbdd6b3179d44d108501952f51ac35d",
+    "src/cadence/cortex.py": "7ca88003bcc2a8227958bcc6ded6fbf0790a0371387a99310fe9711e65a0e130",
+    "src/cadence/memory.py": "0c88670da663cdc059fa3f3bb8a2579e1f61c378297ef61cf34edf54906ef2b9",
+    "src/cadence/ports.py": "3a191eb340d32d1c15ef6699f0650cad9c58ca6c2e031666e4f3f77d6de35002",
+    "src/cadence/reinforcement.py": "d3619ad71efbcc842c0d517026ba71e4118e3cbb6a38ad03f5a55f903e83f8fa",
+    "src/cadence/runtime.py": "fa22f9be5195d1ebbfebb6e62112593a1dbcd05e169f2f059344ce5073e60052",
+    "tests/test_batch.py": "0298fe8bca6ad22d21abcb917ed80dc1155365adc17d91088ad6b11b6360ee02",
+    "tests/test_batch_math.py": "5c7c38c1cd926f8bd05d7f7a9e7813d6751b1928999dd002a9b79a1e4564a263",
+    "tests/test_batch_tensor.py": "6e0a8745291ea2c172fdaf9eafad67e7d8a52be976edb34d6120e7675c2c4976",
+    "tests/test_bootstrap.py": "f683613dd39a033034b7f427ca18a8667840132f831098b41eb248ff3a0ccf3b",
+    "tests/test_dense_defaults.py": "9c3b0dd1739228154693c93fb7603c95dbdb9c9ceb32a6b162168ee6d8b099fe",
+    "tests/test_documentation.py": "3c310d88a2d66cb4d095585fbf3e7cc68080692e7d0cf3a3b25689bbab6d7b98",
+    "tests/test_drsn.py": "17c2c5b954b0eed3987a707124bcef63d8044fbc0183ddf1b10e248af562169d",
+    "tests/test_drsn_math.py": "32a283cc10b2ebde675b55ae53cd03170a57d7c6198cccc650957ce3d4d7d27c",
+    "tests/test_estimates.py": "8f971d0ad76ae0f87e62348c8805ce18909286887b1ebe4226d1a2da7cc32443",
+    "tests/test_event_serialization.py": "f1b111b1de857aa7433375d716e37939f914f7bf8b6a78a42f599a62584262fa",
+    "tests/test_execution_config.py": "1f857c02560b0a25d30d56de0570e5da3c63642653d7b924db3633524ac5dda0",
+    "tests/test_inspection_coverage.py": "e3f54d5ba757a44d5bd25e22d70bc6a8afcd3d015ca1e1842b7d89322a543331",
+    "tests/test_learning_basics.py": "7aa2e06c4db8010685ceead1ce919a09531446ebfd5ee84c9e0899e6b8c7ac81",
+    "tests/test_live_control_example.py": "b5d484ed86ba43374f8e063db5647ed674735982814edc5c4c06e63aa6c442e0",
+    "tests/test_live_learning.py": "e347f811c411eaeaa7c77542865f7dcefef23ccda98c8b6f324666569875cdf6",
+    "tests/test_memory.py": "8220f30ebac492bb9cf4a2ea9b88095af25cae69e3be4adf4f86c0056eda8356",
+    "tests/test_parallel_example.py": "25d968af75fc7f24af8ae935dcc8999be80fb1b48389726af839ac45efc5079e",
+    "tests/test_query_gradients.py": "59bcf021e2163dbf90cd2a070eab8e91b33677bd2d25ae17e9f436032beea048",
+    "tests/test_reinforcement.py": "a07898eaa607f330d8f9d965d20899889a59097c75ab31688009de2387a31a1c",
+    "tests/test_runtime.py": "c7253a79d86567eab41f39af218c8bd70f636cbfe4c1f80147a48acfeb621267",
+    "tests/test_setup_errors.py": "a6446d95c643de21e6170e15c614d31f1d6a437f3f5b0c4130531d0e9a288c36",
+    "tests/test_spectral_step.py": "c3896f626a0bd37abea09aa15056fde7db4a9bac110c902ed1c588086cb11bf2",
+    "tests/test_temporal_credit.py": "ca73fd8e09023cc32782d846a0834e2b7b2c80b26d73d6d0c91f5c3a42fd3e9c",
+    "tests/test_tensor_math.py": "12d32ddab4cda45bca23f80df966dced1835f2a8cb65a36a7dfbe3363a83788e"
+  },
+  "source_sha256_after": {
+    "AGENTS.md": "9492fcf4882fb731bbfd0af0f731bfbdcbbfe52253c0df10175add6f2e64097b",
+    "CHANGELOG.md": "994c0253b5209b9451d837f8b0588b84383a2e7d193af1a3b0c932fa7af09a0c",
+    "README.md": "dc7ff39c3a9aa071c33df2597774e8b6a61ec4c227dac6f6d90ec70914a45db2",
+    "docs/ACCELERATION.md": "9fab38e940ecdbe4ad05eeacb05eb7932cbe8a2f1a526418cfbc1c6728d2762f",
+    "docs/BOOTSTRAP.md": "c1327862598167723b881e1d7aac6fd48c852f30407527d12010664622f89269",
+    "docs/DRSN.md": "f4487c13ed5df31a06af38c497cd04221e73a94f3981dbb63c264761665c0aa1",
+    "docs/ELEMENT.md": "821f53e9bb80483a0326d977d3da225da469110727a895b8d32c027f209f945d",
+    "docs/LIVE.md": "73a04d94fa01c5a6eb1a2da5e90875a9096254351fea9ab92e62ca0ca14c01a0",
+    "docs/PERFORMANCE.md": "4e0edbbed04d6215c8543650ff53674831c9385f0b0ec4a283ca687b877ebf72",
+    "docs/QUICKSTART.md": "29b694ca341fabce81faf51207a58cb509c7da9c04f6d50701bff77ff364f89a",
+    "docs/REFERENCE.md": "5b556c2e986f2e7fbd58374173d9b46afb2e0f4ddf091ba0a71d46607647a0a7",
+    "docs/SPECIFICATION.md": "05e966d970467fe05663e8a048923a8ebf6655610acf0d534600963869d3137c",
+    "docs/VARIANTS.md": "3834238902bf69914681658394c0c84f8b5acf0ade975fb2b850787888c78281",
+    "docs/index.md": "6366d0377f85d81f5da31e8a29f812e0b9d3fec14fda6d8ec16e6b5e3347a0c5",
+    "examples/README.md": "7aefb98af903c31f43553735285ed284de7ea7ea6ca62c3e33a5f7a6208f9725",
+    "examples/batch_bootstrap.py": "17148ff2dc231dc46b6759f0369ae3b7f8d9b8dc2d964edd49f48fa2b067a722",
+    "examples/cuda_qualification.py": "b5a503dfe9837ab0678464ea8ff63f36f47c5c73a65ee8c7aa43c5f4c116f731",
+    "examples/layout_cost.py": "a9c566986164cfded60a250e5c6d81c14e594e6bd4354d7ac09fd3c672d593b7",
+    "examples/live_control.py": "38b055a7de1e5c4531ef1c9b9724eb235dd7e850849e6f94a9c5fd115e52a645",
+    "examples/live_learning.py": "d47a0816ad0e33c44ab03ff63988c4c8ec3361d5f0793dab639cde796ef31d20",
+    "examples/parallel_bootstrap.py": "594d281b1c2d51ba31b614bd0559ab5fa8c21bc8b185f06112bb117e86cd7de1",
+    "examples/temporal_credit.py": "8fd10233fa37ecfce008ce41815467299cf3aeb6cddbdbaf821120f4714cd817",
+    "pyproject.toml": "126ffe29029603d0410a9cf9014a21048e11b4c03b6d561e678cb83c893e67a5",
+    "src/cadence/__init__.py": "1516f46b722d8d64f06db47c25aa58fa784b3218841cda788e84640e7a056e7e",
+    "src/cadence/_repair.py": "74b7d6463f2b2714d7546b80ecd7a42a54cbc3d15628751244bde851e3f71fc6",
+    "src/cadence/_tensor.py": "2184726c150fd770cbf1d149917200e40b06c48a2b6d340447feda774f636fe4",
+    "src/cadence/_validation.py": "865713b9095f64f93b678855127b6564a89d692f86345e6103d21b0d883382f2",
+    "src/cadence/bootstrap.py": "20f85c2fc75981f666dfc03af486406a7bd64d0e77b3c3c4649f77b2c11399a1",
+    "src/cadence/brain.py": "f22952d56b9b5fb3b77832d0b7a909b51034425e327928927814f7424a0a40b1",
+    "src/cadence/column.py": "82b425f6657019ef937e68d52981ea05ffbdd6b3179d44d108501952f51ac35d",
+    "src/cadence/cortex.py": "7ca88003bcc2a8227958bcc6ded6fbf0790a0371387a99310fe9711e65a0e130",
+    "src/cadence/memory.py": "0c88670da663cdc059fa3f3bb8a2579e1f61c378297ef61cf34edf54906ef2b9",
+    "src/cadence/ports.py": "3a191eb340d32d1c15ef6699f0650cad9c58ca6c2e031666e4f3f77d6de35002",
+    "src/cadence/reinforcement.py": "d3619ad71efbcc842c0d517026ba71e4118e3cbb6a38ad03f5a55f903e83f8fa",
+    "src/cadence/runtime.py": "fa22f9be5195d1ebbfebb6e62112593a1dbcd05e169f2f059344ce5073e60052",
+    "tests/test_batch.py": "0298fe8bca6ad22d21abcb917ed80dc1155365adc17d91088ad6b11b6360ee02",
+    "tests/test_batch_math.py": "5c7c38c1cd926f8bd05d7f7a9e7813d6751b1928999dd002a9b79a1e4564a263",
+    "tests/test_batch_tensor.py": "6e0a8745291ea2c172fdaf9eafad67e7d8a52be976edb34d6120e7675c2c4976",
+    "tests/test_bootstrap.py": "f683613dd39a033034b7f427ca18a8667840132f831098b41eb248ff3a0ccf3b",
+    "tests/test_dense_defaults.py": "9c3b0dd1739228154693c93fb7603c95dbdb9c9ceb32a6b162168ee6d8b099fe",
+    "tests/test_documentation.py": "3c310d88a2d66cb4d095585fbf3e7cc68080692e7d0cf3a3b25689bbab6d7b98",
+    "tests/test_drsn.py": "17c2c5b954b0eed3987a707124bcef63d8044fbc0183ddf1b10e248af562169d",
+    "tests/test_drsn_math.py": "32a283cc10b2ebde675b55ae53cd03170a57d7c6198cccc650957ce3d4d7d27c",
+    "tests/test_estimates.py": "8f971d0ad76ae0f87e62348c8805ce18909286887b1ebe4226d1a2da7cc32443",
+    "tests/test_event_serialization.py": "f1b111b1de857aa7433375d716e37939f914f7bf8b6a78a42f599a62584262fa",
+    "tests/test_execution_config.py": "1f857c02560b0a25d30d56de0570e5da3c63642653d7b924db3633524ac5dda0",
+    "tests/test_inspection_coverage.py": "e3f54d5ba757a44d5bd25e22d70bc6a8afcd3d015ca1e1842b7d89322a543331",
+    "tests/test_learning_basics.py": "7aa2e06c4db8010685ceead1ce919a09531446ebfd5ee84c9e0899e6b8c7ac81",
+    "tests/test_live_control_example.py": "b5d484ed86ba43374f8e063db5647ed674735982814edc5c4c06e63aa6c442e0",
+    "tests/test_live_learning.py": "e347f811c411eaeaa7c77542865f7dcefef23ccda98c8b6f324666569875cdf6",
+    "tests/test_memory.py": "8220f30ebac492bb9cf4a2ea9b88095af25cae69e3be4adf4f86c0056eda8356",
+    "tests/test_parallel_example.py": "25d968af75fc7f24af8ae935dcc8999be80fb1b48389726af839ac45efc5079e",
+    "tests/test_query_gradients.py": "59bcf021e2163dbf90cd2a070eab8e91b33677bd2d25ae17e9f436032beea048",
+    "tests/test_reinforcement.py": "a07898eaa607f330d8f9d965d20899889a59097c75ab31688009de2387a31a1c",
+    "tests/test_runtime.py": "c7253a79d86567eab41f39af218c8bd70f636cbfe4c1f80147a48acfeb621267",
+    "tests/test_setup_errors.py": "a6446d95c643de21e6170e15c614d31f1d6a437f3f5b0c4130531d0e9a288c36",
+    "tests/test_spectral_step.py": "c3896f626a0bd37abea09aa15056fde7db4a9bac110c902ed1c588086cb11bf2",
+    "tests/test_temporal_credit.py": "ca73fd8e09023cc32782d846a0834e2b7b2c80b26d73d6d0c91f5c3a42fd3e9c",
+    "tests/test_tensor_math.py": "12d32ddab4cda45bca23f80df966dced1835f2a8cb65a36a7dfbe3363a83788e"
+  },
+  "source_unchanged": true,
+  "source_hash_note": "Exact checkout bytes, including line endings; commit identifies the complete Git tree.",
+  "environment": {
+    "python": "3.13.2 (tags/v3.13.2:4f8bb39, Feb  4 2025, 15:23:48) [MSC v.1942 64 bit (AMD64)]",
+    "utf8_mode": 1,
+    "child_python_utf8": "1",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "torch": "2.11.0+cu128",
+    "torch_cuda_runtime": "12.8",
+    "torch_threads": 1,
+    "torch_interop_threads": 24,
+    "deterministic_algorithms": false,
+    "device": "cuda:0",
+    "name": "NVIDIA RTX 4000 Ada Generation Laptop GPU",
+    "total_memory_bytes": 12878086144,
+    "compute_capability": [
+      8,
+      9
+    ],
+    "cuda_device_count": 1,
+    "nvidia_smi": "name, driver_version, memory.total [MiB]\nNVIDIA RTX 4000 Ada Generation Laptop GPU, 595.95, 12282 MiB",
+    "pytest": "9.1.1"
+  },
+  "dtypes": [
+    "float64",
+    "float32"
+  ],
+  "pytest_args": [
+    "-q"
+  ],
+  "pytest_exit_code": 0,
+  "pytest_seconds": 297.7178607000387,
+  "timing_scope": "pytest invocation including collection; excludes runner imports and CUDA preflight; not production latency",
+  "counts": {
+    "tests": 971,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 34
+  },
+  "cuda_counts": {
+    "passed": 67
+  },
+  "both_cuda_dtypes_collected": true,
+  "skips_by_reason": {
+    "MPS hardware unavailable": 34
+  },
+  "cases": [
+    {
+      "test": "tests.test_batch_tensor::test_batch_derivatives_match_independent_finite_differences[False-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.192
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_derivatives_match_independent_finite_differences[False-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.024
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_derivatives_match_independent_finite_differences[False-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:93: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_derivatives_match_independent_finite_differences[True-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.017
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_derivatives_match_independent_finite_differences[True-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.015
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_derivatives_match_independent_finite_differences[True-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:93: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_repeated_rows_do_not_multiply_or_dilute_parameter_anchor[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.02
+    },
+    {
+      "test": "tests.test_batch_tensor::test_repeated_rows_do_not_multiply_or_dilute_parameter_anchor[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.017
+    },
+    {
+      "test": "tests.test_batch_tensor::test_repeated_rows_do_not_multiply_or_dilute_parameter_anchor[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:139: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_query_freezes_exact_parameters_and_refines_every_row[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.066
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_query_freezes_exact_parameters_and_refines_every_row[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.02
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_query_freezes_exact_parameters_and_refines_every_row[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:194: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_shared_learning_qualifies_original_witnesses_and_single_anchor[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.069
+    },
+    {
+      "test": "tests.test_batch_tensor::test_shared_learning_qualifies_original_witnesses_and_single_anchor[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.054
+    },
+    {
+      "test": "tests.test_batch_tensor::test_shared_learning_qualifies_original_witnesses_and_single_anchor[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:229: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_averaged_state_gradient_cannot_hide_unsettled_row[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.003
+    },
+    {
+      "test": "tests.test_batch_tensor::test_averaged_state_gradient_cannot_hide_unsettled_row[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.003
+    },
+    {
+      "test": "tests.test_batch_tensor::test_averaged_state_gradient_cannot_hide_unsettled_row[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:280: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_work_counts_vector_evaluations_and_all_row_visits[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.066
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_work_counts_vector_evaluations_and_all_row_visits[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.047
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_work_counts_vector_evaluations_and_all_row_visits[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:301: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_query_omits_unused_parameter_gradients[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.01
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_query_omits_unused_parameter_gradients[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.008
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_query_omits_unused_parameter_gradients[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:347: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_one_overflowing_batch_row_is_not_hidden_by_tanh[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.006
+    },
+    {
+      "test": "tests.test_batch_tensor::test_one_overflowing_batch_row_is_not_hidden_by_tanh[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.005
+    },
+    {
+      "test": "tests.test_batch_tensor::test_one_overflowing_batch_row_is_not_hidden_by_tanh[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.0,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:368: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_refinement_preserves_strict_tolerance[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.022
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_refinement_preserves_strict_tolerance[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.008
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_refinement_preserves_strict_tolerance[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:387: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_subnormal_row_stationarity_is_checked_before_tensor_admission[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.002
+    },
+    {
+      "test": "tests.test_batch_tensor::test_subnormal_row_stationarity_is_checked_before_tensor_admission[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.003
+    },
+    {
+      "test": "tests.test_batch_tensor::test_subnormal_row_stationarity_is_checked_before_tensor_admission[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.0,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:406: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_reductions_do_not_overflow_finite_mean_objective[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.016
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_reductions_do_not_overflow_finite_mean_objective[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.011
+    },
+    {
+      "test": "tests.test_batch_tensor::test_batch_reductions_do_not_overflow_finite_mean_objective[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:425: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_no_input_all_clamped_contradictory_batch_keeps_shared_compromise[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.072
+    },
+    {
+      "test": "tests.test_batch_tensor::test_no_input_all_clamped_contradictory_batch_keeps_shared_compromise[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.068
+    },
+    {
+      "test": "tests.test_batch_tensor::test_no_input_all_clamped_contradictory_batch_keeps_shared_compromise[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:464: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_duplicate_rows_preserve_preconditioned_state_steps[1-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.027
+    },
+    {
+      "test": "tests.test_batch_tensor::test_duplicate_rows_preserve_preconditioned_state_steps[1-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.033
+    },
+    {
+      "test": "tests.test_batch_tensor::test_duplicate_rows_preserve_preconditioned_state_steps[1-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.0,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:502: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_duplicate_rows_preserve_preconditioned_state_steps[2-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.038
+    },
+    {
+      "test": "tests.test_batch_tensor::test_duplicate_rows_preserve_preconditioned_state_steps[2-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.023
+    },
+    {
+      "test": "tests.test_batch_tensor::test_duplicate_rows_preserve_preconditioned_state_steps[2-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:502: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_public_batch_bootstrap_recall_checkpoint_transfer_and_live_learning[cuda64]",
+      "outcome": "passed",
+      "seconds": 1.961
+    },
+    {
+      "test": "tests.test_batch_tensor::test_public_batch_bootstrap_recall_checkpoint_transfer_and_live_learning[cuda32]",
+      "outcome": "passed",
+      "seconds": 2.045
+    },
+    {
+      "test": "tests.test_batch_tensor::test_public_batch_bootstrap_recall_checkpoint_transfer_and_live_learning[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:568: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_batch_tensor::test_public_batch_refusal_and_retry_preserve_order_and_source_custody[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.962
+    },
+    {
+      "test": "tests.test_batch_tensor::test_public_batch_refusal_and_retry_preserve_order_and_source_custody[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.826
+    },
+    {
+      "test": "tests.test_batch_tensor::test_public_batch_refusal_and_retry_preserve_order_and_source_custody[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_batch_tensor.py:618: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[False-3-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.045
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[False-3-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.045
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[False-3-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.0,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:86: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[False-17-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.046
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[False-17-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.048
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[False-17-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.0,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:86: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[True-3-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.036
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[True-3-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.047
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[True-3-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:86: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[True-17-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.047
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[True-17-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.047
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_derivatives_against_independent_scalar_energy[True-17-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:86: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_query_keeps_original_frozen_parameters[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.067
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_query_keeps_original_frozen_parameters[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.064
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_query_keeps_original_frozen_parameters[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.0,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:126: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_learning_uses_original_clamp_and_fixed_anchor[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.13
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_learning_uses_original_clamp_and_fixed_anchor[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.106
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_learning_uses_original_clamp_and_fixed_anchor[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:152: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_nonrepresentable_bounds_are_reprojected_before_reference_check[False-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.044
+    },
+    {
+      "test": "tests.test_tensor_math::test_nonrepresentable_bounds_are_reprojected_before_reference_check[False-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.039
+    },
+    {
+      "test": "tests.test_tensor_math::test_nonrepresentable_bounds_are_reprojected_before_reference_check[False-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:185: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_nonrepresentable_bounds_are_reprojected_before_reference_check[True-cuda64]",
+      "outcome": "passed",
+      "seconds": 0.055
+    },
+    {
+      "test": "tests.test_tensor_math::test_nonrepresentable_bounds_are_reprojected_before_reference_check[True-cuda32]",
+      "outcome": "passed",
+      "seconds": 0.075
+    },
+    {
+      "test": "tests.test_tensor_math::test_nonrepresentable_bounds_are_reprojected_before_reference_check[True-mps32]",
+      "outcome": "skipped",
+      "seconds": 0.0,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:185: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_device_stopping_hint_cannot_relax_reference_tolerance[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.059
+    },
+    {
+      "test": "tests.test_tensor_math::test_device_stopping_hint_cannot_relax_reference_tolerance[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.021
+    },
+    {
+      "test": "tests.test_tensor_math::test_device_stopping_hint_cannot_relax_reference_tolerance[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.0,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:222: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_float32_device_phase_reserves_budget_for_reference_repair[cuda:0]",
+      "outcome": "passed",
+      "seconds": 0.059
+    },
+    {
+      "test": "tests.test_tensor_math::test_float32_device_phase_reserves_budget_for_reference_repair[mps]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:246: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_nested_observers_return_influence_within_the_same_solve[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.686
+    },
+    {
+      "test": "tests.test_tensor_math::test_nested_observers_return_influence_within_the_same_solve[cuda32]",
+      "outcome": "passed",
+      "seconds": 2.057
+    },
+    {
+      "test": "tests.test_tensor_math::test_nested_observers_return_influence_within_the_same_solve[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:298: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_work_counts_include_tensor_and_reference_evaluations[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.044
+    },
+    {
+      "test": "tests.test_tensor_math::test_work_counts_include_tensor_and_reference_evaluations[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.023
+    },
+    {
+      "test": "tests.test_tensor_math::test_work_counts_include_tensor_and_reference_evaluations[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:331: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_explicit_checkpoint_transfer_preserves_values_and_event_custody[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.056
+    },
+    {
+      "test": "tests.test_tensor_math::test_explicit_checkpoint_transfer_preserves_values_and_event_custody[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.081
+    },
+    {
+      "test": "tests.test_tensor_math::test_explicit_checkpoint_transfer_preserves_values_and_event_custody[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:399: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_refused_tensor_admission_does_not_consume_event[cuda64]",
+      "outcome": "passed",
+      "seconds": 1.18
+    },
+    {
+      "test": "tests.test_tensor_math::test_refused_tensor_admission_does_not_consume_event[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.622
+    },
+    {
+      "test": "tests.test_tensor_math::test_refused_tensor_admission_does_not_consume_event[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:438: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_pre_activation_overflow_is_rejected[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.004
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_pre_activation_overflow_is_rejected[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.004
+    },
+    {
+      "test": "tests.test_tensor_math::test_tensor_pre_activation_overflow_is_rejected[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:452: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_query_skips_unused_parameter_gradients_on_device[cuda64]",
+      "outcome": "passed",
+      "seconds": 0.006
+    },
+    {
+      "test": "tests.test_tensor_math::test_query_skips_unused_parameter_gradients_on_device[cuda32]",
+      "outcome": "passed",
+      "seconds": 0.006
+    },
+    {
+      "test": "tests.test_tensor_math::test_query_skips_unused_parameter_gradients_on_device[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:470: MPS hardware unavailable"
+    },
+    {
+      "test": "tests.test_tensor_math::test_bootstrap_held_out_recall_and_live_learning_on_device[cuda64]",
+      "outcome": "passed",
+      "seconds": 3.479
+    },
+    {
+      "test": "tests.test_tensor_math::test_bootstrap_held_out_recall_and_live_learning_on_device[cuda32]",
+      "outcome": "passed",
+      "seconds": 124.874
+    },
+    {
+      "test": "tests.test_tensor_math::test_bootstrap_held_out_recall_and_live_learning_on_device[mps32]",
+      "outcome": "skipped",
+      "seconds": 0.001,
+      "message": "MPS hardware unavailable",
+      "detail": "C:\\Users\\Mario\\SourceCode\\Local\\cadence\\tests\\test_tensor_math.py:491: MPS hardware unavailable"
+    }
+  ],
+  "passed": true
+}
