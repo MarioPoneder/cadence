@@ -10,6 +10,8 @@ Choose **flat settlement**, **state-coupled settlement** or **recursive observer
 settlement**. All three support the query, learning and save operations below.
 This quickstart illustrates an observer; the [design-pattern guide](VARIANTS.md)
 has minimal runnable layouts for all three, including a flat starting point.
+The [brain-design guide](BRAIN_DESIGN.md) explains how to choose observations,
+capacity, temporal context, acquisition checks and compute budgets for a task.
 
 ## Connect populations
 

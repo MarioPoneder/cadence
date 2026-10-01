@@ -7,8 +7,9 @@ into Deep Recursive Settlement Networks.
 Prepare and check a brain during its **bootstrapping phase**, then use it during
 its **live phase**, continuing to admit actual witnesses when available.
 Both phases use the same mechanism; neither implies an automatic mode switch.
-The current documentation covers Cadence 0.50.0, including `History`,
-`Reinforcement`, `LearningProgress`, `LiveController` and `slew`.
+Convenience helpers include `History`, `Reinforcement`, `LearningProgress`,
+`LiveController` and `slew`. The [0.60 candidate migration notes](MIGRATION_060.md)
+explain changed contracts and checkpoint compatibility.
 
 For a first project, follow the quickstart through learning and saving. Use
 `observe` for measured targets and `Reinforcement` for discrete choices from
@@ -19,6 +20,8 @@ For exact signatures, result fields and refusal behavior, use the API reference.
 | Read | Purpose |
 | --- | --- |
 | [Quickstart](QUICKSTART.md) | Build, query, learn and save a small brain |
+| [Designing an efficient, capable brain](BRAIN_DESIGN.md) | Choose information, layout, capacity, training checks and compute budgets |
+| [0.60 candidate migration notes](MIGRATION_060.md) | Changed contracts, experimental scope and checkpoint compatibility |
 | [Bootstrapping and size](BOOTSTRAP.md) | Starting configurations, individual/batch admissions and task checks |
 | [Memory, rewards and live control](LIVE.md) | Temporal history, reward credit, replay, curiosity and responsive bodies |
 | [GPU execution and parallel experience](ACCELERATION.md) | CPU/GPU selection, batch repair, numerical checks and independent lives |

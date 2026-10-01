@@ -150,6 +150,8 @@ The [specification](docs/SPECIFICATION.md) states the exact contract.
 | Documentation | Start here for |
 | --- | --- |
 | [Quickstart](docs/QUICKSTART.md) | Queries, teaching, diagnostics and saved continuation |
+| [Brain design](docs/BRAIN_DESIGN.md) | Choose sensors, context, reachable capacity and learning budgets; measure useful behavior and cost |
+| [0.60 candidate migration](docs/MIGRATION_060.md) | Unreleased changes, executed-outcome ownership and versioned demo reproduction |
 | [Bootstrapping](docs/BOOTSTRAP.md) | Calibration, individual/batch learning and readiness checks |
 | [Live operation](docs/LIVE.md) | History, reward credit, replay and control callbacks |
 | [Architecture guide](docs/DRSN.md) | Population layouts, recursive observation and equations |

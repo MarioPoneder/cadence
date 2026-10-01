@@ -7,10 +7,13 @@ an explicit record of recent observations. These are different mechanisms.
 Neither saved activity nor a larger observer population automatically provides
 working memory, episodic retrieval, or protection against forgetting.
 
-Install `cadence-net>=0.50.0` for the helpers on this page. They reuse
-the same patch equation and qualified admission. They add no mandatory dependency
-and do not simulate neurotransmitter chemistry. See the [reference](REFERENCE.md)
-for every parameter and failure contract.
+The helpers originated in `cadence-net` 0.50.0. This development copy uses the
+unreleased candidate's explicit `decision_id` and `executed_action` feedback
+arguments; installing released 0.50.0 does not supply that signature. See the
+[candidate migration guide](MIGRATION_060.md) before running these examples.
+The helpers reuse the same patch equation and qualified admission. They add
+no mandatory dependency and do not simulate neurotransmitter chemistry. See
+the [reference](REFERENCE.md) for every parameter and failure contract.
 
 ## Remember a recent observation
 
