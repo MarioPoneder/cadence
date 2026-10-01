@@ -2,6 +2,7 @@
 
 import inspect
 import re
+import runpy
 import time
 from pathlib import Path
 
@@ -10,7 +11,11 @@ import pytest
 import cadence
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCUMENTS = [ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md"))]
+DOCUMENTS = [
+    ROOT / "README.md",
+    ROOT / "examples" / "README.md",
+    *sorted((ROOT / "docs").glob("*.md")),
+]
 FENCE = re.compile(r"^```([^\n]*)\n(.*?)^```[ \t]*$", re.MULTILINE | re.DOTALL)
 
 
@@ -41,6 +46,17 @@ def test_public_exports_are_documented():
     reference = (ROOT / "docs" / "REFERENCE.md").read_text()
     for name in cadence.__all__:
         assert re.search(rf"\b{re.escape(name)}\b", reference), name
+
+
+@pytest.mark.parametrize("kind", ("flat", "deep", "recursive"))
+@pytest.mark.parametrize("seed", (0, 2, 7))
+def test_layout_learning_example(kind, seed):
+    example = runpy.run_path(str(ROOT / "examples" / "layout_learning.py"))
+    report = example["learn"](kind, seed=seed)
+    assert report["updates"] > 0
+    assert report["accepted_examples"] == 4 * report["updates"]
+    assert report["max_fresh_error"] < 0.1
+    assert report["resume_exact"]
 
 
 @pytest.mark.parametrize(

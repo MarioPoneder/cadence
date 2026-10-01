@@ -5,16 +5,20 @@ experience: interpreting sensors, responding to relevant objects, controlling
 a body, and retaining those abilities together. The **live phase** uses that
 same brain in a continuing environment. Both phases use the same patch rule;
 actual new witnesses can keep changing learned relations during the live phase.
+Bootstrapping/live describes when experience is used, not System 1/System 2
+or a switch between fast and slow patch types.
 
 These phases apply to all three [settlement design patterns](VARIANTS.md):
 flat, state-coupled and recursive observer layouts. Choose the layout separately
 from the training method. The same `bootstrap`, `observe` and `observe_batch`
 interfaces teach each pattern; compare acquired behavior and learning cost
-before increasing depth.
+before increasing depth. The
+[layout quickstarts](VARIANTS.md#teach-and-save-through-the-same-interface) apply
+one complete learning loop to all three.
 
 Cadence supplies supervised witness learning and an explicit `Reinforcement`
-helper for discrete choices, one-step Q credit and replay. The application
-provides sensors, measured outcomes or rewards, and the environment used to
+helper for discrete choices, estimated action-value targets and replay. The
+application provides sensors, measured outcomes or rewards, and the environment used to
 check behavior. A declared eye port does not by itself teach vision; a motor
 port does not by itself teach walking. These are abilities to bootstrap and
 measure, using the same generic interfaces. See [live learning](LIVE.md) for
@@ -32,9 +36,8 @@ from cadence import Brain, Cortex, bootstrap
 
 cortex = Cortex(seed=2)
 signal = cortex.input("signal", shape=1)
-base = cortex.column("perception", patches=4, inputs=signal)
-observer = cortex.observer("reflection", patches=2, inputs=signal, observes=base)
-cortex.output("answer", shape=1, reads=observer)
+response = cortex.column("response", patches=1, inputs=signal)
+cortex.output("answer", shape=1, reads=response)
 learner = cortex.build()
 
 examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]

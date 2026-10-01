@@ -15,6 +15,27 @@ The helpers reuse the same patch equation and qualified admission. They add
 no mandatory dependency and do not simulate neurotransmitter chemistry. See
 the [reference](REFERENCE.md) for every parameter and failure contract.
 
+## Keep one body interface
+
+A flat, deep ordinary or recursively observing brain receives named observations
+and returns named outputs through the same calls. One body adapter executes a
+qualified command and reports what happened. Internal observers require no
+separate evaluator or attention signal from the application.
+
+Keep three records distinct: the original forecast before execution, the command
+actually applied, and the later measured outcome. Feed back actual body state;
+a requested motor movement can be blocked and a requested sound can have ended.
+Current patch residuals compare current states with current predictions; they
+do not store the error of an earlier forecast. Preserve that forecast and its
+context before learning from the outcome.
+
+The desired routine → disturbance → correction → inexpensive routine cycle is
+an integrated capability still to be established. The helpers below provide
+explicit history, action/outcome ownership and learning calls; they do not
+implement automatic internal attention or choose the task objective. See
+[brain design](BRAIN_DESIGN.md#spend-compute-according-to-measured-need) for
+behavioral checks that distinguish successful recovery from mere settlement.
+
 ## Remember a recent observation
 
 ```python

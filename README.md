@@ -11,7 +11,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 
-**A deep real-time brain that learns from experience.**
+**Brains that learn through joint settlement.**
 
 Cadence is an experimental learning architecture from
 [Pragma Research](https://floatingpragma.io/), with embodied AI as a target
@@ -61,12 +61,17 @@ settlement mechanism with a small deterministic model.
 qualification, and can be combined in one brain. Coupled populations participate
 in one solve; they do not chain completed predictions. Start with the smallest
 layout that learns the behavior and measure the benefit of added coupling.
-The [design-pattern guide](docs/VARIANTS.md) has runnable constructions of each.
+Ordinary deep layouts already return influence through the common energy.
+Observers add an explicit residual channel; they are not separate evaluators.
+A capable routine response can need several ordinary layers. The
+[design-pattern quickstarts](docs/VARIANTS.md) teach and resume all three through
+one external interface; [brain design](docs/BRAIN_DESIGN.md) explains when to
+try each and how to measure its cost.
 
 ## Install
 
 Python 3.11 or later. The default engine uses only the standard library.
-This README and its examples describe Cadence 0.50.0:
+The published baseline is Cadence 0.50.0:
 
 ```sh
 python -m pip install "cadence-net==0.50.0"
@@ -80,6 +85,11 @@ For optional PyTorch execution on CPU, Apple Silicon GPU or NVIDIA GPU:
 python -m pip install "cadence-net[gpu]==0.50.0"
 ```
 
+This checkout also contains an unreleased 0.60 candidate. Its changed outcome
+API requires installing the reviewed checkout with `python -m pip install -e .`;
+see [migration](docs/MIGRATION_060.md). Automatic internal attention and the
+complete routine–disturbance–correction cycle are not yet supplied.
+
 Choose `Cortex(device="mps")` or `Cortex(device="cuda")` for the corresponding
 GPU. Execution uses the same learning rule and final float64 admission check.
 Small brains can be faster with the default Python engine; see
@@ -88,19 +98,16 @@ Small brains can be faster with the default Python engine; see
 ## Learn a relation and keep learning
 
 A `Cortex` declares a layout; `build()` returns its persistent `Brain`.
-This small observer layout learns a signed input/output relation. It illustrates
-the API, without measuring an advantage from depth.
+This one-patch flat layout learns a signed input/output relation. Deep ordinary
+and recursive layouts use these same calls.
 
 ```python
 from cadence import Brain, Cortex, bootstrap
 
 layout = Cortex(seed=2)
 signal = layout.input("signal", shape=(1,))
-base = layout.column("perception", patches=4, inputs=signal)
-observer = layout.observer(
-    "reflection", patches=2, inputs=signal, observes=base,
-)
-layout.output("answer", shape=(1,), reads=observer)
+response = layout.column("response", patches=1, inputs=signal)
+layout.output("answer", shape=(1,), reads=response)
 brain = layout.build()
 
 # Bootstrapping phase: learn from supplied outcomes, then check without clamps.

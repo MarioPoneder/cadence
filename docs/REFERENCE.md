@@ -24,8 +24,11 @@ existing brain methods; it adds no solver or phase state. `memory.py` holds
 explicit history and error-progress bookkeeping; `reinforcement.py` supplies
 discrete-action Q-learning orchestration; `runtime.py` supplies serial live
 scheduling and actuator rate limits. These helpers preserve the patch equation.
-See the [quickstart](QUICKSTART.md) for a first example and the
-[architecture guide](DRSN.md) for equations and layout patterns.
+See the [quickstart](QUICKSTART.md) for a first learned relation, the
+[layout quickstarts](VARIANTS.md) for flat/deep/recursive construction, and the
+[architecture guide](DRSN.md) for equations. This development reference includes
+the unreleased candidate's outcome-ownership interface; consult
+[migration](MIGRATION_060.md) when using an installed release.
 
 ## Cortex: declare a layout
 
@@ -104,6 +107,11 @@ Sources must already exist. `inputs` reads sensor values or population states;
 `observes` accepts populations only and additionally reads their errors.
 Declaring a population in both fields does not duplicate its state connection.
 Empty-input columns are permitted for internal-state controls.
+Both kinds of population contacts follow declaration order. All eligible
+states are solved jointly: ordinary state contacts already return influence
+through the energy derivatives, and observation adds an exact current-error
+channel. Neither construction supplies a separately scheduled critic,
+external attention flag or learned recurrent state cycle.
 
 `shape` accepts a positive integer or a tuple/list of at most eight positive
 integer dimensions. `shape=()` denotes one scalar. Shape describes data layout,

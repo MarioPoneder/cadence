@@ -1,46 +1,40 @@
 # Quickstart
 
-Install Python 3.11+ and `python -m pip install --upgrade "cadence-net>=0.50.0"`.
-The [release wheel](https://github.com/muellerberndt/cadence/releases/latest)
-is also available when a package index has not listed the new version yet. Cadence has no
-mandatory runtime dependencies. A `Cortex` declares a layout; `build()` returns its
-persistent `Brain`.
+Use Python 3.11 or later. Cadence has no mandatory runtime dependencies.
+For the released baseline, install `cadence-net==0.50.0`. To run **all examples
+in this development checkout**, including the candidate reward acknowledgment
+API, install the checkout itself from its root:
 
-Choose **flat settlement**, **state-coupled settlement** or **recursive observer
-settlement**. All three support the query, learning and save operations below.
-This quickstart illustrates an observer; the [design-pattern guide](VARIANTS.md)
-has minimal runnable layouts for all three, including a flat starting point.
-The [brain-design guide](BRAIN_DESIGN.md) explains how to choose observations,
-capacity, temporal context, acquisition checks and compute budgets for a task.
+```sh
+python -m pip install -e .
+```
 
-## Connect populations
+The [migration guide](MIGRATION_060.md) separates the unreleased candidate from
+the published package. Nothing here enables automatic System 1/System 2 attention.
+
+## Build a flat brain
+
+A `Cortex` declares a layout; `build()` returns its persistent `Brain`. Start
+with one patch that learns a small sensor-to-answer relation:
 
 ```python
 from cadence import Brain, Cortex, bootstrap
 
 layout = Cortex(seed=2)
-signal = layout.input("signal", shape=(1,))
-base = layout.column("perception", patches=4, inputs=signal)
-observer = layout.observer(
-    "reflection", patches=2, inputs=signal, observes=base,
-)
-layout.output("answer", shape=(1,), reads=observer)
+signal = layout.input("signal", shape=1)
+response = layout.column("response", patches=1, inputs=signal)
+layout.output("answer", shape=1, reads=response)
 brain = layout.build()
-assert brain.inspect()["patches"] == 6
+assert brain.inspect()["patches"] == 1
 assert brain.inspect()["outputs"][0]["sensor_coverage_by_coordinate"] == (1,)
 ```
 
-`patches` counts live processing coordinates. `inputs` reads fixed sensor data
-or other populations' states. `observes` additionally reads live prediction
-errors. Observer feedback participates in the same solve as the populations it
-observes. Increase width with `patches`; add recursive depth by observing an
-observer. These are separate choices.
-
-Default wiring reads every coordinate of each declared source. For a scalar
-control or regression problem, start with one output patch reading the sensors;
-the six-patch layout above illustrates observation. A nonlinear hidden
-representation needs a connected second population, not unused patches beside
-an output. See [bootstrapping and size](BOOTSTRAP.md) for starting ranges and setup.
+`patches` counts processing states; `shape` describes sensor or output data.
+The output exposes a patch state, with no separate readout network. This flat
+layout is enough for the relation below. For learned intermediate features,
+use [deep ordinary or recursive layouts](VARIANTS.md); their operations and
+external interface are the same. Adding unused flat patches supplies no hidden
+representation to this output.
 
 ## Inspect an unbootstrapped brain
 
@@ -63,19 +57,26 @@ convergence. A qualified state may still have prediction error.
 ## Bootstrapping phase
 
 ```python
-examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
-checks = [({"signal": [x]}, {"answer": [x]}) for x in (-0.4, 0.4)]
-report = bootstrap(brain, examples, checks=checks, max_error=0.2)
+examples = [
+    ({"signal": [x]}, {"answer": [0.6 * x]})
+    for x in (-0.8, -0.4, 0.4, 0.8)
+]
+checks = [
+    ({"signal": [x]}, {"answer": [0.6 * x]}) for x in (-0.6, 0.6)
+]
+report = bootstrap(
+    brain, examples, checks=checks, max_error=0.1, epochs=20, batch_size=4,
+)
 assert report["passed"], report
 
 # Target-free recall at amplitudes absent from teaching and readiness checks.
-assert brain.predict({"signal": [-0.6]})["answer"][0] < -0.3
-assert brain.predict({"signal": [0.6]})["answer"][0] > 0.3
+assert abs(brain.predict({"signal": [-0.5]})["answer"][0] + 0.3) < 0.1
+assert abs(brain.predict({"signal": [0.5]})["answer"][0] - 0.3) < 0.1
 ```
 
-The helper checks every example before making changes, then shuffles and replays
-examples through `observe`. It scores recall and the separate checks without
-target clamps, stopping when both meet the declared error limit or work stops.
+The helper validates every example before making changes, then shuffles and
+replays examples through `observe_batch` here (`observe` when `batch_size=1`).
+It scores recall and the separate checks without target clamps, stopping when both meet the declared error limit or work stops.
 `observe` fixes the witnessed outputs and jointly repairs state and retained
 relation parameters. It commits only a fully qualified proposal. This is
 supervised learning; provide the actual outcome you intend to teach, not a
@@ -102,6 +103,23 @@ same inputs, physical output clamps and `source` label. An identical latest retr
 reports `duplicate=True`, `accepted=False` and performs no learning. Older or changed
 identities are rejected. If IDs are omitted, the next ID is allocated on
 acceptance; automatic IDs do not identify a retried external event.
+
+## Save and resume the learned brain
+
+```python
+saved = brain.snapshot()
+resumed = Brain.from_snapshot(saved)
+assert resumed.snapshot() == saved
+assert resumed.predict({"signal": [0.5]}) == brain.predict({"signal": [0.5]})
+```
+
+Save this JSON text with your application. Loading binds the exact implementation
+sources, layout and configuration. Save preprocessing and body/history state
+alongside it. See [continuation](#save-a-whole-reward-learner) for reward learners.
+
+This completes the first learning loop. Run the same loop with all three
+layouts using `python examples/layout_learning.py --layout all`, or continue
+with the [layout quickstarts](VARIANTS.md) and [brain-design guide](BRAIN_DESIGN.md).
 
 ## Learn several experiences together
 
@@ -159,7 +177,7 @@ speedup.
 activity = brain.step({"signal": [0.3]})
 assert activity["accepted"]
 print(activity["outputs"]["answer"])
-assert brain.observe({"signal": [0.3]}, {"answer": [0.3]})["accepted"]
+assert brain.observe({"signal": [0.3]}, {"answer": [0.18]})["accepted"]
 ```
 
 Use the same brain, sensory encoding and output decoding in the live phase.
@@ -209,20 +227,7 @@ For delayed rewards, record intervening transitions with their actual rewards
 an explicit recent-observation window when current sensing is insufficient.
 See [the live guide](LIVE.md) for bounded demonstrations and exact failure rules.
 
-## Save and resume
-
-```python
-saved = brain.snapshot()
-resumed = Brain.from_snapshot(saved)
-assert resumed.snapshot() == saved
-assert resumed.predict({"signal": [0.4]}) == brain.predict({"signal": [0.4]})
-```
-
-Save the returned JSON text with your application. It contains layout,
-configuration, state, parameters and admission identity. Loading requires the
-same layout/repair/validation source hashes. Restored brains accept sensor and
-output names; handles from another brain are foreign. Checkpoints are bounded
-continuation records, not authenticated proof of an experience.
+## Save a whole reward learner
 
 A reward learner needs its own complete snapshot, not just its brain:
 

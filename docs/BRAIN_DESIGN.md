@@ -68,42 +68,10 @@ sources only: it supports jointly coupled state/error constraints, but does not
 expose explicit recurrent state cycles. Retaining activity with `step` alone is
 not evidence of useful temporal memory.
 
-The following factory makes three small, valid layouts. These are construction
-examples, not a matched-capacity comparison: the observer has additional error
-contacts.
-
-```python
-from cadence import Brain, Cortex, bootstrap
-
-
-def make_brain(kind, seed=2):
-    layout = Cortex(seed=seed)
-    signal = layout.input("signal", shape=1)
-    if kind == "flat":
-        response = layout.column("response", patches=1, inputs=signal)
-    else:
-        representation = layout.column("representation", patches=4, inputs=signal)
-        if kind == "composed":
-            response = layout.column(
-                "response", patches=1, inputs=(signal, representation),
-            )
-        elif kind == "observer":
-            response = layout.observer(
-                "response", patches=1, inputs=signal, observes=representation,
-            )
-        else:
-            raise ValueError("Unknown layout")
-    layout.output("answer", shape=1, reads=response)
-    return layout.build()
-
-
-for kind in ("flat", "composed", "observer"):
-    candidate = make_brain(kind)
-    description = candidate.inspect()
-    assert description["outputs"][0]["sensor_coverage_by_coordinate"] == (1,)
-    assert description["output_connected_patches"] == description["patches"]
-    assert candidate.settle({"signal": [0.4]})["qualified"]
-```
+The [three layout quickstarts](VARIANTS.md) and
+[shared executable example](../examples/layout_learning.py) teach, query and
+save each pattern with the same `signal`/`answer` body interface. They are
+construction and acquisition examples, not matched-capacity comparisons.
 
 Inspect `connections`, `output_connected_patches` and each output's
 `sensor_coverage_by_coordinate`, not just total patch count. These report
@@ -128,7 +96,7 @@ padding from observed zeros. This is explicit application memory, and its size
 must count in a comparison.
 
 ```python
-from cadence import History
+from cadence import Brain, Cortex, History, bootstrap
 
 history = History(1, steps=3)
 history.push([0.2])
@@ -175,7 +143,11 @@ control stopping; the final four probes are separate from both teaching and
 those checks.
 
 ```python
-brain = make_brain("flat")
+layout = Cortex(seed=2)
+signal = layout.input("signal", shape=1)
+response = layout.column("response", patches=1, inputs=signal)
+layout.output("answer", shape=1, reads=response)
+brain = layout.build()
 examples = [
     ({"signal": [x]}, {"answer": [0.6 * x]})
     for x in (-0.8, -0.4, 0.4, 0.8)
@@ -228,14 +200,17 @@ identity before its outcome arrives. Compare that fixed forecast with the later
 measurement. Recomputing a prediction after learning can erase the very error
 you wanted to measure. `LearningProgress` summarizes changes in supplied
 predictor errors; it is not an automatic surprise detector or information-gain
-measure.
+measure. Even with unchanged parameters, an internal prediction and the final
+settled output can differ because of priors and coupling. Use the original
+issued output when measuring forecast error.
 
 Targets also change the settling problem. An observer's error inputs during
 joint teaching can differ from the signals available when the future answer is
 free. Evaluate with that answer unclamped. When diagnosing an apparent readback
 benefit, compare those two signal conditions with identical parameters and
 causally available observations. A low teaching loss is not sufficient evidence
-of a useful free prediction.
+of a useful free prediction. Observers also read states, so zero error does not
+make their input or influence vanish; it is not a safe automatic sleep signal.
 
 ## Keep actions and outcomes attached to the right life
 
@@ -281,12 +256,28 @@ energy, and qualification checks every eligible free coordinate. Adding a slow
 observer does not automatically let a fast
 branch issue actions while that observer sleeps.
 
-A complete automatic mechanism that allocates attention from historical surprise,
-shares outcome responsibility and engages deeper correction only when needed
-remains unreleased and unconfirmed. Current tools do not establish that a deep
-observer hierarchy becomes useful merely through long training. Use the
-available common rule and explicit body records; measure any scheduling or
-curriculum choice as part of the application.
+> **Current capability boundary.** The intended cycle is learned routine →
+> actual disturbance → useful corrective processing → restored, inexpensive
+> routine, while retaining the skill. Automatic internal allocation of attention
+> and shared long-term outcome responsibility are not yet implemented and
+> validated as that integrated cycle. No extra application attention flag or
+> per-population evaluator should be needed for the intended design. The body
+> still has to supply observations and actual outcomes.
+
+Test the whole cycle before claiming that a correction mechanism works. First
+establish autonomous routine competence with teaching disconnected. Apply a
+specified disturbance to the body; feed back what it actually does, including
+actuator overrides and exhausted resources. Then measure recovery, retained
+skill and the return to inexpensive decisions. Do not substitute low internal
+residuals, training agreement or a nominal output flag for observed behavior.
+A music command to hold a note, for example, does not prove a finite sample
+continues sounding. Legitimate variation also needs to remain possible; a goal
+of minimizing every deviation would suppress a useful musical fill.
+
+Current tools do not establish that a deep observer hierarchy becomes useful
+merely through long training. Measure any scheduling, curriculum and body-level
+task measure as part of the application. Numerical reuse of invariant arithmetic
+is a supported optimization; learned selective attention is a different claim.
 
 Measure the complete workload: queries, selected actions, teaching, replay,
 readiness checks and refused attempts. Sum `work` counters from results or use

@@ -25,10 +25,29 @@ qualified activity, and `observe` learns from supplied output witnesses.
 Check `qualified` or `accepted`; `predict` raises on refusal. Numerical
 qualification and useful learned behavior are separate checks.
 
+## Start with the same learning loop in three layouts
+
+[layout_learning.py](layout_learning.py) is the smallest complete example:
+select `flat`, `deep` or `recursive`, teach the same scalar relation, check new
+unclamped inputs and verify saved continuation. It uses the default Python
+engine with no optional dependency:
+
+```sh
+PYTHONPATH=src python examples/layout_learning.py --layout all
+```
+
+The deep and recursive cases each have seven connected patches; the flat case
+has one. Observation adds error contacts. They are API examples with declared
+different capacities and costs, not evidence of a depth advantage. “Deep” means
+ordinary populations settled together, not sequential finished layer answers.
+For a larger task, follow [brain design](../docs/BRAIN_DESIGN.md) before scaling
+this small relation.
+
 ## Choose an example
 
 | Example | Actual layout | What it demonstrates |
 | --- | --- | --- |
+| [layout_learning.py](layout_learning.py) | One-patch flat, seven-patch deep ordinary, and seven-patch nested observer layouts. | The same public build/teach/query/save contract, fresh free predictions, exact resumption and separate work counts. |
 | [layout_cost.py](layout_cost.py) | Six patches: input-only flat, state-only composition, composition with a sensory skip, and two observer levels. | Pure query cost at fixed parameters, including an independent exact-optimum check for flat queries. No training or capability score. |
 | [batch_bootstrap.py](batch_bootstrap.py) | 12 processing patches and four observers, with direct sensory inputs to both populations. | Batched supervised preparation on two simple continuous relations, followed by fresh unclamped checks; separates startup, learning and test time across requested devices. |
 | [cuda_qualification.py](cuda_qualification.py) | Existing single-example and batch tensor test fixtures. | Records CUDA correctness checks from a clean committed checkout, including exact source identity, hardware and per-case outcomes; `--full` includes the complete test suite. |

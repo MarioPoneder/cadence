@@ -21,15 +21,20 @@ general recipe for a better brain.
 
 Applications provide observations, execute qualified actions and report actual
 outcomes. The intended integrated architecture manages attention and correction
-inside that boundary. Users should not have to construct two brains or provide
-a separate evaluator for each population.
+inside that boundary. Users should not have to construct two brains, provide
+an attention flag or connect a separate evaluator to each population. “Internal attention” does not
+mean operation without sensory observations or actual outcome evidence.
 
 **System 1** describes inexpensive learned routine behavior. **System 2**
 describes additional recursive observation and correction when routine behavior
 cannot maintain equilibrium, including longer-term consequences. These names
 describe roles within one brain. They are not constructor names, background
 worker guarantees or automatic modes enabled by the current candidate.
-An unresolved observer still participates in whole-brain qualification.
+Ordinary layers also settle together and can supply learned nonlinear routine
+competence; System 1 is not restricted to one input-only layer. Observer
+contacts add current error readback to this common rule. An unresolved observer
+still participates in whole-brain qualification. The public builder supports
+these previously declared dependencies, not explicit recurrent state cycles.
 
 ## Change reward acknowledgments explicitly
 
