@@ -297,6 +297,10 @@ refuses; use `replay()` to retry fitting that retained experience.
    learned vision or recover discarded observations. `History` can preserve a
    bounded explicit sample window with validity masks; it is an input encoding,
    not learned recurrent memory or automatic object tracking.
+   Include actual actuator feedback where the command history is insufficient.
+   For example, repeating a musical HOLD command does not reveal whether a
+   finite sample is still sounding. Voice age, remaining samples and measured
+   sound are body observations, not instructions to activate a particular layer.
 2. Scale inputs consistently and use targets comfortably inside both the
    `tanh` prediction range and `state_bound`, such as `-0.6` and `0.6` with
    the default bounds. Fit preprocessing on bootstrap examples only. Centering
@@ -313,6 +317,20 @@ refuses; use `replay()` to retry fitting that retained experience.
    Track the qualification rate at the deployment budget across training:
    settling cost can grow as content accumulates, and a fixed budget that was
    generous early can start refusing held-out queries later.
+
+Sampling also determines what a forecast learns. A model trained mostly on
+events where an opponent bet cannot treat that sample's betting frequency as
+the frequency across all opportunities. Keep factual prediction targets on a
+representative event stream; attach an action-value target only to its recorded
+action and consequence. Missing consequences are not zero rewards. Leaving an
+output unclamped removes its target, not its patch from the joint energy, so
+the remaining free output can still affect parameter learning.
+
+Assess forecasts made **before** each outcome, as well as frozen checkpoints
+on held-out events. A short recent window can track changes quickly while
+overfitting a streak; a longer window costs more work and keeps old-regime
+examples for longer. Record both adaptation delay and repeated row exposure.
+Do not use an uncalibrated score as a probability of surprise.
 
 The default `fan_in=None` gives each patch every coordinate of each declared
 source. Opting into sparse `fan_in` changes the information available to each
