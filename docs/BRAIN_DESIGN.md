@@ -61,6 +61,15 @@ Additional unconnected output patches do not recover the missing computation.
 Compare a capable ordinary layout with its observer extension before attributing
 a failure or improvement to self-observation.
 
+Choose what an observer reads deliberately. During teaching, a clamped motor
+state records the action that actually happened. A later relation reading only
+that fixed state cannot send its error into the motor's own parameters through
+that connection. Reading the motor's error adds a parameter-learning path,
+because that error depends on the motor's prediction. This can change what is
+learned; it does not guarantee a better action or assign reward credit. Ordinary
+coupling already affects free states, so an output change alone does not
+demonstrate a benefit from error readback.
+
 Width counts processing states. Observation depth means an observer reads
 another observer. Neither a population called `reflection` nor extra settling
 sweeps demonstrates reasoning. The public builder accepts previously declared
