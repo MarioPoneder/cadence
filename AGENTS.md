@@ -2,6 +2,8 @@
 
 Read [the guide](docs/DRSN.md), [API reference](docs/REFERENCE.md) and
 [specification](docs/SPECIFICATION.md) before changing semantics.
+Use [the agent recipe](docs/AGENTS.md) to construct and assess an application;
+it also defines the documentation rules for System 1 and System 2.
 
 ## Three mandatory review gates
 
@@ -9,7 +11,7 @@ Read [the guide](docs/DRSN.md), [API reference](docs/REFERENCE.md) and
 
 | Pillar | A change is ready only when |
 | --- | --- |
-| Minimalism | It uses the common patch/repair substrate, keeps the public API small, and adds no compatibility machinery, application-specific core rule or mandatory runtime dependency. Optional acceleration must preserve the same mathematical rule and admission contract. A new abstraction must remove real duplication or enable a demonstrated general need. |
+| Minimalism | It builds on bounded patches, ports, readback and explicit learning/repair, keeps the public API small, and adds no compatibility machinery, application-specific core rule or mandatory runtime dependency. Optional acceleration must preserve the same mathematical rule and admission contract. A new abstraction must remove real duplication or enable a demonstrated general need. |
 | User-friendliness | A first-time user can construct, query, teach and save a brain from the quickstart. Names separate width, sensor shape and recursive observation. Configuration has validated defaults, errors explain the violated contract, and failure leaves continuation intact. |
 | Agent-friendliness | Public signatures, defaults, return fields, mutation rules and failure behavior match the reference. State and topology are inspectable; examples execute; checkpoint identity and retry semantics are explicit. No undocumented preprocessing or hidden fallback changes the task. |
 
@@ -54,6 +56,33 @@ and transition replay through that same repair law; derived teaching targets
 must use `source="estimate"`. `runtime.py` supplies a serial callback owner and
 actuator rate limits, without hard deadlines or solver cancellation. These
 helpers are not new patch primitives or biological chemistry.
+
+## System 1 and System 2
+
+**System 1** means acquired routine competence with inexpensive repair.
+**System 2** means additional recursive observation and correction when routine
+behavior cannot maintain equilibrium, including longer-term outcomes. These are
+roles within one brain, not public classes or synonyms for flat and deep.
+Ordinary deep populations can learn specialized routines. Recursive observers
+add exact current error readback; their presence alone proves no useful correction.
+Bootstrapping and live operation are lifecycle phases, distinct from these roles.
+
+The current API builds flat, ordinary composed and observing layouts, including
+mixed layouts, under one whole-brain solve. It does **not** yet implement
+automatic recruitment of reflection, independently progressing fast and slow
+populations, or integrated shared outcome responsibility. Describe these as
+requirements until the runtime and behavioral evidence support them.
+
+Keep the intended application contract small: one brain/body interface for
+observations, qualified actions and actual outcomes. Specialized learned roles
+must not require per-population evaluators or a user-managed attention scheduler.
+Currently all populations use the same patch rule. Future specialized mechanisms
+need explicit bounded state, readback, learning and repair semantics, a declared
+qualification contract and measured general benefit. Minimalism does not establish
+that the current primitive can replace every useful memory mechanism.
+Any future internal scheduling must preserve the declared whole-brain
+qualification, execution custody and saved continuation. Do not certify a
+sleeping or delayed component by omitting it from the check.
 
 ## Changes and verification
 
