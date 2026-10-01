@@ -252,9 +252,12 @@ attention or evidence of improved behavior.
    policy explicitly. Retaining a useful state can change subsequent settling
    cost; it is not a weight update or evidence of protected long-term memory.
 
-A fast action loop with slower recursive deliberation is an application design
-worth testing. It requires explicit interfaces, scheduling, state ownership and
-behavior checks. Cadence does not automatically route easy queries to a flat
-brain or interrupt a coupled solve at a hard deadline. `LiveController` keeps
-rendering responsive; it does not make an unfinished brain answer ready sooner.
-See [live control](LIVE.md) for the execution contract.
+The intended fast/slow design keeps one brain and one body interface: familiar
+behavior stays inexpensive, and internal correction receives more work when
+needed. The current candidate does not implement that automatic allocation.
+Every query must still qualify the complete connected brain; an application
+scheduler cannot certify a partially solved branch. `LiveController` keeps
+rendering responsive while a serial worker owns the brain; it does not make an
+unfinished answer ready sooner. See
+[brain design](BRAIN_DESIGN.md#spend-compute-according-to-measured-need) for the
+capability boundary and [live control](LIVE.md) for execution.
