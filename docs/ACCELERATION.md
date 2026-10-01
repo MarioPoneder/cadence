@@ -257,6 +257,43 @@ a speed comparison.
 
 ## Measured starting points
 
+### NVIDIA hardware qualification
+
+On 2026-10-01, an NVIDIA RTX 4000 Ada Generation Laptop GPU with 12,282 MiB
+of VRAM passed all 67 selected CUDA cases in `test_tensor_math.py` and
+`test_batch_tensor.py`, with no skips. The Windows run used Python 3.13.2,
+driver 595.95, PyTorch 2.11.0+cu128 (CUDA runtime 12.8), and both float64 and
+float32 proposals. The [hardware receipt](../examples/receipts/cuda_qualification.json)
+records exact implementation/test source hashes, package versions and individual
+CUDA outcomes. MPS and additional CUDA device indices were unavailable on this
+single-GPU laptop.
+
+The checks cover independent scalar finite-difference derivatives, recursive
+feedback, original frozen parameters and witness clamps, strict reference
+qualification, overflow/refusal, checkpoint transfer, batch admission/retry
+custody, and subsequent unclamped recall and live learning. Existing CPU/MPS
+checks now also select CUDA when available. Reproduce the CUDA subset from an
+installed development checkout with a CUDA-enabled PyTorch build:
+
+```sh
+python -c "import torch; assert torch.cuda.is_available(), 'CUDA hardware required'; torch.set_num_threads(1); import pytest; raise SystemExit(pytest.main(['-q', 'tests/test_tensor_math.py', 'tests/test_batch_tensor.py', '-k', 'cuda']))"
+```
+
+This is correctness and small-fixture acquisition evidence for
+[issue #64](https://github.com/muellerberndt/cadence/issues/64), not a speedup or
+deployment qualification. Peak host/device memory, temporary and cached-index
+growth, real allocation-failure recovery, full perception-to-action latency
+tails, and matched-workload performance comparisons remain unmeasured here.
+Test durations are not production p50/p95/p99 latency measurements.
+
+The receipt also retains the full-suite run's one reference-only test failure:
+a supposedly capped solve qualified in 476 of 512 sweeps on this machine.
+The rollback fixture now uses a one-sweep cap and keeps its default-budget
+retry; all 17 learning tests passed on follow-up. No repair rule or admission
+tolerance changed.
+
+### Earlier performance measurements
+
 One three-batch `observe_batch` comparison took 934.0 seconds with 64 Torch
 threads and 1,118.9 seconds with 128, with identical accepted sweep counts.
 This establishes about 1.20× for those two settings on that workload, not an
