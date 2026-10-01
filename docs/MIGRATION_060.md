@@ -149,6 +149,12 @@ Preserve each existing baseline and its receipts. First run its original
 verifier, then the candidate's port/API checks, then a short complete native
 loop. A baseline verifier passing establishes only that baseline. A page
 loading establishes neither acquisition nor a benefit from recursion.
+For Amen, the old "one record patch" contains 128 gated context channels and
+8,192 record cells. Replacing it with one input-only output population removes
+those mechanisms; it is a new restricted baseline, not a reproduction of the
+old layout. Count the learned record table as well as the slow parameters when
+comparing capacity. Use the same sequencing rules and audio renderer: the raw
+Python evaluation instrument differs from the published website instrument.
 Optimization comparisons follow a working, measured reproduction and must
 include the cost of learning, sensing, monitoring, correction and action
 selection. Change public demo labels and results only after the replacement

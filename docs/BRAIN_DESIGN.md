@@ -53,6 +53,14 @@ supply teaching targets; they must not enter the inputs used to forecast them.
 | Recursive observation | Testing whether current representation errors help a downstream relation | An observer reads both states and exact errors. Compare with ordinary composition at declared information, parameter count and work. |
 | Parallel branches with fusion | Sensors with different local structure or update meaning | Every output must have a useful path to the observations it needs. |
 
+Fast routine behavior does not imply a single input-only layer. A familiar
+skill may require learned intermediate features and temporal memory even when
+it needs no recursive error observation. The flat pattern above has no hidden
+representation: each output predicts from its own weighted sensor inputs.
+Additional unconnected output patches do not recover the missing computation.
+Compare a capable ordinary layout with its observer extension before attributing
+a failure or improvement to self-observation.
+
 Width counts processing states. Observation depth means an observer reads
 another observer. Neither a population called `reflection` nor extra settling
 sweeps demonstrates reasoning. The public builder accepts previously declared
@@ -263,6 +271,10 @@ sensory slot must not hold reward or transition records.
 
 “System 1” and “System 2” can describe cheap familiar responses and more costly
 context-dependent correction. They are not Cadence modes or constructor flags.
+They also do not specify layer count or distinct patch types. The current
+library uses the same patch rule in ordinary and observing populations; this
+design choice does not establish that it can replace every specialized memory
+or processing mechanism at an acceptable cost.
 Flat and observing populations can coexist in one brain, with the same input
 and output boundary. Every participating population remains in the whole-brain
 energy, and qualification checks every eligible free coordinate. Adding a slow
