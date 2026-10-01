@@ -257,6 +257,88 @@ a speed comparison.
 
 ## Measured starting points
 
+### NVIDIA hardware qualification
+
+On 2026-10-01, an NVIDIA RTX 4000 Ada Generation Laptop GPU with 12,282 MiB
+of VRAM passed all 67 selected CUDA cases in `test_tensor_math.py` and
+`test_batch_tensor.py`, with no skips. The Windows run used Python 3.13.2,
+driver 595.95, PyTorch 2.11.0+cu128 (CUDA runtime 12.8), and both float64 and
+float32 proposals. The final [audited receipt](../examples/receipts/cuda_audit_verified.json)
+records a full run with **937 passed and 34 MPS skips**, including all 67 CUDA
+cases, on commit `8892927`. It identifies the tested Git tree, hardware and
+library versions, individual CUDA outcomes, and unchanged source hashes before
+and after testing. MPS and additional CUDA device indices were unavailable on
+this single-GPU laptop.
+
+Runtime is also part of the evidence. In that final full run, the pytest
+invocation took **297.72 seconds**, including collection but excluding the
+collector's imports and CUDA preflight. Its JUnit test-case durations include
+the complete fixture, setup/teardown and assertions:
+
+| Acquisition fixture | CUDA float64 | CUDA float32 |
+| --- | ---: | ---: |
+| Single-example bootstrap, held-out recall and live learning (6 patches) | 3.479 s | 124.874 s |
+| Batch bootstrap, recall, checkpoint transfer and live learning (3 patches) | 1.961 s | 2.045 s |
+
+These are `test_bootstrap_held_out_recall_and_live_learning_on_device` in
+`test_tensor_math.py` and
+`test_public_batch_bootstrap_recall_checkpoint_transfer_and_live_learning` in
+`test_batch_tensor.py`. Both precisions passed, but float32 took about **36
+times as long** in the single-example fixture. That is a performance concern
+to investigate. The receipt does not retain per-solve work or phase timings,
+so it does not establish the cause or equal work across precision trajectories.
+The batch fixture uses a different graph and task; comparing the two rows
+does not measure a batching speedup.
+
+The four retained runs also show substantial variation: this single-example
+fixture ranged from **3.479 to 16.280 seconds** in float64 and **124.874 to
+347.800 seconds** in float32. Those runs used different suite selections or
+revisions and uncontrolled timing conditions. They are observations, not a
+latency distribution. A performance follow-up needs repeated matched Python,
+CPU tensor and CUDA workloads, separate initialization and complete-call
+timings, and per-solve work/refinement counts alongside qualification and
+unclamped prediction error.
+
+The checks cover independent scalar finite-difference derivatives, recursive
+feedback, original frozen parameters and witness clamps, strict reference
+qualification, overflow/refusal, checkpoint transfer, batch admission/retry
+custody, and subsequent unclamped recall and live learning. Existing CPU/MPS
+checks now also select CUDA when available. Run the current CUDA subset from
+a clean, committed development checkout installed with
+`python -m pip install -e ".[dev]"` and a CUDA-enabled PyTorch build:
+
+```sh
+python -X utf8 examples/cuda_qualification.py --out data/cuda-qualification.json
+```
+
+The [collector](../examples/cuda_qualification.py) requires actual CUDA and
+both precision cases, records the tested Git commit and source hashes before
+and after testing, and fails on skipped CUDA cases or changed sources. Use
+`--full` for the complete test suite. Choose a new output path for each run;
+existing receipts are never overwritten. Refusal tests require a tensor sweep
+before checking rollback; derivative checks also assert actual tensor dtypes.
+
+This is correctness and small-fixture acquisition evidence for
+[issue #64](https://github.com/muellerberndt/cadence/issues/64), not a speedup or
+deployment qualification. Peak host/device memory, temporary and cached-index
+growth, real allocation-failure recovery, full perception-to-action latency
+tails, and matched-workload performance comparisons remain unmeasured here.
+Test durations are not production p50/p95/p99 latency measurements.
+
+The [original receipt](../examples/receipts/cuda_qualification.json) retains
+the earlier full-suite run's one reference-only test failure:
+a supposedly capped solve qualified in 476 of 512 sweeps on this machine.
+The rollback fixture now uses a one-sweep cap and keeps its default-budget
+retry; all 17 learning tests passed on follow-up. No repair rule or admission
+tolerance changed.
+
+An [intermediate collector failure](../examples/receipts/cuda_audit_encoding_failure.json)
+is also retained: Python's `-X utf8` setting did not reach CLI subprocesses on
+Windows. The collector now propagates that setting, and the final full run
+above passed with the correction.
+
+### Earlier performance measurements
+
 One three-batch `observe_batch` comparison took 934.0 seconds with 64 Torch
 threads and 1,118.9 seconds with 128, with identical accepted sweep counts.
 This establishes about 1.20× for those two settings on that workload, not an

@@ -1,4 +1,4 @@
-"""Shared-parameter batch math, complete work and actual CPU/MPS execution."""
+"""Shared-parameter batch math, complete work and actual CPU/GPU execution."""
 
 import math
 
@@ -11,6 +11,17 @@ torch = pytest.importorskip("torch")
 
 DEVICES = [
     pytest.param("cpu", "float64", id="cpu64"),
+    *(
+        pytest.param(
+            "cuda:0",
+            dtype,
+            id=f"cuda{dtype.removeprefix('float')}",
+            marks=pytest.mark.skipif(
+                not torch.cuda.is_available(), reason="CUDA hardware unavailable"
+            ),
+        )
+        for dtype in ("float64", "float32")
+    ),
     pytest.param(
         "mps",
         "float32",
@@ -98,13 +109,17 @@ def test_batch_derivatives_match_independent_finite_differences(
         batch_size=batch,
     )
     tolerance = 4e-6 if dtype == "float32" else 2e-9
-    assert energy.device.type == device
+    assert energy.device.type == torch.device(device).type
+    assert energy.dtype == getattr(torch, dtype)
+    if device.startswith("cuda:"):
+        assert energy.device == torch.device(device)
     assert float(energy) == pytest.approx(
         energy_oracle(graph, batch, inputs, *groups, alpha, anchors, beta),
         abs=tolerance,
     )
     for group_index, gradient in enumerate(gradients):
-        assert gradient.device.type == device
+        assert gradient.device == energy.device
+        assert gradient.dtype == energy.dtype
         assert gradient.numel() == len(groups[group_index])
         for coordinate, actual in enumerate(gradient.cpu().tolist()):
             plus, minus = (
@@ -598,3 +613,34 @@ def test_public_batch_bootstrap_recall_checkpoint_transfer_and_live_learning(
     assert abs(restored.predict(inputs)["answer"][0] + 0.3) < abs(previous + 0.3)
     assert restored.weights != brain.weights
     assert brain.snapshot() == snapshot
+
+
+@pytest.mark.parametrize(("device", "dtype"), DEVICES)
+def test_public_batch_refusal_and_retry_preserve_order_and_source_custody(
+    device, dtype
+):
+    cortex = Cortex(seed=7, device=device, dtype=dtype)
+    sensor = cortex.input("signal", shape=1)
+    base = cortex.column("base", patches=2, inputs=sensor)
+    observer = cortex.observer("observer", patches=1, inputs=sensor, observes=base)
+    cortex.output("answer", shape=1, reads=observer)
+    brain = cortex.build()
+    assert brain.step({"signal": [0.3]})["accepted"]
+    examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
+    before = brain.snapshot()
+    live_state = brain.state
+    refused = brain.observe_batch(examples, event_id=7, source="estimate", budget=1)
+    assert not refused["accepted"] and refused["reason"] == "budget"
+    assert refused["execution"]["tensor_sweeps"] == 1
+    assert brain.snapshot() == before
+    admitted = brain.observe_batch(examples, event_id=7, source="estimate")
+    assert admitted["accepted"] and admitted["execution"]["device"] == device
+    assert brain.state == live_state
+    assert brain.inspect()["admissions"] == 1
+    saved = brain.snapshot()
+    assert brain.observe_batch(examples, event_id=7, source="estimate")["duplicate"]
+    assert brain.snapshot() == saved
+    for rows, source in ((examples[::-1], "estimate"), (examples, "witness")):
+        with pytest.raises(ValueError, match="conflicts"):
+            brain.observe_batch(rows, event_id=7, source=source)
+        assert brain.snapshot() == saved

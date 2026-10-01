@@ -134,9 +134,12 @@ def test_capped_deep_witness_rolls_back_and_can_retry_with_default_budget():
     targets = {"horizontal": [-0.8], "vertical": [0.8]}
     checkpoint = brain.snapshot()
 
-    refused = brain.observe(inputs, targets, event_id=17, budget=512)
+    # A 512-sweep cap can already qualify on some platforms. Exercise rollback
+    # with a deliberately small positive budget, independent of that cutoff.
+    refused = brain.observe(inputs, targets, event_id=17, budget=1)
     assert not refused["accepted"]
     assert refused["reason"] == "budget"
+    assert refused["sweeps"] == 1
     assert brain.snapshot() == checkpoint
 
     accepted = brain.observe(inputs, targets, event_id=17)
