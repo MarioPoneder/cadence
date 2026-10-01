@@ -286,6 +286,13 @@ a small body relation, queries actions, and chooses by predicted need reduction;
 that comparison is an application controller, explicitly separate from neural
 settlement. `live_learning.py` exercises reward-based choice and reversal.
 
+An executed motor command is a factual record, but using it as a motor teaching
+target trains imitation of that choice regardless of its consequence. Repeating
+this with the brain's own choices can overwrite a useful routine. Preserve the
+action in the causal record, distinguish consequence prediction from preference
+learning, and check retained behavior after online updates. Connected populations
+alone do not guarantee that outcome quality changes the motor parameters.
+
 ## Drives and curiosity
 
 Keep physical state in the body adapter: energy, fatigue, contact and actuator

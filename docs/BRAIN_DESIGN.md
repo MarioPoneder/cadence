@@ -242,6 +242,12 @@ A larger credit horizon is not a learned world model or a planning algorithm.
 Keep the single body-level outcome stream lossless; `LiveController`'s replaceable
 sensory slot must not hold reward or transition records.
 
+Recording an executed action establishes what happened, not whether the action
+was useful. Repeatedly teaching a motor output to copy its own choices can erase
+an acquired routine. Use measured consequences to teach a body predictor and a
+declared outcome-credit procedure to teach preferences; test routine retention
+throughout live learning.
+
 ## Spend compute according to measured need
 
 “System 1” and “System 2” can describe cheap familiar responses and more costly
