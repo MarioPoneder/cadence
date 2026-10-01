@@ -51,12 +51,20 @@ learned temporal memory are separate questions.
    explicit. Preserve enough causal context to distinguish required answers;
    future targets, unavailable teacher decisions and privileged environment
    state are not actor inputs. Past executed actions may be part of that context.
+   Include measured actuator state when commands alone are ambiguous: a held
+   note can be silent after its sample ends, just as a movement command can fail
+   against an obstacle. Give a routine branch the signals its job needs; attach
+   broader context where a controlled comparison shows it helps.
    A bounded `History` is explicit memory, not learned recurrence.
 2. **Acquire a capable routine.** Start with flat or ordinary composition as the
    task requires. Check output connectivity and target range. Use public
    `observe`/`observe_batch` or `bootstrap`; measured labels are witnesses,
    derived teaching values use `source="estimate"`. A batch has private row
    states and one shared parameter admission, not an implicit sequence.
+   When interpreting forecasts as probabilities, preserve the relevant event
+   distribution or explicitly account for resampling. Replaying only events
+   where an action was available can bias a shared predictor; supply selected-action
+   value targets only where that action and its outcome were actually recorded.
 3. **Test free behavior.** Disconnect the teacher and leave future outputs
    unclamped. Check `qualified` before acting and `accepted` before counting
    learning. Measure the actual body, not just prediction MAE or command flags.
