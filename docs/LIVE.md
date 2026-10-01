@@ -93,12 +93,20 @@ decision = learner.act({"senses": [0.3, 0.1, 0.0]})
 assert decision["accepted"]
 action_index = decision["action"]
 # The environment executes action_index and returns its actual consequence.
-admission = learner.feedback(0.0, {"senses": [0.2, 0.1, 0.0]})
+admission = learner.feedback(
+    0.0, {"senses": [0.2, 0.1, 0.0]},
+    decision_id=decision["decision_id"], executed_action=action_index,
+)
 assert admission["stored"]
 ```
 
-Call `act` only when there is no pending action; call `feedback` once for that
-action's actual consequence. `feedback(..., terminal=True)` has no next inputs
+Call `act` only when there is no pending action. Pass its `decision_id` and the
+action actually executed to `feedback` with that action's consequence. An
+actuator override must report the executed action instead of the proposal.
+An identical retry of the latest outcome is acknowledged without recording or
+learning twice, including while a newer decision is pending. A conflicting or
+older outcome is rejected without changing the brain or pending decision.
+`feedback(..., terminal=True)` has no next inputs
 and no future-value term. An arbitrary collection timeout is not necessarily
 terminal: use the next observation when future rewards continue. If reward arrives
 later, intervening transitions can have zero reward; subsequent replay propagates
@@ -127,8 +135,8 @@ the caller's evidence. Real reward and next sensing are observed; the fitted
 action value is an estimate. Ordinary witnessed demonstrations still use
 `observe` or `observe_batch` with their default `source="witness"`.
 
-Invalid feedback does not consume the pending action. Valid feedback **does**
-store the transition and consume the action even if its subsequent learning
+Invalid feedback does not consume the pending action. A first valid
+acknowledgment stores the transition and consumes the action even if its learning
 attempt refuses. Retry with `replay`, not by pretending the outcome happened
 twice. Query/fit refusals do not change learned parameters. Check `accepted`
 before applying actions and after learning; `stored` alone does not mean learning
@@ -136,9 +144,10 @@ succeeded. `feedback(..., learn=False)` records a frozen-learning control.
 The stored record also survives an exception during the subsequent fit; it
 remains an actual experience even though no fitted update was admitted.
 
-`feedback` has no external event-ID or network retry interface. A body adapter
-must deduplicate incoming outcome messages and acknowledge which command was
-executed. Do not associate a delayed network packet with a newer pending action.
+`feedback` binds the outcome to the issued decision and deduplicates an identical
+retry of the latest acknowledgment. A body adapter must retain that decision ID
+and report which command it actually executed. Earlier identities are rejected;
+Cadence does not retain an unlimited network-message history.
 `reset()` abandons a pending action without inventing feedback; it does not clear
 replay, parameters or retained activity. Start a new learner for a fresh life.
 

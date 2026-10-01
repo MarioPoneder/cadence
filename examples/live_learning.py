@@ -131,13 +131,23 @@ def delayed_reward(seed, *, episodes=50):
                 return dict(passed=False, refusal="first_action")
             action = first["action"]
             later = {"senses": [0, float(action == 0), float(action == 1)]}
-            update = learner.feedback(0, later)
+            update = learner.feedback(
+                0,
+                later,
+                decision_id=first["decision_id"],
+                executed_action=action,
+            )
             if not update["accepted"]:
                 return dict(passed=False, refusal=update.get("reason"))
             second = learner.act(later)
             if not second["accepted"]:
                 return dict(passed=False, refusal="second_action")
-            update = learner.feedback(1 if action == preferred else -1, terminal=True)
+            update = learner.feedback(
+                1 if action == preferred else -1,
+                terminal=True,
+                decision_id=second["decision_id"],
+                executed_action=second["action"],
+            )
             if not update["accepted"]:
                 return dict(passed=False, refusal=update.get("reason"))
         decision = learner.act(start, explore=False)

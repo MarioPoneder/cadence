@@ -228,6 +228,16 @@ both prediction quality and complete playing strength.
 
 ## Choosing a layout for a real-time application
 
+The experimental query implementation reuses predictions that depend only on
+fixed sensory inputs during one repair. This also applies to sensory populations
+inside a recursive graph: their predictions are constant, while their states,
+errors and feedback remain live. Initial and final checks still traverse the
+complete graph. Reuse changes neither the patch law nor the number of required
+repair sweeps. It introduces no caller configuration and keeps no cache between
+observations. Measure elapsed time as well as edge visits: cache setup and copies
+cost time but are not edge traversals. This numerical optimization is not learned
+attention or evidence of improved behavior.
+
 1. Establish a small flat baseline with the actual available sensors. Measure
    useful behavior after bootstrapping, including refusal and failure cases.
 2. Add ordinary composition if the direct mapping lacks a useful representation.

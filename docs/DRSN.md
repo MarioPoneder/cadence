@@ -187,7 +187,7 @@ nothing. By default, targets are labeled `source="witness"`; derived teaching
 values require `source="estimate"`. The equation is the same, and the source
 label is caller-supplied provenance bound into the admission identity.
 `Reinforcement` uses this interface for discrete-action Q-learning with
-one-step reward credit and bounded replay. It does not make episodic retrieval,
+one-step reward credit by default and bounded replay. It does not make episodic retrieval,
 imagination policies or structural growth automatic.
 
 `observe_batch` groups labeled experiences under one shared set of parameters.

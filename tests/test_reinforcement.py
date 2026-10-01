@@ -30,10 +30,25 @@ def context(value=0.3):
     return {"signal": [value]}
 
 
+def _ack(agent, *args, **kwargs):
+    """These synchronous fixtures execute exactly the last proposed action."""
+    pending = agent.inspect()
+    return agent.feedback(
+        *args,
+        decision_id=pending["pending_decision_id"],
+        executed_action=pending["pending_action"],
+        **kwargs,
+    )
+
+
 def record(agent, reward=0.5, *, terminal=True, learn=False, value=0.3):
     assert agent.act(context(value))["accepted"]
-    return agent.feedback(
-        reward, None if terminal else context(-value), terminal=terminal, learn=learn
+    return _ack(
+        agent,
+        reward,
+        None if terminal else context(-value),
+        terminal=terminal,
+        learn=learn,
     )
 
 
@@ -51,7 +66,7 @@ def test_scalar_output_shapes_and_boundaries(shape):
     supplied = {"signal": 0.3 if not shape else [0.3]}
     result = agent.act(supplied)
     assert result["accepted"] and result["action"] in (0, 1)
-    update = agent.feedback(1, terminal=True)
+    update = _ack(agent, 1, terminal=True)
     assert update["accepted"] and update["source"] == "estimate"
     assert update["targets"] == pytest.approx((0.045,))
 
@@ -249,7 +264,7 @@ def test_feedback_keeps_actual_outcome_after_refused_fit_and_replay_can_retry():
     agent = controller(discount=0, batch_size=1)
     assert agent.act(context())["accepted"]
     before = agent.brain.snapshot()
-    refused = agent.feedback(1, terminal=True, budget=0)
+    refused = _ack(agent, 1, terminal=True, budget=0)
     assert refused["stored"] and not refused["accepted"]
     assert refused["source"] == "estimate"
     assert agent.brain.snapshot() == before
@@ -259,9 +274,17 @@ def test_feedback_keeps_actual_outcome_after_refused_fit_and_replay_can_retry():
         "transitions": 1,
         "updates": 0,
         "pending": False,
+        "episode": 1,
+        "issued_decisions": 1,
+        "pending_decision_id": None,
+        "pending_action": None,
+        "last_feedback_id": 1,
     }
-    with pytest.raises(ValueError, match="preceding"):
-        agent.feedback(1, terminal=True)
+    saved = json.loads(agent.snapshot())
+    duplicate = agent.feedback(
+        1, terminal=True, decision_id=1, executed_action=saved["records"][0][1]
+    )
+    assert duplicate["duplicate"] and not duplicate["stored"]
     update = agent.replay()
     assert update["accepted"] and agent.inspect()["updates"] == 1
     assert agent.inspect()["transitions"] == 1
@@ -280,7 +303,7 @@ def test_feedback_numerical_exception_keeps_valid_record_but_restores_replay_rng
 
     monkeypatch.setattr(agent, "_values", fail)
     with pytest.raises(ValueError, match="numeric failure"):
-        agent.feedback(0.3, context(-0.2))
+        _ack(agent, 0.3, context(-0.2))
     after = json.loads(agent.snapshot())
     assert after["rng"] == prior["rng"]
     assert after["brain"] == prior["brain"]
@@ -307,7 +330,7 @@ def test_invalid_feedback_is_atomic_including_pending_action(kwargs):
     assert agent.act(context())["accepted"]
     before = agent.snapshot()
     with pytest.raises(ValueError):
-        agent.feedback(**kwargs)
+        _ack(agent, **kwargs)
     assert agent.snapshot() == before
 
 
@@ -334,7 +357,7 @@ def test_snapshot_pending_replay_rng_and_continuation_are_exact_and_independent(
     restored = Reinforcement.from_snapshot(saved)
     assert restored.snapshot() == saved
     for owner in (agent, restored):
-        assert owner.feedback(-0.5, terminal=True)["accepted"]
+        assert _ack(owner, -0.5, terminal=True)["accepted"]
     assert agent.snapshot() == restored.snapshot()
     assert agent.act(context(0.5)) == restored.act(context(0.5))
     assert agent.snapshot() == restored.snapshot()
@@ -350,7 +373,7 @@ def test_inputs_replay_and_inspection_are_owned_and_rng_is_local():
     assert agent.act(supplied)["accepted"]
     supplied["signal"][0] = 99
     following = context(-0.4)
-    agent.feedback(0.2, following, learn=False)
+    _ack(agent, 0.2, following, learn=False)
     following["signal"][0] = 99
     record = json.loads(agent.snapshot())["records"][0]
     assert record[0] == {"signal": [0.3]} and record[3] == {"signal": [-0.4]}
@@ -446,7 +469,7 @@ def test_action_and_replay_work_include_every_real_candidate_query_and_fit(monke
     action = agent.act(context())
     assert action["work"] == dict(work)
     work.clear()
-    feedback = agent.feedback(0.5, context(-0.4))
+    feedback = _ack(agent, 0.5, context(-0.4))
     assert feedback["accepted"] and feedback["work"] == dict(work)
 
 
@@ -458,7 +481,7 @@ def test_actual_reward_experience_acquires_greedy_choice_with_ordinary_repair(
     for _ in range(32):
         action = agent.act(context())
         assert action["accepted"]
-        result = agent.feedback(1 if action["action"] == 1 else -1, terminal=True)
+        result = _ack(agent, 1 if action["action"] == 1 else -1, terminal=True)
         assert result["accepted"] and result["source"] == "estimate"
     assessment = agent.act(context(), explore=False)
     assert assessment["accepted"] and assessment["action"] == 1
@@ -471,9 +494,9 @@ def test_actual_two_step_credit_reaches_the_unrewarded_predecessor():
     agent = controller(discount=0.6, value_scale=0.8, exploration=1, batch_size=8)
     for _ in range(40):
         assert agent.act(context(-0.8))["accepted"]
-        assert agent.feedback(0, context(0.8))["accepted"]
+        assert _ack(agent, 0, context(0.8))["accepted"]
         assert agent.act(context(0.8))["accepted"]
-        assert agent.feedback(1, terminal=True)["accepted"]
+        assert _ack(agent, 1, terminal=True)["accepted"]
     # The preceding state never received immediate reward. The analytic
     # discounted returns are 0.6 * (1 - 0.6) * 0.8 and (1 - 0.6) * 0.8.
     for state, expected in ((-0.8, 0.192), (0.8, 0.32)):
@@ -499,7 +522,7 @@ def test_action_only_brain_accepts_an_empty_context():
     cortex.output("value", shape=(), reads=node)
     agent = Reinforcement(cortex.build(), actions=2)
     assert agent.act({})["accepted"]
-    assert agent.feedback(1, terminal=True)["accepted"]
+    assert _ack(agent, 1, terminal=True)["accepted"]
 
 
 def test_wrong_action_width_or_multiple_values_rejected_at_construction():
@@ -589,7 +612,7 @@ def test_vector_reward_teaches_only_selected_scalar_output(terminal, monkeypatch
         return fit(examples, **options)
 
     monkeypatch.setattr(agent.brain, "observe_batch", update)
-    result = agent.feedback(1, None if terminal else following, terminal=terminal)
+    result = _ack(agent, 1, None if terminal else following, terminal=terminal)
     assert result["accepted"] and result["source"] == "estimate"
     assert result["targets"] == pytest.approx((expected,))
     assert len(seen) == 1 and set(seen[0][1]) == {value.name}
@@ -604,7 +627,7 @@ def test_vector_snapshot_pending_and_replay_restore_exactly():
     clone = Reinforcement.from_snapshot(saved)
     assert clone.config["value_output"] == ("left", "right")
     assert clone.snapshot() == saved
-    assert clone.feedback(-0.2, terminal=True) == agent.feedback(-0.2, terminal=True)
+    assert _ack(clone, -0.2, terminal=True) == _ack(agent, -0.2, terminal=True)
     assert clone.snapshot() == agent.snapshot()
 
 
@@ -640,7 +663,7 @@ def test_vector_values_learn_context_dependent_opposite_choices():
         state = -0.7 if i % 2 else 0.7
         action = agent.act(context(state))["action"]
         correct = 0 if state < 0 else 1
-        assert agent.feedback(1 if action == correct else -1, terminal=True)["accepted"]
+        assert _ack(agent, 1 if action == correct else -1, terminal=True)["accepted"]
     for state, expected in ((-0.4, 0), (0.4, 1)):
         result = agent.act(context(state), explore=False)
         assert result["accepted"] and result["action"] == expected

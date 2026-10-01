@@ -191,7 +191,10 @@ choice = reward_learner.act({"position": [position]})
 assert choice["accepted"]
 next_position = position + (-0.1, 0.1)[choice["action"]]  # actual body step
 reward = abs(position) - abs(next_position)
-feedback = reward_learner.feedback(reward, {"position": [next_position]})
+feedback = reward_learner.feedback(
+    reward, {"position": [next_position]},
+    decision_id=choice["decision_id"], executed_action=choice["action"],
+)
 assert feedback["stored"]
 assert feedback["accepted"]
 ```
