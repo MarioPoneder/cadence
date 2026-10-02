@@ -7,9 +7,10 @@ with a competent brain.
 
 **Bootstrapping** is initial guided practice. **Live operation** uses the same
 brain in its environment and may include more learning. These lifecycle phases
-are separate from System 1 and System 2. A capable routine can use flat or
-ordinary deep columns; these are the recommended application path. Recursive
-observers are an explicit experiment, not the next required stage of learning.
+are separate from System 1 and System 2. A capable routine uses coupled
+populations, two at least, and more when the task needs them; that is the
+application path. Recursive observers are an explicit experiment, not the next
+required stage of learning.
 All layouts use the same public learning operations and processing-patch rule.
 See [brain design](BRAIN_DESIGN.md) and the
 [experimental capability boundary](EXPERIMENTAL.md).
@@ -25,7 +26,8 @@ from cadence import Brain, Cortex, bootstrap
 
 layout = Cortex(seed=2)
 signal = layout.input("signal", shape=1)
-response = layout.column("response", patches=1, inputs=signal)
+features = layout.column("features", patches=4, inputs=signal)
+response = layout.column("response", patches=1, inputs=features)
 layout.output("answer", shape=1, reads=response)
 brain = layout.build()
 
@@ -92,16 +94,18 @@ states and acquire no chronological relationship merely by being adjacent.
 
 | Relation to learn | Small starting layout |
 | --- | --- |
-| One direct sensor-to-answer relation | One directly sensing output patch |
-| Several direct relations | One selected patch per output coordinate |
-| Learned nonlinear combinations | A small ordinary representation, for example four patches, feeding an output population |
+| One direct sensor-to-answer relation | A few sensing patches read by one output patch: the smallest brain that builds |
+| Several direct relations | One sensing population read by a population with one selected patch per output coordinate |
+| Learned nonlinear combinations | A wider or deeper representation feeding the output population |
 | Experimental internal mismatch readback | An explicitly selected observer, assessed against a capable ordinary control |
 
 These are starting constructions, not validated recipes for raw vision, music
 or general planning. Width only helps an output if the added patches are
-connected to it. Increasing a flat population from one to ten patches while
-reading only its first state does not create a ten-patch hidden representation.
-Ordinary deep populations already return influence through the coupled energy;
+connected to it. Widening a population from one to ten patches while reading
+only its first state does not create a ten-patch hidden representation; patches
+within a population do not read each other, and a population that reads only
+sensors and is read by nobody does not build.
+Coupled populations already return influence through the shared energy;
 observers additionally read exact current prediction errors. They participate
 in every whole-brain solve; they do not automatically sleep or wake on demand.
 An advantage over ordinary layers must be measured, including the extra work.
@@ -110,7 +114,7 @@ Inspect wiring before training:
 
 ```python
 description = brain.inspect()
-assert description["output_connected_patches"] == 1
+assert description["output_connected_patches"] == 5
 assert description["outputs"][0]["sensor_coverage_by_coordinate"] == (1,)
 ```
 
@@ -121,8 +125,9 @@ structural paths, not measured causal influence: zero weights and saturation
 can still suppress a path.
 
 The [layout examples](VARIANTS.md) teach and resume ordinary brains, with a
-separate opt-in recursive experiment. Start flat and add ordinary depth when a
-controlled comparison improves free task performance enough to justify the work.
+separate opt-in recursive experiment. Start with two coupled populations and
+add depth when a controlled comparison improves free task performance enough to
+justify the work.
 Equal patch counts need not imply equal parameters, connections or cost. A useful
 System 1 routine may be deep; an observer alone does not demonstrate System 2.
 

@@ -20,7 +20,7 @@ def controller(*, shape=(1,), recursive=False, **options):
     top = (
         cortex.observer("top", patches=2, inputs=(signal, action), observes=base)
         if recursive
-        else base
+        else cortex.column("top", patches=2, inputs=(signal, action, base))
     )
     cortex.output("value", shape=shape, reads=top)
     return Reinforcement(cortex.build(), actions=2, **options)
@@ -518,7 +518,8 @@ def test_checkpoint_cannot_claim_updates_without_any_recorded_transition():
 def test_action_only_brain_accepts_an_empty_context():
     cortex = Cortex()
     action = cortex.input("action", shape=2)
-    node = cortex.column(patches=1, inputs=action)
+    base = cortex.column(patches=2, inputs=action)
+    node = cortex.column(patches=1, inputs=base)
     cortex.output("value", shape=(), reads=node)
     agent = Reinforcement(cortex.build(), actions=2)
     assert agent.act({})["accepted"]
@@ -528,7 +529,8 @@ def test_action_only_brain_accepts_an_empty_context():
 def test_wrong_action_width_or_multiple_values_rejected_at_construction():
     cortex = Cortex()
     action = cortex.input("action", shape=2)
-    node = cortex.column(patches=2, inputs=action)
+    base = cortex.column(patches=2, inputs=action)
+    node = cortex.column(patches=2, inputs=base)
     cortex.output("value", shape=2, reads=node)
     brain = cortex.build()
     with pytest.raises(ValueError, match="scalar-valued"):
@@ -554,7 +556,8 @@ def test_snapshot_identity_is_bound_to_imported_source_not_later_disk_edits(
 def vector_controller(**options):
     cortex = Cortex(seed=3)
     signal = cortex.input("signal", shape=1)
-    node = cortex.column(patches=2, inputs=signal)
+    base = cortex.column(patches=2, inputs=signal)
+    node = cortex.column(patches=2, inputs=base)
     cortex.output("left", shape=(), reads=node, indices=(0,))
     cortex.output("right", shape=1, reads=node, indices=(1,))
     return Reinforcement(
@@ -646,6 +649,7 @@ def test_invalid_vector_outputs_are_rejected(names):
 def test_vector_outputs_cannot_alias_the_same_physical_patch():
     cortex = Cortex()
     node = cortex.column(patches=1)
+    cortex.column(patches=1, inputs=node)
     cortex.output("first", shape=(), reads=node)
     cortex.output("second", shape=(), reads=node)
     with pytest.raises(ValueError, match="distinct patches"):

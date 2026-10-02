@@ -1,11 +1,10 @@
-# Learn a routine, then choose its layout
+# Build a brain, teach it a routine, keep it
 
-This guide targets **`0.60.0`**, the stable package release on `main`.
-It needs Python 3.11 or later and has no mandatory runtime dependencies.
-Install the release:
+This guide targets **`0.61.0`**. It needs Python 3.11 or later and has no
+mandatory runtime dependencies. Install the release:
 
 ```sh
-python -m pip install "cadence-net==0.60.0"
+python -m pip install "cadence-net==0.61.0"
 ```
 
 Or install from a checkout of this version:
@@ -17,22 +16,26 @@ python -m pip install -e .
 Retain the installed package and source when saving a reproducible experiment.
 Saved brains bind their implementation sources; see [checkpoints](REFERENCE.md#checkpoints).
 
-## 1. Build and teach a small routine
+## 1. Build the smallest brain and teach it
 
 We will learn a simple calibration: a supplied toy instrument produces
 `movement = 0.6 * command`. Training supplies measured pairs. Later queries
-supply only the command, so a correct answer must come from learned parameters.
+supply only the command, so a correct answer must come from learned relations.
 All values use the same normalized units.
 
-A `Cortex` describes the wiring; `build()` creates the persistent `Brain`.
-One directly sensing patch is sufficient for this small relation:
+A `Cortex` describes the wiring; `build()` creates the persistent `Brain`. The
+smallest brain has two populations: `features` reads the sensor, `response`
+reads the live states of `features`. Their patches settle against each other,
+and that shared equilibrium is the answer. A single population reading only
+sensors does not build: its patches would never settle with anything.
 
 ```python
 from cadence import Brain, Cortex, bootstrap
 
 layout = Cortex(seed=2)
 command = layout.input("command", shape=1)
-response = layout.column("response", patches=1, inputs=command)
+features = layout.column("features", patches=4, inputs=command)
+response = layout.column("response", patches=1, inputs=features)
 layout.output("movement", shape=1, reads=response)
 brain = layout.build()
 
@@ -53,7 +56,6 @@ assert report["updates"] > 0
 
 `shape` is the shape of supplied data. `patches` counts processing states.
 An output exposes selected patch states; it is not a separate readout network.
-Here the patch reads sensors only, so the layout is **flat**.
 
 `bootstrap` teaches through the normal learning calls and checks answers with
 the targets absent. Its error limit measures task accuracy. The solver's
@@ -113,12 +115,11 @@ The four main operations have different responsibilities:
 A refused call does not admit its proposal. An accepted update can still worsen
 other skills, so recheck free behavior after learning.
 
-## 4. Add a representation when the task needs one
+## 4. Add depth when the task needs it
 
-Flat and ordinary deep networks are the recommended defaults. For a more
-complicated relation, connect ordinary populations. They jointly settle: the
-later relation can influence earlier states through the common energy. The body
-still uses the same named inputs and outputs.
+For a more complicated relation, connect more populations. They all settle
+together: the later relation influences earlier states through the common
+energy. The body still uses the same named inputs and outputs.
 
 ```python
 cortex = Cortex(seed=2)
@@ -138,21 +139,22 @@ assert abs(candidate.predict({"command": [0.5]})["movement"][0] - 0.3) < 0.1
 ```
 
 Both layouts learn through the same patch rule. This tiny calibration already
-works with one flat patch; keep that simpler network for this task. Add depth
-when it improves measured quality enough to justify its cost. Arbitrary depth
-is not guaranteed to be fast. See [layout variants](VARIANTS.md) and
+works with the two-population brain; keep the smaller brain for this task. Add
+depth when it improves measured quality enough to justify its cost. Arbitrary
+depth is not guaranteed to be fast. See [layout variants](VARIANTS.md) and
 [brain design](BRAIN_DESIGN.md) for larger tasks and meaningful controls.
 
-**System 1** means an acquired routine, which can need ordinary deep layers.
-**System 2** names the intended useful recursive observation and correction.
-These are behavioral roles, not public classes.
+**System 1** means an acquired routine, which can need several coupled
+populations. **System 2** names the intended useful recursive observation and
+correction. These are behavioral roles, not public classes.
 
-## Experimental observers
+## Experimental error readback
 
-Explicit observer wiring is available in the
+Every patch already repairs its own disagreement. Explicit observer wiring,
+which lets a population read other patches' current errors, is available in the
 [experimental layout recipes](VARIANTS.md#experimental-recursive-observer-settlement).
 Observers participate in every synchronous solve and may slow every call,
-including familiar routine work. Their advantage over capable ordinary networks
+including familiar routine work. Their advantage over state-coupled populations
 is unproven. Automatic on-demand attention, independent population clocks and
 the complete correction-to-retained-routine capability are not public features.
 See [experimental capabilities](EXPERIMENTAL.md) before choosing this path.
@@ -168,6 +170,6 @@ failure behavior. The repository's complete layout example also runs from a
 shell:
 
 ```sh
-python examples/layout_learning.py --layout flat
+python examples/layout_learning.py
 python examples/layout_learning.py --layout deep
 ```

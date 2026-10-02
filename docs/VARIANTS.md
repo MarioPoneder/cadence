@@ -1,77 +1,90 @@
-# Flat and ordinary deep networks, then observer experiments
+# Coupled populations, deeper composition, then observer experiments
 
-Start with **flat settlement** or **ordinary deep settlement**. Choose the
-smallest ordinary network that learns the task and measure its quality and
-latency before adding capacity. Ordinary depth can support a capable routine;
-arbitrary depth is not guaranteed to be fast.
+Every Cadence brain is one equilibrium of patches settling against each other.
+The builder refuses a population that settles with no other population, so the
+smallest brain is two populations: one reads the sensors, the next reads its
+live states. Start there, and choose the smallest coupled layout that learns
+the task. Measure its quality and latency before adding capacity. Deeper
+composition can support a capable routine; arbitrary depth is not guaranteed
+to be fast.
 
-**Recursive observer settlement is experimental.** Observers participate in
-every synchronous solve and may slow every call, even during familiar routine
-work. Their benefit over capable ordinary networks is unproven. There is no
-public on-demand attention or independent population clock. All layouts use the
-same patch law, repair engine, learning operations and qualification check;
-observers are an explicit wiring option.
+**Error readback is experimental.** Every patch repairs its own disagreement.
+`observer(...)` additionally lets a population read other populations' exact
+current prediction errors. Those contacts participate in every synchronous solve
+and may slow every call, even during familiar routine work. Their benefit over
+state-coupled populations is unproven. There is no public on-demand attention or
+independent population clock. All layouts use the same patch law, repair
+engine, learning operations and qualification check; error readback is an
+explicit wiring option.
 
-These examples target **`0.60.0`**; follow the [quickstart installation
-instructions](QUICKSTART.md) before running them. “Fast” describes the
-intended cost of a learned routine, and “slow” the extra work a correction may
-need. They are not selectable execution modes. All populations currently take
-part in one qualified solve, including observers in a mixed layout.
+These examples target **`0.61.0`**; follow the [quickstart installation
+instructions](QUICKSTART.md) before running them. "Fast" describes the intended
+cost of a learned routine, and "slow" the extra work a correction may need.
+They are not selectable execution modes. All populations take part in one
+qualified solve, including observers in a mixed layout.
 
 | Design pattern | What patches read | When to try it |
 | --- | --- | --- |
-| Flat settlement | Fixed sensory inputs only | A direct sensor-to-answer mapping; start here for small, latency-sensitive tasks |
-| State-coupled settlement | Sensors and other populations' live states | A task that needs learned intermediate representations or sensory fusion |
-| Experimental recursive observation | Live states **and exact prediction errors**, including those of other observers | A controlled test against capable ordinary networks, charging all extra work |
+| Two coupled populations | Sensors, then the first population's live states | Every direct sensor-to-answer task; start here |
+| Deeper composition | Several populations' live states, parallel branches, fusion | A task that needs learned intermediate representations or sensory fusion |
+| Experimental error readback | Live states **and exact prediction errors**, including those of other observers | A controlled test against a state-coupled control, charging all extra work |
 
 These are layout patterns within one implementation. They can coexist in a
-brain: sensory columns, state-reading populations and nested observers can
-participate in one joint settlement. This does not automatically give the flat
-part an independent deadline; the full query must qualify before it returns.
+brain: sensory columns, deeper populations and nested observers can participate
+in one joint settlement. The full query must qualify before it returns.
 
-Start with either ordinary construction below and its shared learning/query/save
-loop. The later experimental recipes also expose `signal` and `answer`, so the
-body interface does not change. These are teaching examples with different
-capacities and contact counts, not
-a controlled comparison of architecture quality. The complete runnable version
-is [layout_learning.py](../examples/layout_learning.py):
+Start with the two-population construction below and its shared
+learning/query/save loop. The later recipes also expose `signal` and `answer`,
+so the body interface does not change. These are teaching examples with
+different capacities and contact counts, not a controlled comparison of
+architecture quality. The complete runnable version is
+[layout_learning.py](../examples/layout_learning.py):
 
 ```sh
-python examples/layout_learning.py --layout flat
+python examples/layout_learning.py
 python examples/layout_learning.py --layout deep
 ```
 
-## 1. Flat settlement
+## 1. The smallest brain: two coupled populations
 
-Each patch reads fixed sensors. With parameters held fixed for a query, the
-state objective separates into independent scalar problems. This makes a
-small flat layout a useful starting point for direct control, calibration or
-simple prediction tasks.
+`features` reads the sensor and `response` reads the live states of
+`features`. Each patch predicts its own state from what it reads and settles
+against the others; the equilibrium of all five patches is the answer.
 
 ```python
 from cadence import Cortex
 
-flat = Cortex(seed=7)
-signal = flat.input("signal", shape=1)
-response = flat.column("response", patches=1, inputs=signal)
-flat.output("answer", shape=1, reads=response)
-flat_brain = flat.build()
+small = Cortex(seed=7)
+signal = small.input("signal", shape=1)
+features = small.column("features", patches=4, inputs=signal)
+response = small.column("response", patches=1, inputs=features)
+small.output("answer", shape=1, reads=response)
+small_brain = small.build()
 
-result = flat_brain.settle({"signal": [0.4]})
+result = small_brain.settle({"signal": [0.4]})
 assert result["qualified"]
+assert {kind for kind, _, _ in small_brain.graph.edges} == {"input", "state"}
 ```
 
-This is still a settlement operation. The current engine runs its ordinary
-repair and final stationarity check. The [performance guide](PERFORMANCE.md)
-derives the special flat query's exact optimum and explains why learning can
-cost more than querying it.
+A population that reads only sensors and is read by nobody does not build:
 
-## 2. Deep ordinary settlement
+```python
+import pytest
 
-Pass a population through `inputs` to read its states. This ordinary composition
-lets output patches use a learned intermediate representation. Populations
-settle together; the downstream relation can influence upstream states through
-the joint energy's derivatives, even without any error-reading observer.
+alone = Cortex(seed=7)
+sensor = alone.input("signal", shape=1)
+patch = alone.column("response", patches=1, inputs=sensor)
+alone.output("answer", shape=1, reads=patch)
+with pytest.raises(ValueError, match="settles with no other population"):
+    alone.build()
+```
+
+## 2. Deeper composition
+
+Pass a population through `inputs` to read its states. Deeper composition lets
+output patches use a learned intermediate representation. Populations settle
+together; the downstream relation influences upstream states through the joint
+energy's derivatives.
 
 ```python
 from cadence import Cortex
@@ -90,14 +103,15 @@ assert result["qualified"]
 
 The read graph looks layered, but execution jointly repairs its live states.
 It is not a single feed-forward pass through frozen intermediate activations.
-Choose this pattern when a direct mapping is insufficient; measure whether the
-learned representation improves behavior enough to justify the coupling cost.
+Choose this pattern when the two-population brain is insufficient; measure
+whether the learned representation improves behavior enough to justify the
+coupling cost.
 
 ## Teach and save through the same interface
 
-Teach both ordinary layouts with the same calls. This task is
-`answer = 0.6 * signal`. Training witnesses and development checks are distinct
-from the final free query, and all answer values are absent from query inputs.
+Teach both layouts with the same calls. This task is `answer = 0.6 * signal`.
+Training witnesses and development checks are distinct from the final free
+query, and all answer values are absent from query inputs.
 
 ```python
 from cadence import Brain, bootstrap
@@ -109,7 +123,7 @@ examples = [
 checks = [
     ({"signal": [x]}, {"answer": [0.6 * x]}) for x in (-0.6, 0.6)
 ]
-for brain in (flat_brain, composed_brain):
+for brain in (small_brain, composed_brain):
     report = bootstrap(
         brain, examples, checks=checks, epochs=20,
         max_error=0.1, batch_size=4, seed=2,
@@ -132,19 +146,19 @@ and `observe_batch` learns shared parameters from private example states.
 Check `qualified` or `accepted` before using results. `predict` raises on
 refusal. The [API reference](REFERENCE.md) describes their exact contracts.
 
-Start with the smallest adequate ordinary network. Measure task quality, query
-latency, learning cost and refusals separately. Coupling can add substantial
-work; adding depth or observers is not a performance optimization by itself.
-See the [performance guide](PERFORMANCE.md) and
+Start with the smallest coupled layout. Measure task quality, query latency,
+learning cost and refusals separately. Coupling adds work; adding depth or
+observers is not a performance optimization by itself. See the
+[performance guide](PERFORMANCE.md) and
 [runnable examples](../examples/README.md) for measured comparisons.
 
-## Choose routine competence separately from observation
+## Choose routine competence separately from error readback
 
-A familiar skill can require a deep learned representation. “System 1” does
-not mean one flat layer, and “System 2” does not mean any population named
-`reflection`. Ordinary composition already has returning influence during joint
-repair. An observer adds the exact **current** error signal, not an independent
-critic, a recorded past failure or a built-in long-term objective.
+A familiar skill can require a deep learned representation. "System 1" does
+not mean one small layout, and "System 2" does not mean any population named
+`reflection`. State-coupled composition already has returning influence during
+joint repair. An observer adds the exact **current** error signal, not an
+independent critic, a recorded past failure or a built-in long-term objective.
 
 The public builder reads previously declared sources only. Its read graph is
 acyclic even though solving the common energy returns influence upstream.
@@ -157,9 +171,9 @@ for the current attention boundary and temporal controls.
 | Choice | Construction | Meaning |
 | --- | --- | --- |
 | Width | `column(patches=256, inputs=...)` | 256 processing states and their incoming relations |
-| Parallel branches | Multiple columns reading different sensors | Separate sensory representations participating in the same solve |
-| Ordinary composition | `column(inputs=(vision, hearing), ...)` | A population reading other populations' states |
-| Experimental recursive observation | `observer(observes=(vision, hearing), ...)` | State **and exact live error** readback with feedback in the joint energy |
+| Parallel branches | Multiple columns reading different sensors, read by a later population | Separate sensory representations participating in the same solve |
+| Composition | `column(inputs=(vision, hearing), ...)` | A population reading other populations' states |
+| Experimental error readback | `observer(observes=(vision, hearing), ...)` | State **and exact live error** readback with feedback in the joint energy |
 | Experimental deeper observation | An observer includes an earlier observer in `observes` | Observation of a system that already observes other patches |
 | Motor readout | `output(shape=(8,), reads=population)` | Eight selected patch states, with no separate readout network |
 
@@ -168,18 +182,21 @@ coupled constraints and capacity; it does not grant a final veto or guarantee
 better reasoning. A population's role is its wiring, not a different neuron
 class. Sensory `shape` describes supplied data, not learned interpretation.
 
-Patches in a flat population have separate incoming relations. Selecting one
-as an output does not give it access to all the other patches: connect a second
-population to the first to create a learned hidden representation. More unused
-flat patches are not a substitute for that connection. See
-[bootstrapping](BOOTSTRAP.md) for small starting sizes and measured setup
-requirements. The bootstrapping and live phases can use the same persistent
-layout; live experience can continue to repair its relations through `observe`.
+Patches within one population have separate incoming relations and do not
+read each other. Selecting one as an output does not give it access to the
+other patches of its population: connect a second population to the first to
+create a learned shared representation. Every population must read another
+population's states or errors, or be read by one, and those reads must join all
+populations into one connected system; `build()` refuses a population that
+settles alone and a group of populations that settles apart from the rest. See [bootstrapping](BOOTSTRAP.md) for
+small starting sizes and measured setup requirements. The bootstrapping and
+live phases can use the same persistent layout; live experience can continue
+to repair its relations through `observe`.
 
 ## Combine sensory branches
 
-Ordinary branches can learn and combine different sensory representations
-without observers. This is the recommended starting layout for such a task:
+Branches can learn and combine different sensory representations without
+error readback. This is the recommended starting layout for such a task:
 
 ```python
 from cadence import Cortex
@@ -246,10 +263,10 @@ more observer levels alone do not establish better reasoning. The
 
 ## Experimental: combine routine layers and recursive observation
 
-The observer below adds work to every solve, including queries that ordinary
+The observer below adds work to every solve, including queries that the coupled
 layers could answer well. It has no automatic sleep or separate clock.
 
-An action need not come from the highest observer. Here ordinary layers produce
+An action need not come from the highest observer. Here coupled layers produce
 the answer while an observer reads their states and errors. Its relations can
 return influence to those same states through joint settlement. No second body
 interface, separate evaluator or call to the observer is needed.
@@ -279,7 +296,7 @@ assert abs(result["outputs"]["answer"][0] - 0.3) < 0.1
 
 This checks that a mixed graph learns the small relation. It does not show that
 the observer helps, sleeps during routine work or runs at its own speed. To test
-whether it helps, train a capable ordinary control with the same information
+whether it helps, train a capable state-coupled control with the same information
 and account for parameters, acquisition work and complete query cost. See
 [System 1 and System 2](BRAIN_DESIGN.md) for the behavioral goal and current
 runtime boundary.
@@ -311,7 +328,7 @@ memory-cost choice, not additional brain capacity. See
 [batch execution](ACCELERATION.md#batch-experience-on-one-device).
 
 To test the value of recursion, compare a nested layout with shallow and
-ordinary-composition controls, match information and capacity, and account for
+state-coupled controls, match information and capacity, and account for
 all bootstrapping, live learning and settlement work. Measure target-free task
 performance, numerical refusal rates and latency. A wider brain or a larger
 budget alone is not proof that observation adds value.
@@ -320,9 +337,8 @@ Test direct sensory and action-history paths separately from latent-state and
 prediction-error readback. A policy can use a bypass while its observers remain
 numerically active. Conversely, removing bypasses can force a latent path
 without teaching it useful perception. Perturb sensory inputs with history
-held fixed, and compare ordinary state connections with state-and-error
-observation. Detached lesions measure sensitivity; an action changing under a
-lesion does not show that the intact path helps the task. Check qualified
-environment behavior as well as scores, and distinguish lesions from trained
-controls. Equal patch counts need not imply equal parameters, connections or
-work.
+held fixed, and compare state connections with state-and-error observation.
+Detached lesions measure sensitivity; an action changing under a lesion does
+not show that the intact path helps the task. Check qualified environment
+behavior as well as scores, and distinguish lesions from trained controls.
+Equal patch counts need not imply equal parameters, connections or work.

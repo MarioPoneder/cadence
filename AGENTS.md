@@ -5,6 +5,60 @@ Read [the guide](docs/DRSN.md), [API reference](docs/REFERENCE.md) and
 Use [the agent recipe](docs/AGENTS.md) to construct and assess an application;
 it also defines the documentation rules for System 1 and System 2.
 
+## The principle: one equilibrium by local settlement
+
+**Patches repair local disagreement to reach a coherent brain state. Further
+repair is driven by that state's mismatch with reality.** This is the main
+hypothesis, and everything in this repository serves it.
+
+A Cadence brain is one equilibrium. Every patch is an observer: it reads its
+ports, predicts its own state from what it reads, and carries the disagreement
+between that prediction and its state as a live error. Patches repair their
+disagreements locally, against the patches they read and the patches that read
+them, until the whole brain is stationary. That equilibrium is the brain's
+world model. A disturbance, a new observation or an outcome that contradicts a
+prediction, is what calls for repair, and learning is the same repair with the
+relations made eligible. There is no backward pass of an output loss through
+layers; each relation changes because its own patch's disagreement remains at
+the settled joint state.
+
+This principle is enforced, not recommended:
+
+- `Cortex.build()` refuses a layout in which a population settles with no other
+  population, and a layout in which a group of populations settles apart from
+  the rest. Every population must read another population's states or errors,
+  or be read by one, and those reads must join all populations into one
+  connected system. A patch that reads only sensors and is read by nobody is an
+  isolated regression, not part of a brain; two unconnected groups are two
+  brains. The refusal stays. Do not add a flag, a mode, a wrapper or an example
+  that builds a brain without settlement between all of its populations.
+- The smallest brain has two populations. Every quickstart, example, test fixture
+  and recipe uses at least that.
+- Never describe a layout as having no settlement, and never describe routine
+  competence as a layout that bypasses settlement. "Flat" and "deep" are not
+  Cadence vocabulary for brains that skip the equilibrium; the only layout choice
+  is which ports a population reads. State readback through `inputs=` is the
+  baseline coupling; error readback through `observes=` is the experimental
+  addition. Both settle.
+- What the mathematics guarantees must be stated exactly: repair decreases the
+  energy monotonically and the final projected stationarity check certifies the
+  equilibrium that was reached. For a quadratic energy the equilibrium is unique;
+  for the general nonlinear energy several stationary points can exist, and the
+  certificate names the one found. Do not weaken that certificate to make a
+  layout look faster, and do not claim more than it establishes.
+
+The second premise is simplicity: the building block stays as simple as
+possible, every part of the brain answers with a settled state of that same
+patch rule, and a feed-forward readout or a copied input is a baseline, never
+a result. Complexity is added only when a measured behavior needs it and only
+on top of settlement, never instead of it.
+
+The library drifted from this once, between 0.60.0.dev1 and 0.60.0, when
+"start with a small flat network" became the recommended first step and a
+single input-only population was presented as the fast baseline. That layout
+settled nothing between patches, failed the first application it was tried on,
+and was removed in 0.61.0. Treat any proposal to reintroduce it as a defect.
+
 ## Three mandatory review gates
 
 **Minimalism, user-friendliness and agent-friendliness govern every change.**
@@ -18,17 +72,19 @@ it also defines the documentation rules for System 1 and System 2.
 Minimalism measures concepts and dependencies, not file count. Separate
 responsibilities into focused modules when that makes ownership clearer.
 
-Before merging, explain how the change meets each applicable gate and run the
-checks below. Prefer improving an existing primitive to adding another. Do not
-add aliases or wrappers solely to make a second way to express the same thing.
-Performance or convenience must preserve qualification and witness custody.
-Tests enforce executable examples and signature/export parity; architectural
-simplicity and clarity still require review rather than a test-count claim.
+Before merging, explain how the change meets each applicable gate and the
+principle above, and run the checks below. Prefer improving an existing
+primitive to adding another. Do not add aliases or wrappers solely to make a
+second way to express the same thing. Performance or convenience must preserve
+qualification and witness custody. Tests enforce executable examples and
+signature/export parity; architectural simplicity and clarity still require
+review rather than a test-count claim.
 
 ## Architecture
 
 Import `Cortex` and `Brain` from `cadence`. `Cortex` declares populations;
-`build()` returns a persistent `Brain`. `column(patches=..., inputs=...)` and
+`build()` returns a persistent `Brain` and refuses a population that settles
+with no other population. `column(patches=..., inputs=...)` and
 `observer(patches=..., observes=...)` use the same processing-patch rule.
 Width counts processing states. Recursive depth comes from observation wiring.
 `observes` reads current state and exact prediction error and contributes
@@ -59,16 +115,17 @@ helpers are not new patch primitives or biological chemistry.
 
 ## System 1 and System 2
 
-**Recommend System 1 for applications.** Start with the smallest adequate flat
-`column`, then add ordinary `column(..., inputs=previous)` layers when the task
-needs intermediate representations. Most examples and application recipes must
-use this ordinary path. Ordinary depth is not System 2. Check held-out quality
-and end-to-end latency; depth alone does not guarantee fast settlement.
+**Recommend System 1 for applications.** Start with the smallest coupled
+layout, a population reading the sensors and a population reading it, then add
+`column(..., inputs=previous)` layers when the task needs intermediate
+representations. Most examples and application recipes must use this
+state-coupled path. Depth is not System 2. Check held-out quality and
+end-to-end latency; depth alone does not guarantee fast settlement.
 
 **Recursive self-observation is experimental.** `observer(..., observes=...)`
 is explicit opt-in and participates in every whole-brain solve. It can slow
 routine responses; the public runtime does not automatically put it to sleep
-or recruit it only on surprise. Its advantage over capable ordinary layers
+or recruit it only on surprise. Its advantage over capable state-coupled layers
 is not established. Keep recursive examples clearly labeled experiments and
 link the [experimental boundary](docs/EXPERIMENTAL.md). Never add observers to
 a production-oriented recipe merely because a task is complex or long-term.
@@ -76,12 +133,12 @@ a production-oriented recipe merely because a task is complex or long-term.
 **System 1** means acquired routine competence with inexpensive repair.
 **System 2** means additional recursive observation and correction when routine
 behavior cannot maintain equilibrium, including longer-term outcomes. These are
-roles within one brain, not public classes or synonyms for flat and deep.
-Ordinary deep populations can learn specialized routines. Recursive observers
+roles within one brain, not public classes or synonyms for shallow and deep.
+Coupled populations can learn specialized routines. Recursive observers
 add exact current error readback; their presence alone proves no useful correction.
 Bootstrapping and live operation are lifecycle phases, distinct from these roles.
 
-The current API builds flat, ordinary composed and observing layouts, including
+The current API builds state-coupled, deeper and observing layouts, including
 mixed layouts, under one whole-brain solve. It does **not** yet implement
 automatic recruitment of reflection, independently progressing fast and slow
 populations, or integrated shared outcome responsibility. Describe these as
@@ -91,7 +148,7 @@ Keep the intended application contract small: one brain/body interface for
 observations, qualified actions and actual outcomes. Specialized learned roles
 must not require per-population evaluators or a user-managed attention scheduler.
 Do not add a System 1/System 2 mode flag, extra brain wrapper or migration layer
-to express this recommendation. Ordinary construction is already the default.
+to express this recommendation. Coupled construction is already the default.
 Currently all populations use the same patch rule. Future specialized mechanisms
 need explicit bounded state, readback, learning and repair semantics, a declared
 qualification contract and measured general benefit. Minimalism does not establish
@@ -111,7 +168,7 @@ python -m ruff format --check src tests
 
 Tests execute Python examples in the README and every documentation page.
 Basic learning tests must also pass: multiple seeds, independently varied inputs,
-unclamped recall after replay, and saved continuation across flat, composed and
+unclamped recall after replay, and saved continuation across coupled, deeper and
 observing populations. Keep these gates small enough to run in ordinary CI.
 Numerical qualification alone cannot pass an acquisition test.
 Constructor signatures and package exports must match the reference. Add
@@ -157,7 +214,9 @@ equivalence of parameter solves and the distinct live-state commitment rules.
   not provide learned visual/audio features or recover omitted information.
 - Start with [the bootstrapping guide](docs/BOOTSTRAP.md). Default wiring includes
   every declared source coordinate; sparse `fan_in` is an explicit choice.
-  An unused flat patch does not provide hidden capacity to a separate output.
+  Patches within one population do not read each other: a population that
+  reads only sensors and is read by nobody cannot be built, and an unused
+  patch does not provide hidden capacity to a separate output.
 - Parallelize independent brains or environment collection; keep each brain's
   experience admissions ordered. Device availability is checked on first solve;
   do not silently substitute a different device.

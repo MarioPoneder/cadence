@@ -111,6 +111,7 @@ def test_flat_and_nested_sensor_values_are_identical_and_outputs_are_state_views
     cortex = Cortex(seed=1, settle_budget=2048)
     sensor = cortex.input("image", shape=(2, 2))
     base = cortex.column("base", patches=3, inputs=(sensor,))
+    cortex.column("reader", patches=1, inputs=(base,))
     cortex.output("answer", shape=(2,), reads=base, indices=(2, 0))
     brain = cortex.build()
     before = brain.snapshot()
@@ -174,6 +175,7 @@ def test_observed_target_changes_later_target_free_prediction():
     cortex = Cortex(seed=2, fan_in=1, settle_budget=4096, tolerance=1e-7)
     sensor = cortex.input("sensor", shape=(1,))
     base = cortex.column("base", patches=1, inputs=(sensor,))
+    cortex.column("reader", patches=1, inputs=(base,))
     output = cortex.output("answer", shape=(1,), reads=base)
     brain = cortex.build()
     inputs = {"sensor": [0.4]}
@@ -276,6 +278,7 @@ def test_conflicting_output_aliases_are_rejected_atomically():
     cortex = Cortex(seed=1)
     sensor = cortex.input("sensor", shape=(1,))
     base = cortex.column("base", patches=1, inputs=(sensor,))
+    cortex.column("reader", patches=1, inputs=(base,))
     cortex.output("one", shape=(1,), reads=base)
     cortex.output("two", shape=(1,), reads=base)
     brain = cortex.build()
@@ -448,6 +451,7 @@ def test_shape_keys_and_duplicate_runtime_references_are_validated():
     cortex = Cortex()
     sensor = cortex.input("image", shape=(2, 2))
     base = cortex.column("base", patches=2, inputs=(sensor,))
+    cortex.column("reader", patches=1, inputs=(base,))
     cortex.output("answer", shape=1, reads=base)
     brain = cortex.build()
     before = brain.snapshot()
@@ -467,6 +471,7 @@ def test_built_layout_is_frozen_and_connection_budget_refusal_is_retryable():
     cortex = Cortex(max_connections=1)
     sensor = cortex.input("sensor", shape=2)
     base = cortex.column("base", patches=1, inputs=(sensor,))
+    cortex.column("reader", patches=1, inputs=(base,))
     cortex.output("answer", shape=1, reads=base)
     with pytest.raises(ValueError, match="Connection"):
         cortex.build()
@@ -474,6 +479,7 @@ def test_built_layout_is_frozen_and_connection_budget_refusal_is_retryable():
         cortex.build()
     cortex = Cortex()
     base = cortex.column(patches=1)
+    cortex.column(patches=1, inputs=base)
     cortex.output("answer", shape=(), reads=base)
     brain = cortex.build()
     assert brain.predict({})["answer"] == (0.0,)
@@ -553,6 +559,7 @@ def test_large_finite_initial_scale_does_not_overflow_random_interval():
     cortex = Cortex(initial_scale=1e308, parameter_bound=1e308)
     source = cortex.input("source", shape=2)
     population = cortex.column(patches=2, inputs=(source,))
+    cortex.column(patches=1, inputs=(population,))
     cortex.output("answer", shape=1, reads=population)
     brain = cortex.build()
     assert all(math.isfinite(w) and abs(w) <= 1e308 for w in brain.weights)
@@ -654,6 +661,7 @@ def test_layout_handles_are_immutable_owned_references():
         assert copied is not node and copied != node
     with pytest.raises(ValueError, match="existing nodes"):
         cortex.column("forged", patches=1, inputs=(replace(sensor),))
+    cortex.column("reader", patches=1, inputs=(population,))
     brain = cortex.build()
     with pytest.raises(ValueError, match="foreign"):
         brain.predict({replace(sensor): [0.2]})
@@ -730,9 +738,10 @@ def test_invalid_unicode_names_are_refused_before_layout_changes(kind):
     }
     with pytest.raises(ValueError, match="UTF-8"):
         getattr(cortex, kind)("\ud800", **options[kind])
+    cortex.column("reader", patches=1, inputs=(base,))
     cortex.output("answer", shape=1, reads=base)
     brain = cortex.build()
-    assert brain.graph.n_patches == brain.graph.n_inputs == 1
+    assert brain.graph.n_inputs == 1 and brain.graph.n_patches == 2
     assert Brain.from_snapshot(brain.snapshot()).snapshot() == brain.snapshot()
 
 
@@ -756,8 +765,9 @@ def test_connection_and_output_iterators_are_consumed_with_declared_limits():
 
     with pytest.raises(ValueError):
         cortex.output("invalid", shape=1, reads=base, indices=too_many_indices())
+    cortex.column("reader", patches=1, inputs=(base,))
     cortex.output("answer", shape=1, reads=base)
-    assert cortex.build().graph.n_patches == 1
+    assert cortex.build().graph.n_patches == 2
 
 
 @pytest.mark.parametrize("shape", [(1000000,), (1, 2), 2])
@@ -786,6 +796,7 @@ def test_array_protocol_accepts_nested_and_flat_values_without_a_dependency():
     cortex = Cortex()
     source = cortex.input("image", shape=(2, 2))
     population = cortex.column("base", patches=1, inputs=(source,))
+    cortex.column("reader", patches=1, inputs=(population,))
     cortex.output("answer", shape=1, reads=population)
     brain = cortex.build()
     nested = Array((2, 2), [[0.1, 0.2], [0.3, 0.4]])

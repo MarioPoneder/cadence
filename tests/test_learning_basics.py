@@ -78,7 +78,7 @@ def assert_acquired(predictions):
         assert abs(predictions[a][0] - predictions[b][0]) < 0.15
 
 
-@pytest.mark.parametrize("kind", ("flat", "ordinary", "recursive"))
+@pytest.mark.parametrize("kind", ("ordinary", "recursive"))
 @pytest.mark.parametrize("seed", (0, 2, 7))
 def test_defaults_acquire_independent_relations_and_retain_them_on_replay(kind, seed):
     brain = learner(kind, seed)

@@ -1,9 +1,10 @@
 """Teach, query and resume three layouts through the same public interface.
 
 Run: PYTHONPATH=src python examples/layout_learning.py
-The default is flat. Select --layout deep for ordinary composition, or explicitly
-select --layout recursive/all to study observer wiring. This tiny relation
-demonstrates the API, not an architectural advantage.
+The default is the smallest brain: four ``features`` patches read the sensor and
+one ``response`` patch reads them. Select --layout deep for deeper composition,
+or explicitly select --layout recursive/all to study observer wiring. This tiny
+relation demonstrates the API, not an architectural advantage.
 """
 
 import argparse
@@ -11,7 +12,7 @@ import json
 
 from cadence import Brain, Cortex, bootstrap
 
-LAYOUTS = ("flat", "deep", "recursive")
+LAYOUTS = ("small", "deep", "recursive")
 
 
 def make_brain(kind, *, seed=2):
@@ -20,16 +21,15 @@ def make_brain(kind, *, seed=2):
         raise ValueError(f"layout must be one of {LAYOUTS}")
     layout = Cortex(seed=seed)
     signal = layout.input("signal", shape=1)
-    if kind == "flat":
-        response = layout.column("response", patches=1, inputs=signal)
+    base = layout.column("representation", patches=4, inputs=signal)
+    if kind == "small":
+        response = layout.column("response", patches=1, inputs=base)
+    elif kind == "deep":
+        middle = layout.column("integration", patches=2, inputs=base)
+        response = layout.column("response", patches=1, inputs=middle)
     else:
-        base = layout.column("representation", patches=4, inputs=signal)
-        if kind == "deep":
-            middle = layout.column("integration", patches=2, inputs=base)
-            response = layout.column("response", patches=1, inputs=middle)
-        else:
-            middle = layout.observer("integration", patches=2, observes=base)
-            response = layout.observer("response", patches=1, observes=middle)
+        middle = layout.observer("integration", patches=2, observes=base)
+        response = layout.observer("response", patches=1, observes=middle)
     layout.output("answer", shape=1, reads=response)
     return layout.build()
 
@@ -96,7 +96,7 @@ def learn(kind, *, seed=2):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--layout", choices=("all", *LAYOUTS), default="flat")
+    parser.add_argument("--layout", choices=("all", *LAYOUTS), default="small")
     parser.add_argument("--seed", type=int, default=2)
     args = parser.parse_args(argv)
     selected = LAYOUTS if args.layout == "all" else (args.layout,)

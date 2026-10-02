@@ -1,40 +1,51 @@
 # Agent guide: build one brain, measure its behavior
 
-Follow the repository's [contributor instructions](../AGENTS.md). For API
-spelling and numerical semantics, use [the reference](REFERENCE.md) and
-[specification](SPECIFICATION.md). The practical explanation is
-[brain design](BRAIN_DESIGN.md); start a small application from
-[the quickstart](QUICKSTART.md).
+Follow the repository's [contributor instructions](../AGENTS.md), including
+the principle they open with: a Cadence brain is one equilibrium of patches
+settling against each other. For API spelling and numerical semantics, use
+[the reference](REFERENCE.md) and [specification](SPECIFICATION.md). The
+practical explanation is [brain design](BRAIN_DESIGN.md); start a small
+application from [the quickstart](QUICKSTART.md).
 
 ## Explain the supported model first
 
 Use `Cortex` to declare one graph, then `build()` to create its persistent
 `Brain`. Inputs are supplied samples, populations contain processing patches,
-and outputs expose selected patch states. Every population uses the same
-bounded relation and coupled repair. There is no separate feed-forward output
-network or external critic attached to each population.
+and outputs expose selected patch states. Every patch is an observer of the
+ports it reads: it predicts its own state from them and carries the
+disagreement as a live error. All patches settle together, and the settled
+whole is the answer. There is no separate feed-forward output network or
+external critic attached to each population, and no backward pass of an output
+loss: learning repairs each relation from its own patch's remaining
+disagreement at the settled joint state.
+
+`build()` refuses a population that settles with no other population. Every
+population must read another population's states (`inputs=`) or errors
+(`observes=`), or be read by one. The smallest brain is two populations. Do not
+offer, describe or construct a layout without settlement between populations.
 
 The application still owns sensor meaning, action decoding and outcome units.
 Choose useful connectivity and adequate information before increasing width.
 
-**Default to ordinary layers.** Start flat, then add ordinary
-`column(..., inputs=previous)` layers if the task needs them. Keep routine
-processing dominant in application designs. Use `step` to retain qualified
-activity between live decisions; count its complete work and command latency.
-There is no extra mode to enable and no separate critic or scheduler to wire.
+**Default to state-coupled populations.** Start with one population reading
+the sensors and one reading it, then add `column(..., inputs=previous)` layers
+if the task needs them. Keep routine processing dominant in application
+designs. Use `step` to retain qualified activity between live decisions; count
+its complete work and command latency. There is no extra mode to enable and no
+separate critic or scheduler to wire.
 
 **System 2 warning:** recursive self-observation remains under active testing.
 An explicit `observer` joins every synchronous whole-brain solve and can slow
 routine responses. It is not automatically asleep until surprise, and useful
 recursive superiority remains unproven. Recommend it only for a deliberate
-experiment after a capable ordinary baseline. See
+experiment after a capable state-coupled baseline. See
 [experimental features](EXPERIMENTAL.md).
 
 ## Use System 1 and System 2 for roles
 
 **System 1** is a learned skill that keeps working with little repair: a groove,
-a familiar movement or another competent routine. It can need several ordinary
-layers and useful temporal information. It is not restricted to a flat map.
+a familiar movement or another competent routine. It can need several coupled
+populations and useful temporal information.
 
 **System 2** is additional recursive observation and correction when that routine
 cannot maintain equilibrium or meet longer-term needs. Useful correction should
@@ -46,7 +57,7 @@ relation. It is not a stored historical forecast miss.
 
 These names describe the intended roles of one brain. They are not constructor
 names, biological claims, or bootstrapping/live phase switches. Current
-`0.60.0` supports the layouts below; it does not yet implement automatic
+`0.61.0` supports the layouts below; it does not yet implement automatic
 attention, independently progressing populations or the complete integrated
 routine/correction cycle. Keep that boundary visible when writing examples.
 
@@ -54,12 +65,12 @@ routine/correction cycle. Keep that boundary visible when writing examples.
 
 | Need | Public construction | Interpretation |
 | --- | --- | --- |
-| A simple direct relation | `column(..., inputs=senses)` feeding an output | Flat when it reads sensors only; unused patches do not supply hidden capacity. |
-| Learned intermediate features | Another `column(..., inputs=earlier_population)` | Ordinary deep composition; all live states settle jointly, with returning influence through the energy. |
-| Specialized branches that share context | Ordinary columns combined in one `Cortex`, then `build()` | One graph and body boundary; add only the connectivity the task needs. |
-| Experimental internal error readback | Explicit `observer(..., observes=earlier_population)` | Reads states and exact errors in every solve; compare task benefit and latency against ordinary layers before considering application use. |
+| A direct relation | `column(..., inputs=senses)` read by a second `column(..., inputs=first)` that feeds the output | The smallest brain; the two populations settle against each other. |
+| Learned intermediate features | Further `column(..., inputs=earlier_population)` layers | Deeper composition; all live states settle jointly, with returning influence through the energy. |
+| Specialized branches that share context | Columns reading different sensors, combined by a population that reads them, in one `Cortex` | One graph and body boundary; add only the connectivity the task needs. |
+| Experimental internal error readback | Explicit `observer(..., observes=earlier_population)` | Reads states and exact errors in every solve; compare task benefit and latency against state-coupled layers before considering application use. |
 
-The [layout examples](VARIANTS.md) teach, query and resume ordinary layouts:
+The [layout examples](VARIANTS.md) teach, query and resume these layouts:
 
 ```sh
 PYTHONPATH=src python examples/layout_learning.py
@@ -84,15 +95,16 @@ learned temporal memory are separate questions.
    against an obstacle. Give a routine branch the signals its job needs; attach
    broader context where a controlled comparison shows it helps.
    A bounded `History` is explicit memory, not learned recurrence.
-2. **Acquire a capable routine.** Start with flat or ordinary composition as the
-   task requires. Check output connectivity and target range. Use public
-   `observe`/`observe_batch` or `bootstrap`; measured labels are witnesses,
-   derived teaching values use `source="estimate"`. A batch has private row
-   states and one shared parameter admission, not an implicit sequence.
-   When interpreting forecasts as probabilities, preserve the relevant event
-   distribution or explicitly account for resampling. Replaying only events
-   where an action was available can bias a shared predictor; supply selected-action
-   value targets only where that action and its outcome were actually recorded.
+2. **Acquire a capable routine.** Start with two coupled populations and add
+   composition as the task requires. Check output connectivity and target range.
+   Use public `observe`/`observe_batch` or `bootstrap`; measured labels are
+   witnesses, derived teaching values use `source="estimate"`. A batch has
+   private row states and one shared parameter admission, not an implicit
+   sequence. When interpreting forecasts as probabilities, preserve the relevant
+   event distribution or explicitly account for resampling. Replaying only
+   events where an action was available can bias a shared predictor; supply
+   selected-action value targets only where that action and its outcome were
+   actually recorded.
 3. **Test free behavior.** Disconnect the teacher and leave future outputs
    unclamped. Check `qualified` before acting and `accepted` before counting
    learning. Measure the actual body, not just prediction MAE or command flags.
@@ -105,14 +117,13 @@ learned temporal memory are separate questions.
    brain-wide emotion or a planning model. Keep outcome records separate from
    replaceable sensory summaries.
 5. **Keep recursive correction optional and experimental.** For most application
-   work, continue with ordinary layers. If investigating observers, compare a
-   competent ordinary control with
-   an observer layout on the same causal information, with disclosed capacity,
-   exposure and work. Establish routine, disturb the actual body, measure
-   useful recovery, and recheck retention and cost after recovery. Include
-   routine-plus-factual-fit as a control so consolidation alone is not called
-   a planning benefit. Adding observers or changing a free output does not by
-   itself establish System 2.
+   work, continue with state-coupled layers. If investigating observers, compare
+   a competent state-coupled control with an observer layout on the same causal
+   information, with disclosed capacity, exposure and work. Establish routine,
+   disturb the actual body, measure useful recovery, and recheck retention and
+   cost after recovery. Include routine-plus-factual-fit as a control so
+   consolidation alone is not called a planning benefit. Adding observers or
+   changing a free output does not by itself establish System 2.
 
 Use the operation that matches the intended state change:
 
@@ -157,8 +168,8 @@ per-population evaluator.
 Keep implemented behavior separate from that target and from experimental
 results. Query caching is arithmetic reuse, not learned attention; low
 stationarity is not worldly success; a valid snapshot is not task competence.
-The stable 0.60.0 package recommends ordinary networks. Its release status does
-not establish the complete System 2 cycle; keep recursive observation experimental.
+The `0.61.0` package recommends coupled populations and refuses uncoupled
+layouts. Its release status does not establish automatic System 2.
 
 After documentation changes, run the focused checks from the repository root:
 

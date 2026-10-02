@@ -2,16 +2,24 @@
 
 This document specifies the population DRSN engine. The equations are in
 [the processing-patch description](ELEMENT.md); all arguments and result fields
-are in [the API reference](REFERENCE.md). The `0.60.0` application default
-is ordinary flat or deep composition. Explicit observer wiring is experimental;
+are in [the API reference](REFERENCE.md). Every `0.61.0` brain is one connected
+settlement: the builder refuses a population that settles with no other
+population and a group of populations that settles apart from the rest.
+Explicit observer wiring is experimental;
 it obeys the same whole-brain numerical contract and participates in every
 solve. No automatic observer sleep, internal attention or independent population
 clocks are part of this specification. See [experimental scope](EXPERIMENTAL.md).
 
 ## Layout and state
 
-- `Cortex` is a declaration builder. `build()` requires at least one population
-  and output, resolves deterministic wiring, and freezes declarations. Every
+- `Cortex` is a declaration builder. `build()` requires at least one output and
+  populations joined into one connected system: every population reads another
+  population's states or errors or is read by one, and no group settles apart
+  from the rest. Only then does it resolve deterministic wiring and freeze
+  declarations. The settling invariant: with at least one state or error contact
+  into or out of every population, no patch's energy term is independent of all
+  other patches, so the equilibrium is one joint settlement of the whole brain.
+  Shared fixed inputs do not join populations. Every
   declared source coordinate is connected by default. Positive `fan_in` requests
   sparse wiring; connection-budget overflow raises instead of dropping inputs.
 - `Input`, `Population` and `Output` are immutable identity handles owned by a

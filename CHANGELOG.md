@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.61.0 — 2026-10-02
+
+- Restore the principle as an enforced default: patches repair local
+  disagreement to reach a coherent brain state, and further repair is driven by
+  that state's mismatch with reality. `Cortex.build()` now refuses a layout in
+  which a population settles with no other population, and a layout in which a
+  group of populations settles apart from the rest. Every population must read
+  another population's states or errors, or be read by one, and those reads
+  must join all populations into one connected system; an unread sensors-only
+  population or a disconnected group raises `ValueError` naming it. The
+  smallest brain is two populations.
+- Remove the input-only "flat" layout from the README, quickstart, layout and
+  design guides, agent guides, examples and test fixtures. The layout example
+  defaults to a two-population brain (`small`), with `deep` and the explicit
+  `recursive` experiment. The query-cost and temporal-credit examples no longer
+  build an input-only arm; their recorded receipts stay as recorded.
+- Lead the README and the contributor guide with the main hypothesis and the
+  simplicity premise, and contrast settlement with feed-forward backpropagation.
+- The repair law, energy, qualification tolerance and admission contract are
+  unchanged. `cortex.py` changed, so snapshots bind to this release's sources;
+  snapshots saved by `0.60.0` load only in `0.60.0`.
+- Error-reading observers remain experimental; this release still claims no
+  automatic System 2, retained useful recursive correction or reproduced
+  musical quality.
+
 ## 0.60.0.dev1 — 2026-10-02
 
 - Make flat and ordinary deep settling networks the recommended application

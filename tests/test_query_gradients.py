@@ -44,16 +44,18 @@ def test_query_qualifies_when_only_an_inactive_derivative_overflows():
 def test_public_query_preserves_continuation_with_large_finite_input():
     cortex = Cortex(seed=1, initial_scale=3.5e-309, parameter_prior=10)
     sensor = cortex.input("sensor", shape=1)
-    patch = cortex.column(patches=1, inputs=sensor)
+    sensing = cortex.column(patches=1, inputs=sensor)
+    patch = cortex.column(patches=1, inputs=sensing)
     cortex.output("answer", shape=1, reads=patch)
     brain = cortex.build()
     assert brain.observe({"sensor": [0]}, {"answer": [1]})["accepted"]
+    # The sensing patch's relation is weights[0]/biases[0]; drive it to -atanh(1/3).
     value = (-math.atanh(1 / 3) - brain.biases[0]) / brain.weights[0]
     assert math.isfinite(value)
     snapshot = brain.snapshot()
     result = brain.settle({"sensor": [value]})
     assert result["qualified"]
-    assert result["outputs"]["answer"][0] == pytest.approx(-1 / 3.03, abs=1e-6)
+    assert result["state"][0] == pytest.approx(-1 / 3.03, abs=1e-6)
     assert brain.snapshot() == snapshot
 
 

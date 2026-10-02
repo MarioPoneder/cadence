@@ -8,7 +8,7 @@ target through joint state/parameter repair, labeled as a witness or an estimate
 private experience states. `bootstrap` replays witnesses, optionally in batches,
 and checks unclamped predictions.
 
-Recommend ordinary flat or deep columns before choosing an accelerator. More
+Recommend the smallest coupled layout before choosing an accelerator. More
 width or depth changes capacity and cost; neither guarantees learning or low
 latency. Recursive observation is [experimental opt-in](EXPERIMENTAL.md), joins
 every whole-brain solve and is not automatically inactive during routine work.
@@ -16,8 +16,8 @@ Acceleration changes execution, not the information supplied, the learning
 objective or the need for a useful teaching stream.
 
 Choose the layout before assuming a faster device will solve the latency
-problem. Input-only flat queries can require very little repair; ordinary
-composition and recursive observation introduce different coupling costs.
+problem. A small coupled layout can require little repair; deeper composition
+and recursive observation introduce different coupling costs.
 See [depth, latency and useful work](PERFORMANCE.md) for versioned demo evidence,
 a bounded query comparison and the distinction between answering and learning.
 
@@ -27,10 +27,10 @@ The default `Cortex()` uses Python float64 and has no runtime dependencies.
 Install the optional tensor backend for the same release when needed:
 
 ```sh
-python -m pip install "cadence-net[gpu]==0.60.0"
+python -m pip install "cadence-net[gpu]==0.61.0"
 ```
 
-Use the [quickstart](QUICKSTART.md) for the current `0.60.0` installation.
+Use the [quickstart](QUICKSTART.md) for the current `0.61.0` installation.
 The device measurements below retain their recorded source versions; they are
 not current-version or all-workload performance guarantees.
 

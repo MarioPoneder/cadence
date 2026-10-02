@@ -1,10 +1,12 @@
 # Choose, train and run a brain
 
-In Cadence `0.60.0`, start with a flat network or ordinary deep layers.
-Choose the smallest ordinary network that learns the task, then measure free
-behavior and latency before scaling. Ordinary depth can support capable routine
-behavior; it does not guarantee speed at arbitrary size. All layouts use the
-same bounded patch primitive and settle as one coupled brain.
+In Cadence `0.61.0`, a brain is one equilibrium of patches settling against
+each other. Start with two coupled populations, one reading the sensors and one
+reading the first, and add layers when the task needs them. Choose the smallest
+coupled network that learns the task, then measure free behavior and latency
+before scaling. Depth can support capable routine behavior; it does not
+guarantee speed at arbitrary size. All layouts use the same bounded patch
+primitive, and the builder refuses a population that settles with no other.
 
 **System 1** names an acquired routine that works with little repair. It can
 need several ordinary layers and temporal context. **System 2** names useful
@@ -53,12 +55,12 @@ extracting overlapping windows. Reserve development data for choosing settings
 and fresh assessment data for the final measurement. Future observations may
 supply teaching targets; they must not enter the inputs used to forecast them.
 
-## Flat, ordinary deep and recursive layouts
+## Coupled, deeper and recursive layouts
 
 | Pattern | A sensible first use | What to check |
 | --- | --- | --- |
-| Input-only flat population | A direct sensor-to-output relation | Each output has its own weighted sensor prediction. Unused neighboring patches supply no hidden representation. |
-| Ordinary deep composition | Learned intermediate features for a more complex relation | Connect `column(..., inputs=earlier_population)`. Earlier and later states settle together. |
+| Two coupled populations | A direct sensor-to-output relation | A sensing population read by the output population. Both settle together; a sensing population read by nobody does not build. |
+| Deeper composition | Learned intermediate features for a more complex relation | Connect `column(..., inputs=earlier_population)`. Earlier and later states settle together. |
 | Experimental recursive observation | Test a relation that uses another population's current mismatch | Connect `observer(..., observes=earlier_population)`. It reads states and exact errors during every solve; it is not automatically recruited. |
 | Parallel branches with fusion | Sensors with different local structure or update meaning | Every output must have a useful path to its observations. These are branches of one jointly solved graph, not independently clocked workers. |
 
@@ -72,9 +74,9 @@ Ordinary deep composition already has returning influence. A later relation's
 error contributes to repair of the earlier states it reads. It is therefore
 not a chain of completed feed-forward answers. Observers add another derivative
 path through the current error; they do not introduce feedback into an
-otherwise feedback-free solver. A fast routine can use either a flat or a
-capable ordinary deep layout. Measure its actual work instead of inferring
-speed from the name.
+otherwise feedback-free solver. A fast routine can use a small or a deep
+coupled layout. Measure its actual work instead of inferring speed from the
+name.
 
 ### Experimental observer wiring
 
@@ -139,7 +141,8 @@ assert len(encoded) == history.size == 6
 
 history_layout = Cortex(seed=2)
 recent = history_layout.input("recent", shape=history.shape)
-response = history_layout.column("response", patches=1, inputs=recent)
+features = history_layout.column("features", patches=4, inputs=recent)
+response = history_layout.column("response", patches=1, inputs=features)
 history_layout.output("answer", shape=1, reads=response)
 history_brain = history_layout.build()
 assert history_brain.settle({"recent": encoded})["qualified"]
@@ -159,9 +162,10 @@ requires ordered application records and calls.
 
 ## Acquire a small ability before scaling
 
-Begin with defaults and one directly sensing patch per simple output. For a
-small nonlinear relation, a connected representation of 4–16 patches feeding
-1–4 output patches is a starting search range, not a capability guarantee.
+Begin with defaults and the smallest brain: a few sensing patches read by one
+output patch per simple output. For a small nonlinear relation, a connected
+representation of 4–16 patches feeding 1–4 output patches is a starting search
+range, not a capability guarantee.
 Use [bootstrapping and size](BOOTSTRAP.md) for more detailed recipes.
 Keep the simpler ordinary network when added depth does not improve measured
 quality enough to justify its complete query and learning costs.
@@ -181,7 +185,8 @@ those checks.
 ```python
 layout = Cortex(seed=2)
 signal = layout.input("signal", shape=1)
-response = layout.column("response", patches=1, inputs=signal)
+features = layout.column("features", patches=4, inputs=signal)
+response = layout.column("response", patches=1, inputs=features)
 layout.output("answer", shape=1, reads=response)
 brain = layout.build()
 examples = [

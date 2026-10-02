@@ -15,7 +15,8 @@ from cadence import Brain, Cortex
 def make_brain(device="python", dtype=None):
     cortex = Cortex(seed=4, device=device, dtype=dtype)
     sensor = cortex.input("sensor", shape=1)
-    patch = cortex.column("patch", patches=1, inputs=sensor)
+    features = cortex.column("features", patches=2, inputs=sensor)
+    patch = cortex.column("patch", patches=1, inputs=features)
     cortex.output("answer", shape=1, reads=patch)
     return cortex.build()
 
@@ -224,7 +225,8 @@ builtins.__import__ = blocked
 from cadence import Brain, Cortex
 cortex = Cortex(seed=4)
 sensor = cortex.input('sensor', shape=1)
-patch = cortex.column(patches=1, inputs=sensor)
+features = cortex.column(patches=2, inputs=sensor)
+patch = cortex.column(patches=1, inputs=features)
 cortex.output('answer', shape=1, reads=patch)
 brain = cortex.build()
 assert brain.observe({'sensor': [0.3]}, {'answer': [0.1]})['accepted']

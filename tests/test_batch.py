@@ -13,9 +13,7 @@ def learner(seed=2, layout="observer", device="python"):
     cortex = Cortex(seed=seed, device=device)
     signal = cortex.input("signal", shape=1)
     base = cortex.column("base", patches=3, inputs=signal)
-    if layout == "flat":
-        top = base
-    elif layout == "composed":
+    if layout == "composed":
         top = cortex.column("top", patches=2, inputs=(signal, base))
     else:
         top = cortex.observer("top", patches=2, inputs=signal, observes=base)
@@ -81,13 +79,14 @@ def test_reordered_rows_produce_same_parameters_not_last_example_wins():
 def test_inconsistent_targets_are_a_shared_compromise_not_two_independent_models():
     cortex = Cortex()
     node = cortex.column(patches=1)
+    cortex.column(patches=1, inputs=node)
     cortex.output("answer", shape=1, reads=node)
     brain = cortex.build()
     result = brain.observe_batch([({}, {"answer": [0.8]}), ({}, {"answer": [-0.8]})])
     assert result["accepted"]
     assert result["stationarity"] <= brain.config["tolerance"]
     assert result["prediction_residual"] == pytest.approx(0.8)
-    assert brain.biases == (0.0,)
+    assert brain.biases == (0.0, 0.0)
     assert brain.predict({})["answer"] == (0.0,)
 
 
@@ -168,7 +167,8 @@ def test_invalid_budget_precedes_optional_device_initialization(budget):
 def test_shapes_partial_targets_aliases_and_foreign_handles():
     cortex = Cortex()
     sensor = cortex.input("signal", shape=())
-    node = cortex.column(patches=2, inputs=sensor)
+    base = cortex.column(patches=2, inputs=sensor)
+    node = cortex.column(patches=2, inputs=base)
     grid = cortex.output("grid", shape=(1, 2), reads=node)
     alias = cortex.output("alias", shape=(), reads=node, indices=(1,))
     brain = cortex.build()
@@ -189,7 +189,7 @@ def test_shapes_partial_targets_aliases_and_foreign_handles():
     assert brain.snapshot() == before
 
 
-@pytest.mark.parametrize("layout", ("flat", "composed", "observer"))
+@pytest.mark.parametrize("layout", ("composed", "observer"))
 @pytest.mark.parametrize("seed", (0, 2, 7))
 def test_batch_bootstrap_acquires_and_generalizes_with_atomic_update_accounting(
     layout, seed

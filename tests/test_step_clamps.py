@@ -124,14 +124,17 @@ def test_foreign_clamp_handles_are_rejected_without_mutation(kind):
 def test_next_unclamped_step_requalifies_and_releases_the_previous_goal():
     cortex = Cortex(seed=19, tolerance=1e-8)
     sensor = cortex.input("signal", shape=1)
-    patch = cortex.column("prediction", patches=1, inputs=sensor)
+    sensing = cortex.column("sensing", patches=1, inputs=sensor)
+    patch = cortex.column("prediction", patches=1, inputs=sensing)
     cortex.output("future", shape=1, reads=patch)
     brain = cortex.build()
     inputs = {"signal": [0.4]}
 
-    # With no eligible free coordinate, this is boundary retention, not inference.
-    held = brain.step(inputs, targets={"future": [0.8]}, budget=0)
-    assert held["accepted"] and brain.state == (0.8,)
+    # With every coordinate clamped, this is boundary retention, not inference.
+    held = brain.step(
+        inputs, targets={"future": [0.8]}, interventions={"sensing": [0.3]}, budget=0
+    )
+    assert held["accepted"] and brain.state == (0.3, 0.8)
     saved = brain.snapshot()
     assert not brain.step(inputs, budget=0)["accepted"]
     assert brain.snapshot() == saved
@@ -139,7 +142,11 @@ def test_next_unclamped_step_requalifies_and_releases_the_previous_goal():
     pure = Brain.from_snapshot(saved).settle(inputs)
     released = brain.step(inputs)
     assert released == {**pure, "accepted": True}
-    expected = math.tanh(brain.weights[0] * 0.4) / (1 + brain.config["state_prior"])
-    assert brain.state[0] == pytest.approx(expected, abs=1e-8)
-    assert abs(brain.state[0] - 0.8) > 0.5
+    # The prediction patch is read by nobody, so its settled state is its own
+    # prediction of the settled sensing state, damped by the state prior.
+    expected = math.tanh(brain.weights[1] * brain.state[0]) / (
+        1 + brain.config["state_prior"]
+    )
+    assert brain.state[1] == pytest.approx(expected, abs=1e-6)
+    assert abs(brain.state[1] - 0.8) > 0.5
     assert brain.inspect()["admissions"] == 0

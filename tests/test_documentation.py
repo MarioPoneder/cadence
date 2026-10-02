@@ -48,7 +48,7 @@ def test_public_exports_are_documented():
         assert re.search(rf"\b{re.escape(name)}\b", reference), name
 
 
-@pytest.mark.parametrize("kind", ("flat", "deep", "recursive"))
+@pytest.mark.parametrize("kind", ("small", "deep", "recursive"))
 @pytest.mark.parametrize("seed", (0, 2, 7))
 def test_layout_learning_example(kind, seed):
     example = runpy.run_path(str(ROOT / "examples" / "layout_learning.py"))

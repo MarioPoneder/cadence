@@ -1,19 +1,18 @@
-"""Bounded query-cost probe for equally wide flat, composed and observing layouts.
+"""Bounded query-cost probe for equally wide composed and observing layouts.
 
     python examples/layout_cost.py --out /tmp/layout-cost.json
 
 This is an untrained, numerical cost probe, not a learning or intelligence test.
 All arms receive four scalar sensors and expose two settled patch coordinates.
-Flat and recursive arms have six patches, 24 edges and 30 parameters. Ordinary
-composition has 16 edges; a separate raw-input-skip control restores 24 edges.
-Graph geometry, conditioning, output-connected capacity and random coefficients
-remain different. One seed does not give different topologies identical weights.
+The recursive arm has six patches, 24 edges and 30 parameters. Composition has
+16 edges; a separate raw-input-skip control restores 24 edges. Graph geometry,
+conditioning, output-connected capacity and random coefficients remain
+different. One seed does not give different topologies identical weights. The
+0.50.0 receipt in ``receipts/layout_cost.json`` also records an input-only arm;
+``0.61.0`` refuses that layout, so this probe no longer builds it.
 
 Only pure ``settle`` queries run, each from unchanged zero activity and fixed
 parameters. No witness, warm-up query, tuning, learning, GPU or cloud is used.
-The input-only arm additionally checks the independent exact optimum
-clip(tanh(b + W input) / (1 + state_prior)). That calculation is timed separately;
-it does not replace a library call or propose a second learning rule.
 
 The output starts with a source-bound protocol BEFORE measurement and is then
 replaced by the final receipt. Existing output files are refused. A 45-second
@@ -55,7 +54,7 @@ def source_hashes():
 
 
 SEEDS = (2, 7, 17)
-ARMS = ("flat", "composed", "composed_skip", "recursive")
+ARMS = ("composed", "composed_skip", "recursive")
 INPUTS = tuple(
     tuple(round(0.75 * math.sin((i + 1) * (j + 1) * 0.47), 8) for j in range(4))
     for i in range(12)
@@ -75,40 +74,16 @@ SETTINGS = dict(
 def build(Cortex, arm, seed):
     cortex = Cortex(seed=seed, **SETTINGS)
     sensor = cortex.input("sensor", shape=4)
-    if arm == "flat":
-        output = cortex.column("flat", patches=6, inputs=sensor)
-        indices = (4, 5)
+    base = cortex.column("base", patches=2, inputs=sensor)
+    if arm == "recursive":
+        middle = cortex.observer("middle", patches=2, observes=base)
+        output = cortex.observer("output", patches=2, observes=middle)
     else:
-        base = cortex.column("base", patches=2, inputs=sensor)
-        if arm == "recursive":
-            middle = cortex.observer("middle", patches=2, observes=base)
-            output = cortex.observer("output", patches=2, observes=middle)
-        else:
-            middle = cortex.column("middle", patches=2, inputs=base)
-            inputs = (middle, sensor) if arm == "composed_skip" else middle
-            output = cortex.column("output", patches=2, inputs=inputs)
-        indices = (0, 1)
-    cortex.output("answer", shape=2, reads=output, indices=indices)
+        middle = cortex.column("middle", patches=2, inputs=base)
+        inputs = (middle, sensor) if arm == "composed_skip" else middle
+        output = cortex.column("output", patches=2, inputs=inputs)
+    cortex.output("answer", shape=2, reads=output, indices=(0, 1))
     return cortex.build()
-
-
-def exact_flat(brain, sensor):
-    """Independent closed form for fixed-parameter, input-only query energy."""
-    drive = list(brain.biases)
-    for (kind, source, target), weight in zip(
-        brain.graph.edges, brain.weights, strict=True
-    ):
-        if kind != "input":
-            raise ValueError("The flat closed form requires input-only connections")
-        drive[target] += weight * sensor[source]
-    predictions = [math.tanh(value) for value in drive]
-    prior, bound = brain.config["state_prior"], brain.config["state_bound"]
-    states = [max(-bound, min(bound, p / (1 + prior))) for p in predictions]
-    energy = sum(
-        0.5 * (x - p) ** 2 + 0.5 * prior * x * x
-        for x, p in zip(states, predictions, strict=True)
-    )
-    return states, energy
 
 
 def write(path, report, *, create=False):
@@ -175,7 +150,6 @@ def run(output):
         "inputs": INPUTS,
         "settings": SETTINGS,
         "arms": {
-            "flat": "6 input-only patches; 24 edges, 30 parameters; last two patches are outputs",
             "composed": "2+2+2 state-reading patches; 16 edges, 22 parameters",
             "composed_skip": "2+2+2 state-reading patches, raw-sensor skip to final population; 24 edges, 30 parameters",
             "recursive": "2+2+2 patches, later populations read preceding live states and exact errors; 24 edges, 30 parameters",
@@ -183,16 +157,15 @@ def run(output):
         "schedule": schedule,
         "schedule_rule": "Rotate arm order by model-seed index and input index; no timing-based ordering",
         "wall_scheduling_budget_seconds": 45,
-        "timing": "Each complete public settle call only; graph construction, snapshot checks and independent flat calculations are separately timed or outside query timings. Imports excluded. Shared host may have concurrent work.",
+        "timing": "Each complete public settle call only; graph construction and snapshot checks are outside query timings. Imports excluded. Shared host may have concurrent work.",
         "continuation": "Pure queries from unchanged zero activity, fixed parameters, same input sequence; no learning or retained-state warm start",
-        "flat_reference": "All patch coordinates: x=clip(tanh(b+W input)/(1+state_prior)); qualified-state tolerance 2e-6, energy tolerance 1e-10",
         "source_sha256": sources,
         "nonclaims": [
             "No useful-recursion, quality, task accuracy, learning-throughput or physical-energy claim",
             "Matching patch/edge counts does not match graph geometry, conditioning or output-connected capacity",
             "The skip control has a direct sensory route absent from the recursive layout",
             "Random seeds fix construction but do not align coefficients across different topologies",
-            "The flat exact formula applies only to fixed-parameter, input-only queries",
+            "An input-only arm is not built: 0.61.0 refuses a population that settles with no other population",
         ],
     }
     report = {
@@ -269,29 +242,12 @@ def run(output):
                     )
                 },
             )
-            if case["arm"] == "flat":
-                then = time.perf_counter()
-                exact, energy = exact_flat(brain, inputs)
-                row["exact_flat"] = {
-                    "seconds": time.perf_counter() - then,
-                    "state": exact,
-                    "energy": energy,
-                    "max_state_difference": max(
-                        abs(x - y) for x, y in zip(exact, result["state"], strict=True)
-                    ),
-                    "energy_difference": abs(energy - result["energy"]),
-                }
         except Exception as exc:
             row["exception"] = f"{type(exc).__name__}: {exc}"
         report["rows"].append(row)
     after = source_hashes()
     unchanged = all(brain.snapshot() == snapshot for brain, snapshot in models.values())
     complete = len(report["rows"]) == len(schedule)
-    flat_checks = [r["exact_flat"] for r in report["rows"] if "exact_flat" in r]
-    flat_agreement = len(flat_checks) == 36 and all(
-        r["max_state_difference"] <= 2e-6 and r["energy_difference"] <= 1e-10
-        for r in flat_checks
-    )
     report.update(
         status="complete" if complete else "budget_stopped",
         wall_seconds=time.perf_counter() - started,
@@ -301,12 +257,10 @@ def run(output):
         continuations_unchanged=unchanged,
         all_scheduled_complete=complete,
         missing_schedule=schedule[len(report["rows"]) :],
-        flat_exact_agreement=flat_agreement,
         summary=summarize(report["rows"]),
         passed=complete
         and unchanged
         and sources == after
-        and flat_agreement
         and all(
             r.get("qualified", False) and "exception" not in r for r in report["rows"]
         ),

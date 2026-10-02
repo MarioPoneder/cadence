@@ -11,7 +11,8 @@ def learner():
     layout = Cortex(seed=7)
     eyes = layout.input("eyes", shape=2)
     ears = layout.input("ears", shape=1)
-    body = layout.column("body", patches=1, inputs=(eyes, ears))
+    sense = layout.column("sense", patches=2, inputs=(eyes, ears))
+    body = layout.column("body", patches=1, inputs=sense)
     layout.output("move", shape=1, reads=body)
     layout.output("alias", shape=1, reads=body)
     return layout.build(), eyes
@@ -32,7 +33,8 @@ def test_registered_integral_scalar_shapes_match_sequence_shapes():
     for shape in (2, IntegerScalar(), (IntegerScalar(),)):
         layout = Cortex()
         signal = layout.input("signal", shape=shape)
-        state = layout.column("state", patches=2, inputs=signal)
+        features = layout.column("features", patches=2, inputs=signal)
+        state = layout.column("state", patches=2, inputs=features)
         layout.output("answer", shape=shape, reads=state)
         brains.append(layout.build())
     assert brains[0].snapshot() == brains[1].snapshot() == brains[2].snapshot()
@@ -41,7 +43,8 @@ def test_registered_integral_scalar_shapes_match_sequence_shapes():
 def test_larger_state_bound_does_not_rescale_terminal_predictions():
     layout = Cortex(state_bound=4.0)
     signal = layout.input("signal", shape=1)
-    state = layout.column("state", patches=1, inputs=signal)
+    features = layout.column("features", patches=2, inputs=signal)
+    state = layout.column("state", patches=1, inputs=features)
     layout.output("answer", shape=1, reads=state)
     brain = layout.build()
     for _ in range(20):
@@ -75,7 +78,7 @@ def test_larger_state_bound_does_not_rescale_terminal_predictions():
         (
             {"eyes": [0.2, -0.3], "ears": [0.1]},
             {"move": [0.5], "alias": [-0.5]},
-            "'alias' conflicts with another clamp on patch 0",
+            "'alias' conflicts with another clamp on patch 2",
         ),
     ],
 )

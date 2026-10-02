@@ -28,7 +28,7 @@ def test_paired_suffixes_have_no_cue_leak_and_history_expires(delay):
 
 
 @pytest.mark.parametrize("delay", (2, 4, 8))
-@pytest.mark.parametrize("architecture", ("flat", "ordinary", "observer"))
+@pytest.mark.parametrize("architecture", ("ordinary", "observer"))
 def test_reserved_cue_recall_and_resumed_life(delay, architecture):
     result = experiment.memory_case(0, delay, architecture)
     assert result["passed"], result
@@ -67,7 +67,7 @@ def test_reward_eight_ticks_later_changes_executed_policy(preferred):
 
 
 def test_hypothetical_or_abandoned_choice_cannot_receive_credit():
-    brain = experiment.layout(5, 0, "flat", ("q0", "q1"))
+    brain = experiment.layout(5, 0, "ordinary", ("q0", "q1"))
     learner = experiment.Reinforcement(
         brain, actions=2, action_input=None, value_output=("q0", "q1")
     )

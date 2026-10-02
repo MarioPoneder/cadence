@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: learning through flat, deep and recursive settlement" width="100%">
+  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: brains that settle into one equilibrium" width="100%">
 </p>
 
 # Cadence
@@ -11,54 +11,62 @@
 [![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 
-**Start with a small flat network. Add ordinary depth when the task needs it.**
+**Patches repair local disagreement to reach a coherent brain state. Further
+repair is driven by that state's mismatch with reality.**
 
-Cadence is an experimental learning library built from bounded patches with
-local state, input and output ports, retained relations and prediction-error
-readback. Connected patches settle together to answer; learning repairs their
-relations from experience. Recursive observers read other patches' live states
-and exact errors, feeding back into that same settlement. This is the
-observer-like, self-reading structure behind Cadence.
+That is the whole idea. The coherent state is one equilibrium of the entire
+brain, and it is the brain's world model.
 
-**This README describes `0.60.0` on `main`.** Flat and ordinary deep networks
-are the recommended starting points. Choose the smallest ordinary network that
-learns the task, and measure prediction quality and latency before scaling it.
-Depth can support a capable routine; arbitrary depth is not a speed guarantee.
+Cadence is an experimental learning library built from bounded patches. Every
+patch is an observer: it reads its ports, predicts its own state from what it
+reads, and carries the disagreement between that prediction and its state as a
+live error. Connected patches settle those disagreements together until the
+whole brain is stationary. That settled state is the brain's answer and its
+model of the world. A new observation, or an outcome that contradicts a
+prediction, disturbs the equilibrium, and the brain pays exactly the repair the
+disturbance requires. Learning is the same repair with the relations made
+eligible. No loss is propagated backwards through layers.
 
-**Recursive observers are experimental.** They participate in every synchronous
-solve and may slow every call, including familiar routine work. Their benefit
-over capable ordinary networks is unproven. Automatic on-demand attention and
-independent population clocks are not public features. See the
-[experimental capability boundary](docs/EXPERIMENTAL.md).
+**This README describes `0.61.0`.** Since this release the builder refuses a
+layout in which a population settles with no other population, and a layout in
+which a group of populations settles apart from the rest: a patch that reads
+sensors alone and is read by nobody is an isolated regression, not part of a
+brain, and two unconnected groups are two brains. Neither builds. The smallest
+brain is two populations, one reading the sensors and one reading the first.
 
-## Choose how the brain responds
+**Error readback is experimental.** Every patch repairs its own disagreement.
+`observer(...)` additionally lets a population read other patches' current
+errors as signals. Those contacts join every synchronous solve and may slow
+routine work, and their benefit over state-coupled populations is unproven.
+Automatic on-demand attention and independent population clocks are not public
+features. See the [experimental capability boundary](docs/EXPERIMENTAL.md).
 
-| Layout | What it does | When to start here |
+## Choose how the brain is wired
+
+| Wiring | What patches read | When to use it |
 | --- | --- | --- |
-| **Flat: a simple routine response** | Each patch reads sensors directly. With parameters fixed, patch states can settle independently. | Small direct mappings, calibration and the first inexpensive baseline. |
-| **Deep: co-settling representations** | Ordinary populations read earlier populations' live states. All layers settle together, with returning influence through their shared constraints. | Routines that need learned intermediate features or combined sensory information. |
-| **Experimental recursive feedback** | Observers read live states and exact current prediction errors. An observer can itself be observed. | An explicit experiment against capable ordinary controls, with all extra work measured. |
+| **Two coupled populations** (the smallest brain) | One population reads the sensors, the next reads its live states. All states settle together; the later population's constraint moves the earlier states through the shared energy. | Every application starts here. |
+| **Deeper composition** | Several populations reading earlier populations, parallel sensory branches, fusion. | Routines that need learned intermediate features or combined sensory information. |
+| **Experimental error readback** | Live states and exact current prediction errors of other populations; an observer can itself be observed. | A declared experiment against a state-coupled control, with all extra work measured. |
 
 All three use the **same patch rule**, learning methods and whole-brain
-qualification. These are choices of wiring, not three neuron classes or speed
-settings. A small flat layout is a useful fast baseline; actual latency depends
-on size, coupling, learning and the task. Ordinary layers already provide
-feedback through joint settlement; observers are not needed to enable it.
+qualification. They are choices of wiring, not neuron classes or speed
+settings. Latency depends on size, coupling, learning and the task.
 
-**System 1** means learned routine competence; it can need several ordinary
-layers. **System 2** names the intended useful recursive correction when routine
-competence fails. The complete cycle—cheap routine, useful correction, then
-retained cheap routine—has not been demonstrated. A coherent changing beat,
-a familiar game situation or walking a known
-path can all be routine. Equilibrium in this behavioral sense means sustained
-competence, not an unchanging output. Numerical settlement alone can still give
-a wrong answer about the world: compare forecasts with later observations and
-measure actual task outcomes.
+**System 1** means learned routine competence; it can need several coupled
+populations. **System 2** names the intended useful recursive correction when
+routine competence fails. The complete cycle—cheap routine, useful correction,
+then retained cheap routine—has not been demonstrated. A coherent changing
+beat, a familiar game situation or walking a known path can all be routine.
+Equilibrium in this behavioral sense means sustained competence, not an
+unchanging output. Numerical settlement alone can still give a wrong answer
+about the world: compare forecasts with later observations and measure actual
+task outcomes.
 
 Build the layout inside one `Cortex`. The application supplies observations,
 executes actions and reports outcomes through one brain/body interface; it does
 not attach an evaluator to every population. Start with the
-[flat and ordinary deep quickstarts](docs/VARIANTS.md). Explicit observer wiring
+[layout quickstarts](docs/VARIANTS.md). Explicit observer wiring
 remains available in the [experimental recipes](docs/VARIANTS.md#experimental-recursive-observer-settlement).
 
 ## How this differs from a feed-forward network trained by backpropagation
@@ -94,7 +102,7 @@ the admission rule.
 Python 3.11 or later. The default engine needs only the standard library:
 
 ```sh
-python -m pip install "cadence-net==0.60.0"
+python -m pip install "cadence-net==0.61.0"
 python -c "import cadence; print(cadence.__version__)"
 ```
 
@@ -106,7 +114,7 @@ check. Install the `gpu` extra, then choose
 `Cortex(device="cpu")`, `Cortex(device="mps")` or `Cortex(device="cuda")`:
 
 ```sh
-python -m pip install "cadence-net[gpu]==0.60.0"
+python -m pip install "cadence-net[gpu]==0.61.0"
 ```
 
 Small brains can be faster on the default engine. Measure the complete workload;
@@ -114,10 +122,13 @@ see [devices, precision and batching](docs/ACCELERATION.md).
 
 ## Teach a small body model
 
-This flat brain learns how a supplied one-dimensional simulator moves. It sees
-position and commanded velocity, then predicts the next position. Teaching,
-readiness checks and final probes use different inputs. Predictions come from
-the settled brain; the simulator supplies only measured teaching and test values.
+This brain learns how a supplied one-dimensional simulator moves. It sees
+position and commanded velocity, then predicts the next position. Four
+`features` patches read the body and one `response` patch reads them; the two
+populations settle against each other, so the forecast is one equilibrium of
+five patches. Teaching, readiness checks and final probes use different
+inputs. Predictions come from the settled brain; the simulator supplies only
+measured teaching and test values.
 
 ```python
 from cadence import Brain, Cortex, bootstrap
@@ -136,7 +147,8 @@ def measurements(positions, velocities):
 
 layout = Cortex(seed=2)
 body = layout.input("body", shape=2)
-response = layout.column("response", patches=1, inputs=body)
+features = layout.column("features", patches=4, inputs=body)
+response = layout.column("response", patches=1, inputs=features)
 layout.output("next_position", shape=1, reads=response)
 brain = layout.build()
 
@@ -180,11 +192,11 @@ predictions without targets.
 
 ## Run the current examples
 
-From a checkout of this release:
+From a checkout of this version:
 
 ```sh
 python -m pip install -e .
-python examples/layout_learning.py --layout flat
+python examples/layout_learning.py
 python examples/layout_learning.py --layout deep
 python examples/live_control.py --decisions 20 --seed 0
 python examples/live_learning.py --seeds 0 2 7
@@ -192,7 +204,7 @@ python examples/live_learning.py --seeds 0 2 7
 
 | Example | What you can verify |
 | --- | --- |
-| [Layout learning](examples/layout_learning.py) | Start flat, then try ordinary deep layers; check fresh predictions, work and exact saved continuation. The optional `--layout recursive` experiment has different capacity and does not establish an advantage. |
+| [Layout learning](examples/layout_learning.py) | Start with the two-population brain, then try deeper composition; check fresh predictions, work and exact saved continuation. The optional `--layout recursive` experiment has different capacity and does not establish an advantage. |
 | [Learned body control](examples/live_control.py) | Bootstrap a body model, select actions through explicit candidate search, execute them and admit actual outcomes. |
 | [History, retention and rewards](examples/live_learning.py) | Separate small tests of explicit sensory history, old-skill replay, reward learning/reversal and saved continuation. |
 
@@ -204,9 +216,9 @@ Neither is an automatic planner or a guarantee of long-term success.
 The [public demos](https://github.com/muellerberndt/cadence-demos) also include
 Amen, Atari, Patch World and Doom experiments. Their original engines and
 results have different versions and representations. They are **historical
-application evidence**, not completed reproductions on 0.60.0. In particular,
-the original Amen record-cell brain is not equivalent to one current flat
-patch. Consult the [versioned performance evidence](docs/PERFORMANCE.md) and
+application evidence**, not completed reproductions on `0.61.0`. In particular,
+the original Amen record-cell brain is not equivalent to one current
+population. Consult the [versioned performance evidence](docs/PERFORMANCE.md) and
 [current capability boundary](docs/EXPERIMENTAL.md) before comparing them.
 
 ## Learn more
@@ -214,7 +226,7 @@ patch. Consult the [versioned performance evidence](docs/PERFORMANCE.md) and
 | Guide | What it helps you do |
 | --- | --- |
 | [Quickstart](docs/QUICKSTART.md) | Build, teach, query and save your first brain |
-| [Layout quickstarts](docs/VARIANTS.md) | Construct recommended flat and ordinary deep networks, then optional observer experiments |
+| [Layout quickstarts](docs/VARIANTS.md) | Construct coupled and deeper populations, then optional observer experiments |
 | [Experimental capabilities](docs/EXPERIMENTAL.md) | Understand observer costs, unfinished System 2 behavior and current evidence limits |
 | [Brain design](docs/BRAIN_DESIGN.md) | Choose sufficient observations, connected capacity and useful evaluation checks |
 | [Bootstrapping](docs/BOOTSTRAP.md) | Prepare a skill and measure acquisition, retention and learning cost |
@@ -229,8 +241,9 @@ and comparative efficiency require measured task evidence.
 
 ## Development
 
-Changes follow **minimalism**, **user-friendliness** and **agent-friendliness**.
-See the [contributor instructions](AGENTS.md).
+Changes follow **minimalism**, **user-friendliness** and **agent-friendliness**,
+and the principle in the [contributor instructions](AGENTS.md): every brain is
+one equilibrium of patches settling against each other.
 
 ```sh
 python -m pip install -e ".[dev]"

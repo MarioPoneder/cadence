@@ -21,7 +21,8 @@ def digit_limit():
 def small_brain():
     layout = Cortex()
     signal = layout.input("signal", shape=1)
-    state = layout.column("state", patches=1, inputs=signal)
+    features = layout.column("features", patches=2, inputs=signal)
+    state = layout.column("state", patches=1, inputs=features)
     layout.output("answer", shape=1, reads=state)
     return layout.build()
 

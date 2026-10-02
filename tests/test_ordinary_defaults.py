@@ -22,16 +22,14 @@ def ordinary(depth, *, fan_in=None):
     return layout.build()
 
 
-@pytest.mark.parametrize("depth", (1, 3))
+@pytest.mark.parametrize("depth", (2, 3))
 @pytest.mark.parametrize("fan_in", (None, 1))
 def test_ordinary_depth_never_adds_observed_error_contacts(depth, fan_in):
     brain = ordinary(depth, fan_in=fan_in)
     assert brain.graph.n_patches == 3 * depth
     assert all(p["role"] == "processing" for p in brain.inspect()["populations"])
     assert all(not p["observes"] for p in brain.inspect()["populations"])
-    assert {kind for kind, _, _ in brain.graph.edges} == (
-        {"input"} if depth == 1 else {"input", "state"}
-    )
+    assert {kind for kind, _, _ in brain.graph.edges} == {"input", "state"}
     for kind, source, target in brain.graph.edges:
         if kind == "state":
             assert source // 3 == target // 3 - 1
@@ -39,7 +37,7 @@ def test_ordinary_depth_never_adds_observed_error_contacts(depth, fan_in):
         assert len(brain.graph.edges) == 6 + 9 * (depth - 1)
 
 
-@pytest.mark.parametrize("depth", (1, 3))
+@pytest.mark.parametrize("depth", (2, 3))
 def test_unchanged_retained_input_skips_proposals_but_not_full_checks(
     monkeypatch, depth
 ):
@@ -166,7 +164,7 @@ def test_generic_examples_construct_only_ordinary_populations(
         getattr(module, entry)(*args)
 
 
-def test_layout_cli_defaults_to_flat_and_keeps_explicit_research_choices(
+def test_layout_cli_defaults_to_the_small_brain_and_keeps_explicit_research_choices(
     monkeypatch, capsys
 ):
     module = example("layout_learning")
@@ -177,8 +175,8 @@ def test_layout_cli_defaults_to_flat_and_keeps_explicit_research_choices(
         lambda kind, **kwargs: selected.append(kind) or {"layout": kind},
     )
     module.main([])
-    assert selected == ["flat"]
-    assert json.loads(capsys.readouterr().out) == [{"layout": "flat"}]
+    assert selected == ["small"]
+    assert json.loads(capsys.readouterr().out) == [{"layout": "small"}]
     selected.clear()
     module.main(["--layout", "all"])
     assert selected == list(module.LAYOUTS)

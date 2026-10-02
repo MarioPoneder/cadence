@@ -1,19 +1,20 @@
-# Flat, composed and recursive brains: capability and cost
+# Small, deep and recursive brains: capability and cost
 
 **Start with the least expensive layout that learns the required behavior.**
-Start with ordinary flat columns; use ordinary deep composition when a direct
-relation is insufficient. Either can support a System 1 routine. Flat queries
-can be inexpensive, but no layout guarantees application latency. Recursive
-observation is [experimental opt-in](EXPERIMENTAL.md); an advantage over capable
-ordinary layers has not been established.
+Every Cadence brain is one coupled settlement: the builder refuses a population
+that settles with no other population, so the smallest brain has two
+populations. Use deeper composition when a direct relation is insufficient.
+Either can support a System 1 routine. Small layouts can be inexpensive, but no
+layout guarantees application latency. Recursive observation is
+[experimental opt-in](EXPERIMENTAL.md); an advantage over capable state-coupled
+layers has not been established.
 
-**Flat, ordinary deep and recursively observing layouts all perform
-settlement in 0.60.0.** Recursive observation is optional wiring,
-not a requirement for the patch/repair mechanism. Each layout uses the same
-public `settle`/`step` operations and final stationarity check. Observers join
-every solve; the public runtime does not automatically put them to sleep
+**Every `0.61.0` layout performs settlement.** Recursive observation is optional
+wiring, not a requirement for the patch/repair mechanism. Each layout uses the
+same public `settle`/`step` operations and final stationarity check. Observers
+join every solve; the public runtime does not automatically put them to sleep
 during routine responses.
-The [design-pattern guide](VARIANTS.md) introduces the three choices with
+The [design-pattern guide](VARIANTS.md) introduces the choices with
 runnable examples; this page explains their cost and supporting evidence.
 Recorded benchmarks below retain their original source identities and versions,
 including 0.50.0; they are not automatically new-version results.
@@ -26,34 +27,36 @@ substrate: bounded local state, incoming ports, records of admitted experience,
 readback, and qualified feedback/repair. Their connections determine how much
 of that structure participates in each answer.
 
-## What “flat” means
+## What the demo history calls a patch
 
 Several different mechanisms appear in the demo history. Count the computation
-actually executed, rather than treating every use of “patch” as the same model.
+actually executed, rather than treating every use of "patch" as the same model.
 
 | Mechanism | Computation for an answer | Relevant distinction |
 | --- | --- | --- |
 | Legacy gated record patch | An explicit context update, record lookup and readout | May retain temporal state without an observer hierarchy or iterative DRSN settlement |
-| Current input-only flat population | Independent predictions from fixed sensors, with a separable state objective | No state or error contacts between patches |
-| Current ordinary composition | Populations read other populations' live states | States are coupled even with no error-reading observers |
+| Input-only population (refused since 0.61.0) | Independent predictions from fixed sensors, with a separable state objective | No state or error contacts between patches: not a brain |
+| Current coupled composition | Populations read other populations' live states | States are coupled even with no error-reading observers |
 | Current recursive observation | Observers read live states and exact errors; observers may observe observers | Error dependencies participate in the same coupled objective and returning derivatives |
 
-An output of an input-only flat population does not use its neighbors merely
-because they share a population. One directly sensing output patch represents
-a bounded nonlinear function of an affine sensory combination. Unused patches
-are not a hidden layer. Add ordinary composition when the task needs a learned
-intermediate representation; then test whether state-and-error observation adds
-value beyond that representation. See [layout choices](VARIANTS.md).
+Patches within one population do not read each other. A population that reads
+only sensors and is read by nobody therefore settles nothing between patches;
+each of its patches is a bounded nonlinear function of an affine sensory
+combination, and the group is a set of independent regressions. Since `0.61.0`
+the builder refuses such a layout. Add a population that reads it, or let it
+read one, and test whether state-and-error observation adds value beyond that
+coupling. See [layout choices](VARIANTS.md).
 
 A loop through an environment, temporal context inside a patch, game-tree
 search and recursive observation are also different kinds of recurrence.
 A model can have the first three without an observer observing an observer.
 
-## Why an input-only query is cheap
+## Why an uncoupled population is not a brain
 
-During a query, parameters and sensory inputs are fixed. If every patch reads
+During a query, parameters and sensory inputs are fixed. If a patch reads
 only those inputs, its prediction `p_i` is independent of the adjustable
-states. The state objective separates into scalar quadratics:
+states, and if nothing reads the patch, nothing else depends on its state.
+Its term of the energy separates into a scalar quadratic:
 
 ```text
 p_i = tanh(b_i + sum_j w_ij * input_j)
@@ -61,20 +64,18 @@ E_i = 1/2 * (x_i - p_i)^2 + state_prior/2 * x_i^2
 x_i* = clip(p_i / (1 + state_prior), -state_bound, state_bound)
 ```
 
-This is the exact minimum for each free coordinate in that restricted query.
-Clamped coordinates remain fixed. The positive state prior remains part of the
-model; simply returning `p_i` would change the answer.
+This is the exact minimum for such a coordinate. A population of such patches
+has a closed-form answer and no equilibrium to find; that is why the builder
+refuses a brain made only of them, and a group of populations that settles
+apart from the rest, and why the old flat demos' speed says nothing about
+settlement. A sensing population that another population reads
+keeps the same closed-form prediction `p_i`, but its states now also carry the
+reader's constraint, and the joint repair settles them together. The query
+cache described below reuses only the invariant predictions; the states, errors
+and returning derivatives remain live.
 
-The reference implementation still sends this layout through its common repair
-and qualification procedure. It does not dispatch to a special flat solver.
-For an interior quadratic, its scalar secant step can find the correct curvature
-quickly. The small query comparison below takes two accepted sweeps for every
-input-only flat call. The independent closed-form check validates the answer;
-its arithmetic-only timing is not a public-API latency measurement.
-
-This shortcut does **not** apply to general composed/observing queries, or to
-learning that makes weights and biases eligible. A fast frozen-parameter query
-therefore does not establish equally cheap `observe` or `observe_batch` calls.
+This shortcut does **not** apply to coupled queries, or to learning that makes
+weights and biases eligible.
 
 ## Where coupled settlement spends time
 
@@ -118,20 +119,20 @@ from unchanged initial activity, with no teaching or task-quality score.
 
 | Layout | Edges / parameters | Median query ms | Median accepted sweeps |
 | --- | ---: | ---: | ---: |
-| Input-only flat | 24 / 30 | 0.180 | 2 |
+| Input-only (refused since 0.61.0) | 24 / 30 | 0.180 | 2 |
 | Ordinary composition | 16 / 22 | 0.426 | 8 |
 | Ordinary composition with sensory skip | 24 / 30 | 0.429 | 8 |
 | Two observer levels | 24 / 30 | 0.404 | 6 |
 
 These are small local measurements on macOS 15.3 arm64 with Python 3.13.0,
 under shared-host load, not portable latency promises. All 144 calls qualified.
-Flat, skipped composition and recursive layouts match patch, edge and parameter
-counts; their wiring and representational
-capacity still differ. The skipped control adds direct sensory access to the
+The input-only, skipped composition and recursive layouts match patch, edge and
+parameter counts; their wiring and representational capacity still differ. The skipped control adds direct sensory access to the
 last population to match connection count, which is itself an architectural
 choice. Identical counts do not make the learned functions identical.
 
-Flat is fastest in this screen. Recursive is slightly faster than the composed
+The input-only arm is fastest in this screen, as its closed form predicts; it
+is a cost reference, not a brain. Recursive is slightly faster than the composed
 controls at the median. Observer depth alone does not predict the measured
 latency: wiring and convergence matter too. The receipt preserves each call,
 refusal/error outcomes, work, timing, runtime and source hashes. It demonstrates cost mechanisms,
@@ -224,7 +225,7 @@ preserves the versions, source hashes, task conditions and numerical summaries.
   and goal error. These are system-identification results with an external
   probe controller, not autonomous robot-control deadlines.
 
-These examples support fast flat learners on some useful tasks. They do not
+These examples support fast small learners on some useful tasks. They do not
 establish that recursion always helps or never helps. A claim that a recursive
 model is “smarter” should name the improved task, the control, the training
 budget and the additional inference/learning cost. For Connect Four, hold the
@@ -243,11 +244,12 @@ observations. Measure elapsed time as well as edge visits: cache setup and copie
 cost time but are not edge traversals. This numerical optimization is not learned
 attention or evidence of improved behavior.
 
-1. Establish a small flat baseline with the actual available sensors. Measure
-   useful behavior after bootstrapping, including refusal and failure cases.
-2. Add ordinary composition if the direct mapping lacks a useful representation.
-   Keep recursive layouts as a separate opt-in experiment, with capable ordinary
-   controls before attributing any gain to error readback.
+1. Establish the smallest coupled baseline with the actual available sensors:
+   a sensing population read by the output population. Measure useful behavior
+   after bootstrapping, including refusal and failure cases.
+2. Add composition if the direct mapping lacks a useful representation.
+   Keep recursive layouts as a separate opt-in experiment, with capable
+   state-coupled controls before attributing any gain to error readback.
 3. Keep width, edge/parameter counts, history, target access, starting checkpoint,
    tolerance and backend visible. Match relevant capacity and information; also
    compare within the same elapsed-time budget. Include all training selection.

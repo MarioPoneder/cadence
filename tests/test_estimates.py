@@ -15,7 +15,7 @@ def learner(*, recursive=False):
     top = (
         cortex.observer("top", patches=2, inputs=signal, observes=base)
         if recursive
-        else base
+        else cortex.column("top", patches=2, inputs=(signal, base))
     )
     cortex.output("answer", shape=1, reads=top)
     return cortex.build()
@@ -197,4 +197,4 @@ def test_estimated_labels_can_teach_unclamped_predictions_without_becoming_facts
         assert abs(output - 0.6 * value) < 0.08
     # This checks acquisition of the supplied relation, not its truth in a world.
     assert brain.inspect()["admissions"] == 20
-    assert brain.state == (0.0, 0.0)
+    assert brain.state == (0.0, 0.0, 0.0, 0.0)

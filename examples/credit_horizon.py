@@ -25,7 +25,7 @@ def digest(path):
 
 def make(seed, delay):
     return Reinforcement(
-        layout(1 + 2 * delay, seed, "flat", ("q0", "q1")),
+        layout(1 + 2 * delay, seed, "ordinary", ("q0", "q1")),
         actions=2,
         action_input=None,
         value_output=("q0", "q1"),

@@ -231,14 +231,65 @@ class Cortex:
         return node
 
     def build(self):
-        """Resolve declared wiring once and construct one jointly settling brain."""
+        """Resolve declared wiring once and construct one jointly settling brain.
+
+        Every population must settle with another population: it reads another
+        population's states or errors, or another population reads it. A brain
+        is one equilibrium of patches settling against each other; a population
+        that only reads sensors and is read by nobody would be a set of
+        independent regressions outside that equilibrium, and build refuses it.
+        """
         return self._compile(self.config["max_connections"])
+
+    def _require_settlement_between_populations(self):
+        """One brain is one connected equilibrium of populations.
+
+        Every population must read another population's states or errors, or
+        be read by one, and the reads must connect all populations into one
+        component. A population that settles with no other population, or a
+        cluster that settles apart from the rest, would be a separate set of
+        regressions outside the brain's equilibrium.
+        """
+        neighbours = {p.name: set() for p in self._populations}
+        for population in self._populations:
+            for source in (*population.inputs, *population.observes):
+                if isinstance(source, Population):
+                    neighbours[population.name].add(source.name)
+                    neighbours[source.name].add(population.name)
+        for population in self._populations:
+            if not neighbours[population.name]:
+                raise ValueError(
+                    f"Population {population.name!r} settles with no other "
+                    "population: it reads only sensors and no population reads "
+                    "it. A Cadence brain is one equilibrium of patches settling "
+                    "against each other, so every population must read another "
+                    "population's states (inputs=...) or errors (observes=...), "
+                    "or be read by one. Add a population that reads it, or let "
+                    "it read one."
+                )
+        reached, frontier = set(), [self._populations[0].name]
+        while frontier:
+            name = frontier.pop()
+            if name in reached:
+                continue
+            reached.add(name)
+            frontier.extend(neighbours[name] - reached)
+        apart = [p.name for p in self._populations if p.name not in reached]
+        if apart:
+            raise ValueError(
+                f"Populations {apart} settle apart from the rest: no read "
+                "connects them to the other populations, so they would form a "
+                "separate equilibrium. A Cadence brain is one connected "
+                "equilibrium; connect every cluster to the rest through "
+                "inputs=... or observes=..."
+            )
 
     def _compile(self, edge_limit):
         if self._built or not self._populations or not self._outputs:
             raise ValueError(
                 "Build requires an unbuilt layout with patches and outputs"
             )
+        self._require_settlement_between_populations()
         rng = random.Random(self.config["seed"])
         input_ranges, population_ranges = {}, {}
         n_inputs = n_patches = 0

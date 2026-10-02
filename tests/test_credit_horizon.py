@@ -11,7 +11,8 @@ from cadence import Cortex, Reinforcement
 def learner(horizon=8, **options):
     c = Cortex(seed=2)
     sensor = c.input("observation", shape=1)
-    values = c.column(patches=2, inputs=sensor)
+    hidden = c.column(patches=2, inputs=sensor)
+    values = c.column(patches=2, inputs=hidden)
     for action in range(2):
         c.output(f"q{action}", shape=(), reads=values, indices=(action,))
     return Reinforcement(

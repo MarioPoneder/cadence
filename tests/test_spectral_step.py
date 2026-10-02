@@ -255,7 +255,8 @@ def test_roundoff_finish_must_pass_a_fresh_check_before_admission(monkeypatch):
 
     cortex = Cortex(step=0.25)
     sensor = cortex.input("input", shape=1)
-    population = cortex.column("patch", patches=1, inputs=sensor)
+    sensing = cortex.column("sensing", patches=1, inputs=sensor)
+    population = cortex.column("patch", patches=1, inputs=sensing)
     cortex.output("answer", shape=1, reads=population)
     brain = cortex.build()
     before = brain.snapshot()
@@ -265,7 +266,7 @@ def test_roundoff_finish_must_pass_a_fresh_check_before_admission(monkeypatch):
     def changing_final_check(graph, inputs, state, weights, biases, *args, **kwargs):
         nonlocal proposal_evaluations
         result = original(graph, inputs, state, weights, biases, *args, **kwargs)
-        moved = biases != (0.0,)
+        moved = any(b != 0.0 for b in biases)
         if moved:
             proposal_evaluations += 1
         # The first evaluation qualifies the roundoff finish. A subsequent
@@ -273,9 +274,11 @@ def test_roundoff_finish_must_pass_a_fresh_check_before_admission(monkeypatch):
         # the earlier cached result instead of checking the complete proposal.
         gradient = 0.0 if proposal_evaluations == 1 else 1e-5
         result["energy"] = math.nextafter(1.0, math.inf) if moved else 1.0
-        result["gradient_state"] = (0.0,)
-        result["gradient_weights"] = (0.0,)
-        result["gradient_biases"] = (gradient if moved else 1.0,)
+        result["gradient_state"] = (0.0,) * len(state)
+        result["gradient_weights"] = (0.0,) * len(weights)
+        result["gradient_biases"] = (gradient if moved else 1.0,) + (0.0,) * (
+            len(biases) - 1
+        )
         return result
 
     monkeypatch.setattr(_repair, "_evaluate", changing_final_check)

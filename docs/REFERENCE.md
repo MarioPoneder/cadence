@@ -24,10 +24,11 @@ existing brain methods; it adds no solver or phase state. `memory.py` holds
 explicit history and error-progress bookkeeping; `reinforcement.py` supplies
 discrete-action Q-learning orchestration; `runtime.py` supplies serial live
 scheduling and actuator rate limits. These helpers preserve the patch equation.
-This reference describes `0.60.0`. Start with the
+This reference describes `0.61.0`. Start with the
 [quickstart](QUICKSTART.md), then the [ordinary layout examples](VARIANTS.md).
-Flat and ordinary deep columns are the recommended application path; ordinary
-depth can support a System 1 routine. The [architecture guide](DRSN.md) explains
+Coupled populations are the application path; depth can support a System 1
+routine. `build()` refuses a population that settles with no other population
+and a group of populations that settles apart from the rest. The [architecture guide](DRSN.md) explains
 the equations, and the [experimental boundary](EXPERIMENTAL.md) distinguishes
 observer wiring from unimplemented automatic System 2 behavior.
 
@@ -96,7 +97,7 @@ trajectories and cost, not the declared patch law. See [acceleration](ACCELERATI
 | `column(name=None, *, patches, inputs=())` | A `Population` containing exactly `patches` processing patches, a positive integer. `inputs` accepts existing sensor or population references. |
 | `observer(name=None, *, patches, inputs=(), observes)` | Explicit experimental readback using the same patch primitive, with at least one observed population. Reads its live states and exactly recomputed prediction errors in every joint solve; may also receive ordinary `inputs`. |
 | `output(name, *, shape, reads, indices=None)` | An `Output` exposing selected coordinates of one population, with no separate output network. |
-| `build()` | A `Brain` with resolved sparse wiring. Requires at least one population and one output. A successful build freezes the layout; further construction or another build raises `ValueError`. |
+| `build()` | A `Brain` with resolved sparse wiring. Requires at least one output and populations joined into one connected system through state or error contacts: every population must read another population's states or errors or be read by one, and no group of populations may settle apart from the rest. A single population, an unread sensors-only population or a disconnected group raises `ValueError` naming the defect. A successful build freezes the layout; further construction or another build raises `ValueError`. |
 
 Names are unique across node types, valid UTF-8 strings of 1–256 characters.
 `None` generates a name using the node type and an unused positive integer.
@@ -551,7 +552,7 @@ Reinforcement(
 ```
 
 The helper originated in 0.50.0; `credit_horizon` and explicit executed-outcome
-acknowledgments below are available in `0.60.0`. With the default
+acknowledgments below are available in `0.61.0`. With the default
 action-conditioned form, the compiled
 `brain` needs an `action_input` sensor with exactly `actions` coordinates and a `value_output`
 selecting one scalar patch state. With `action_input=None`, `value_output`

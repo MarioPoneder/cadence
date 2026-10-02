@@ -1,9 +1,9 @@
 # Experimental features and the System 2 boundary
 
-**`0.60.0` recommends ordinary flat or deep settling networks for
-applications.** Build them with `Cortex.column`, teach through `bootstrap` or
-`observe`, and use `step` to retain qualified live activity. Add ordinary depth
-when it improves the task. No extra mode, critic or attention scheduler is
+**`0.61.0` recommends coupled settling populations for applications.** Build
+them with `Cortex.column`, two populations at least, teach through `bootstrap`
+or `observe`, and use `step` to retain qualified live activity. Add depth when
+it improves the task. No extra mode, critic or attention scheduler is
 required. See the [quickstart](QUICKSTART.md) and [brain design](BRAIN_DESIGN.md).
 
 ## System 2 warning
@@ -15,9 +15,9 @@ not put an observer to sleep during familiar behavior, wake it only on
 surprise, or let it run at an independent speed. An observer's presence does
 not establish useful correction or a benefit over capable ordinary layers.
 
-Keep ordinary learned routine (System 1) dominant. For most tasks, use flat
-or ordinary deep layers without self-observation. Ordinary depth remains a
-coupled settling network and can require additional work; measure held-out
+Keep learned routine (System 1) dominant. For most tasks, use coupled
+populations without error readback. Every layout is a coupled settling network
+and can require additional work; measure held-out
 quality and complete decision latency before adding capacity. A small
 settlement residual establishes numerical qualification, not success at the
 task. Repeated qualified `step` calls may need zero repair sweeps while still
@@ -35,7 +35,7 @@ goal → useful correction → retained, inexpensive routine. Predictable failur
 must still matter. The private timing and learning experiments linked from
 [issue 72](https://github.com/muellerberndt/cadence/issues/72) do not yet
 demonstrate that complete cycle or a measured recursive advantage. They are
-not part of this release's public runtime. The stable 0.60.0 package recommends
+not part of this release's public runtime. The stable 0.61.0 package recommends
 ordinary networks; the complete System 2 capability requirements remain open.
 The package version does not certify those experimental capabilities.
 

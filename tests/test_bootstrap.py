@@ -243,7 +243,8 @@ def test_admission_refusal_preserves_previous_successful_witnesses(monkeypatch):
 def test_scalar_multidimensional_partial_targets_and_aliases_score_actual_coordinates():
     cortex = Cortex(seed=7)
     sensor = cortex.input("image", shape=(1, 2))
-    column = cortex.column("coordinates", patches=2, inputs=sensor)
+    base = cortex.column("base", patches=2, inputs=sensor)
+    column = cortex.column("coordinates", patches=2, inputs=base)
     grid = cortex.output("grid", shape=(1, 2), reads=column, indices=(1, 0))
     alias = cortex.output("alias", shape=(), reads=column, indices=(0,))
     brain = cortex.build()
@@ -275,7 +276,8 @@ def test_scalar_multidimensional_partial_targets_and_aliases_score_actual_coordi
 def test_scalar_sensor_and_witness_remain_scalars_during_learning():
     cortex = Cortex(seed=2)
     sensor = cortex.input("scalar", shape=())
-    column = cortex.column("relation", patches=1, inputs=sensor)
+    base = cortex.column("base", patches=2, inputs=sensor)
+    column = cortex.column("relation", patches=1, inputs=base)
     output = cortex.output("scalar_answer", shape=(), reads=column)
     brain = cortex.build()
     examples = [({sensor: value}, {output: value}) for value in (-0.6, 0.6)]

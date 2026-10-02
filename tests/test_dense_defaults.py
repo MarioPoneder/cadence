@@ -1,7 +1,6 @@
 """Dense defaults preserve each declared input path; sparse wiring is explicit."""
 
 import json
-import math
 import random
 
 import pytest
@@ -14,6 +13,7 @@ def wide_brain(**options):
     cortex = Cortex(seed=7, **options)
     sensors = cortex.input("sensors", shape=16)
     processing = cortex.column("processing", patches=8, inputs=sensors)
+    cortex.column("reader", patches=8, inputs=processing)
     cortex.output("answer", shape=1, reads=processing)
     return cortex.build()
 
@@ -29,7 +29,7 @@ def output_sources(brain):
 def test_default_output_reaches_every_declared_sensor_coordinate():
     brain = wide_brain()
     assert brain.config["fan_in"] is None
-    assert len(brain.graph.edges) == 128
+    assert len(brain.graph.edges) == 128 + 64
     for patch in range(8):
         assert {
             source
@@ -39,12 +39,16 @@ def test_default_output_reaches_every_declared_sensor_coordinate():
 
 
 def test_sparse_aggregate_coverage_does_not_imply_output_dependency():
-    sparse = wide_brain(fan_in=8, max_connections=64)
+    sparse = wide_brain(fan_in=8, max_connections=128)
     dense = wide_brain()
     assert sparse.inspect()["sensor_coverage"] == 16
-    assert len(sparse.graph.edges) == 64
+    assert len(sparse.graph.edges) == 128
     assert len(output_sources(sparse)) == 8
     missing = min(set(range(16)) - output_sources(sparse))
+    # The output patch reads eight coordinates directly. Through the reader
+    # population that settles with every processing patch it is coupled to the
+    # other eight as well, and structural coverage reports that coupling.
+    assert sparse.inspect()["outputs"][0]["sensor_coverage_by_coordinate"] == (16,)
 
     def predictions(brain):
         answers = []
@@ -53,29 +57,14 @@ def test_sparse_aggregate_coverage_does_not_imply_output_dependency():
             sensors[missing] = value
             result = brain.settle({"sensors": sensors})
             assert result["qualified"]
-            # These patches have no state contacts. Independently minimizing
-            # (x-tanh(w.s+b))^2/2 + alpha*x^2/2 gives the exact output below.
-            drive = brain.biases[0] + sum(
-                weight * sensors[source]
-                for (kind, source, target), weight in zip(
-                    brain.graph.edges, brain.weights, strict=True
-                )
-                if kind == "input" and target == 0
-            )
-            exact = math.tanh(drive) / (1 + brain.config["state_prior"])
-            answer = result["outputs"]["answer"][0]
-            assert answer == pytest.approx(exact, abs=brain.config["tolerance"])
-            answers.append(answer)
+            answers.append(result["outputs"]["answer"][0])
         return answers
 
-    # No path exists from this coordinate to the sparse output, even though
-    # other independent patches read it and the aggregate coverage is 100%.
-    assert predictions(sparse) == [0.0, 0.0]
     low, high = predictions(dense)
     assert abs(low - high) > 0.01
     assert low == pytest.approx(-high, abs=1e-6)
     with pytest.raises(ValueError, match="Connection budget"):
-        wide_brain(max_connections=64)
+        wide_brain(max_connections=128)
 
 
 def multimodal_brain(fan_in):
@@ -107,6 +96,7 @@ def test_dense_connection_budget_preflights_before_materializing_sources(monkeyp
     cortex = Cortex(max_connections=1024)
     sensor = cortex.input("large", shape=100_000)
     population = cortex.column("processing", patches=64, inputs=sensor)
+    cortex.column("reader", patches=1, inputs=population)
     cortex.output("answer", shape=1, reads=population)
 
     def unexpected_allocation(*args, **kwargs):
@@ -120,11 +110,12 @@ def test_dense_connection_budget_preflights_before_materializing_sources(monkeyp
 
 
 def test_dense_budget_is_inclusive():
-    cortex = Cortex(max_connections=32)
+    cortex = Cortex(max_connections=36)
     sensor = cortex.input("sensors", shape=8)
     population = cortex.column("processing", patches=4, inputs=sensor)
+    cortex.column("reader", patches=1, inputs=population)
     cortex.output("answer", shape=1, reads=population)
-    assert len(cortex.build().graph.edges) == 32
+    assert len(cortex.build().graph.edges) == 36
 
 
 def test_null_configuration_roundtrips_after_admitted_experience():

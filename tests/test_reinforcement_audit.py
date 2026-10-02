@@ -8,14 +8,15 @@ from cadence import Brain, Cortex, Reinforcement
 def learner(*, vector=False, discount=0.0, horizon=1):
     c = Cortex(seed=7)
     x = c.input("x", shape=1)
+    h = c.column("h", patches=2, inputs=x)
     if vector:
-        q = c.column("values", patches=2, inputs=x)
+        q = c.column("values", patches=2, inputs=h)
         c.output("left", shape=1, reads=q, indices=(0,))
         c.output("right", shape=1, reads=q, indices=(1,))
         options = {"action_input": None, "value_output": ("left", "right")}
     else:
         a = c.input("action", shape=2)
-        q = c.column("q", patches=1, inputs=(x, a))
+        q = c.column("q", patches=1, inputs=(h, a))
         c.output("value", shape=1, reads=q)
         options = {}
     return Reinforcement(
@@ -45,12 +46,14 @@ def acknowledge(agent, reward, following, *, terminal=False):
     return decision
 
 
-def test_real_zero_budget_immediate_fit_cannot_be_blocked_by_future_refusal():
+def test_real_exact_budget_immediate_fit_cannot_be_blocked_by_future_refusal():
     agent = learner()
     decision = agent.act({"x": [0.2]}, explore=False)
-    # This actual bounded reward gives a fully qualified current-row fit. A
-    # different future input is deliberately not settled at the current state.
-    target = decision["settlement"]["predictions"][0]
+    # The target is the value patch's own free prediction, a bounded actual
+    # reward. The fit is solved once on a reference copy; replay then receives
+    # exactly the sweeps that fit needed. A query for the different future input
+    # would cost additional work, so equal work shows that none was made.
+    target = decision["settlement"]["predictions"][-1]
     reward = target / agent.config["value_scale"]
     agent.feedback(
         reward,
@@ -66,10 +69,9 @@ def test_real_zero_budget_immediate_fit_cannot_be_blocked_by_future_refusal():
     fit = reference.observe_batch(
         [({"x": [0.2], "action": action}, {"value": (actual_target,)})],
         source="estimate",
-        budget=0,
     )
-    assert fit["accepted"] and fit["stationarity"] == 0
-    result = agent.replay(budget=0)
+    assert fit["accepted"] and fit["qualified"]
+    result = agent.replay(budget=fit["sweeps"])
     assert result["accepted"] and result["qualified"]
     assert result["credit_stops"] == ("zero_discount",)
     assert result["credit_horizons"] == (1,)

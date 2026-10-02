@@ -1,15 +1,15 @@
 # Use a learned brain with an actual body
 
-Install **0.60.0** as shown in the [quickstart](QUICKSTART.md). This guide
+Install **0.61.0** as shown in the [quickstart](QUICKSTART.md). This guide
 covers live observations, actions, outcomes and continued learning using the
 existing public API. Begin with a skill that passes free assessment;
 [bootstrapping](BOOTSTRAP.md) explains how to acquire and check one.
 
-Use flat or ordinary deep columns for an application routine. Named observations
-go in, qualified outputs come out, and actual consequences supply experience.
-Ordinary depth can support System 1; it does not imply System 2 or a latency
-guarantee. Every population uses the same processing-patch rule and participates
-in one coupled solve.
+Use coupled populations for an application routine. Named observations go in,
+qualified outputs come out, and actual consequences supply experience. Depth can
+support System 1; it does not imply System 2 or a latency guarantee. Every
+population uses the same processing-patch rule and participates in one coupled
+solve.
 
 Recursive observers are [experimental opt-in](EXPERIMENTAL.md). They join every
 solve and can slow routine responses; the public runtime does not automatically
@@ -32,7 +32,8 @@ def body(position, command):
 
 layout = Cortex(seed=2)
 senses = layout.input("senses", shape=2)  # current position, actual command
-prediction = layout.column("prediction", patches=1, inputs=senses)
+features = layout.column("features", patches=4, inputs=senses)
+prediction = layout.column("prediction", patches=1, inputs=features)
 layout.output("next_position", shape=1, reads=prediction)
 brain = layout.build()
 
@@ -138,7 +139,8 @@ from cadence import Reinforcement
 
 choices = Cortex(seed=2)
 position_sensor = choices.input("position", shape=1)
-values = choices.column("values", patches=2, inputs=position_sensor)
+situation = choices.column("situation", patches=2, inputs=position_sensor)
+values = choices.column("values", patches=2, inputs=situation)
 for i, name in enumerate(("left", "right")):
     choices.output(name, shape=(), reads=values, indices=(i,))
 learner = Reinforcement(
@@ -458,7 +460,7 @@ python examples/live_control.py
 ```
 
 These are small capability checks, not a complete pet or proof that recursion
-beats a flat model. The tests cover hidden-cue recall through explicit history,
+beats a state-coupled model. The tests cover hidden-cue recall through explicit history,
 delayed reward and reversal, replay retention, saved continuation, consequence
 prediction, numerical refusal and stale-command handling. Longer memory,
 continuous-action reinforcement, learned planning and a browser creature remain
@@ -471,8 +473,8 @@ separate demonstrations.
 - **Recall from supplied history.** Opposite cues precede identical distractor
   suffixes and final observations. Delays are 2, 4 and 8 ticks; `History` contains
   `delay + 1` frames. Reserved tests use new cue amplitudes and distractors.
-  Flat, ordinary-connected and observing layouts each have four patches, with
-  different contacts and parameter counts. Retained activity, reset activity
+  State-coupled and observing layouts each have four patches, with different
+  contacts and parameter counts. Retained activity, reset activity
   and removed-history controls distinguish explicit context from native memory.
 - **Delayed reward.** Two actions are available; only the final transition
   rewards the first choice. Sensors disclose the current stage and first

@@ -43,16 +43,13 @@ class Work:
 def layout(size, seed, architecture, outputs):
     cortex = Cortex(seed=seed, parameter_prior=0.02, tolerance=1e-5)
     senses = cortex.input("senses", shape=size)
-    if architecture == "flat":
-        values = cortex.column(patches=4, inputs=senses)
+    base = cortex.column(patches=2, inputs=senses)
+    if architecture == "ordinary":
+        values = cortex.column(patches=2, inputs=(senses, base))
+    elif architecture == "observer":
+        values = cortex.observer(patches=2, inputs=senses, observes=base)
     else:
-        base = cortex.column(patches=2, inputs=senses)
-        if architecture == "ordinary":
-            values = cortex.column(patches=2, inputs=(senses, base))
-        elif architecture == "observer":
-            values = cortex.observer(patches=2, inputs=senses, observes=base)
-        else:
-            raise ValueError("Unknown architecture")
+        raise ValueError("Unknown architecture")
     for index, name in enumerate(outputs):
         cortex.output(name, shape=(), reads=values, indices=(index,))
     return cortex.build()
@@ -182,7 +179,7 @@ def credit_case(seed, delay, mode, *, episodes=60, preferred=1):
     work = Work()
     discount = 0.0 if mode == "no_bootstrap" else 0.8
     learner = Reinforcement(
-        layout(1 + 2 * delay, seed, "flat", ("q0", "q1")),
+        layout(1 + 2 * delay, seed, "ordinary", ("q0", "q1")),
         actions=2,
         action_input=None,
         value_output=("q0", "q1"),
@@ -314,7 +311,7 @@ def run(seeds):
     rows = []
     for seed in seeds:
         for delay in (2, 4, 8):
-            for architecture in ("flat", "ordinary", "observer"):
+            for architecture in ("ordinary", "observer"):
                 row = memory_case(seed, delay, architecture)
                 rows.append(row)
                 print(

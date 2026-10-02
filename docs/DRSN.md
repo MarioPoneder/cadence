@@ -1,9 +1,18 @@
-# Flat, deep and recursively observing brains
+# Coupled, deeper and recursively observing brains
 
-Cadence builds **one jointly settling graph of processing populations**. Start
-with a flat layout, then use ordinary deep columns when the task needs learned
+Cadence builds **one jointly settling graph of processing populations**. Each
+patch settles locally against the ports it reads: fixed sensor samples, other
+patches' live states and, in experimental observer wiring, other patches'
+exact prediction errors. The joint stationarity of all patches is the brain's
+equilibrium, and that equilibrium is the brain's current model of the world
+under the clamped samples. A new observation or a clamped actual outcome
+disturbs it, and the brain pays the repair the disturbance requires. Learning
+(`observe`) is that repair with the relation parameters made eligible. Start
+with two coupled populations, then add columns when the task needs learned
 intermediate representations. Recursive observers are an explicit experimental
-option, not a requirement for a capable routine. Population size is explicit. Sensory data, ordinary
+option, not a requirement for a capable routine. The builder refuses a
+population that settles with no other population and a group of populations
+that settles apart from the rest. Population size is explicit. Sensory data, ordinary
 representation connections and observation of internal activity have distinct
 roles. Each patch has live state, incoming ports, exact prediction-error
 readback and retained local relation parameters. Feedback repairs one coupled
@@ -15,8 +24,8 @@ all three layouts. Start with the [quickstart](QUICKSTART.md), then use
 
 | Layout | Construction | What changes |
 | --- | --- | --- |
-| Flat | `column(..., inputs=sensors)` | Each output patch directly models its sensory inputs; adjacent unused patches add no hidden capacity. |
-| Ordinary deep | `column(..., inputs=earlier_population)` | Learned intermediate representations participate in one coupled solve, with returning influence through the energy. |
+| Two coupled populations | `column(..., inputs=sensors)` read by `column(..., inputs=first)` | The smallest brain: the sensing patches and the output patches settle against each other. A sensing population read by nobody does not build. |
+| Deeper composition | Further `column(..., inputs=earlier_population)` | Learned intermediate representations participate in one coupled solve, with returning influence through the energy. |
 | Experimental recursive observer | `observer(..., observes=earlier_population)` | Adds exact current prediction-error inputs alongside the observed states. Observers can themselves be observed. |
 
 All use the same patch law and qualification check. The
@@ -34,8 +43,7 @@ sleep during familiar behavior or recruit them automatically on surprise. A
 useful advantage over capable ordinary layers remains unestablished. See the
 [experimental boundary](EXPERIMENTAL.md).
 
-Input-only fixed-parameter queries have a separable state objective; coupling
-adds dependencies to joint repair. Recursive depth adds state-and-error
+Coupling makes every repair a joint one; recursive depth adds state-and-error
 constraints, but does not guarantee
 better reasoning or a particular increase in elapsed time. Start with the
 smallest useful layout and measure task quality, settling work and complete
@@ -45,7 +53,7 @@ closed-form flat case, the older fast browser demos and controlled comparisons.
 **System 1** describes an acquired routine that works with little repair; it
 can require ordinary deep representations. **System 2** describes additional
 recursive correction that usefully repairs a failing routine or unmet goal.
-These are behavioral roles, not layout names. Current `0.60.0` supports
+These are behavioral roles, not layout names. Current `0.61.0` supports
 the wiring and whole-brain repair described here, but automatic internal
 attention, independently progressing populations and the integrated
 routine/correction cycle remain unimplemented. Historical demo results belong
@@ -270,7 +278,7 @@ reporting them as learning accuracy would be invalid. Tests instead check
 subsequent **unclamped predictions**, new inputs and controls without admission
 or sensory access.
 This tiny ordinary layout demonstrates acquisition of an input-dependent
-relation. A simpler flat layout may also suffice; compare free accuracy and
+relation. A smaller coupled layout may also suffice; compare free accuracy and
 complete work before adding capacity.
 
 For a body-driven example, run

@@ -6,8 +6,9 @@ patches; an observer is a population connected to other populations' current
 states and prediction errors. These are software abstractions inspired by
 cortical organization, not simulations of biological cortical columns.
 
-Use ordinary flat or deep columns for application routines. Ordinary depth
-already allows returning influence through the joint energy. Observer wiring
+Use coupled populations for application routines; a population that settles
+with no other population does not build. Coupling already allows returning
+influence through the joint energy. Observer wiring
 is [experimental opt-in](EXPERIMENTAL.md): its exact error contacts participate
 in every solve, with no automatic sleeping or demonstrated task advantage.
 

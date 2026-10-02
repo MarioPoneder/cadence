@@ -40,7 +40,8 @@ def test_same_occluded_present_retains_different_explicit_histories():
     assert a[:3] != b[:3]
     cortex = Cortex(seed=7)
     sensor = cortex.input("history", shape=left.shape)
-    output = cortex.column("response", patches=1, inputs=sensor)
+    features = cortex.column("features", patches=2, inputs=sensor)
+    output = cortex.column("response", patches=1, inputs=features)
     cortex.output("answer", shape=1, reads=output)
     brain = cortex.build()
     before = brain.snapshot()

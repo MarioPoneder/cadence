@@ -13,25 +13,41 @@ def output_coverage(brain, name="answer"):
     )
 
 
-def test_disconnected_output_is_reported_even_when_all_sensors_are_used():
-    cortex = Cortex()
+def test_output_on_a_sensorless_population_is_coupled_to_the_sensors_by_its_reader():
+    cortex = Cortex(seed=7, initial_scale=1.5, tolerance=1e-9, settle_budget=2048)
     sensor = cortex.input("sensor", shape=2)
-    cortex.column("perception", patches=3, inputs=sensor)
+    perception = cortex.column("perception", patches=3, inputs=sensor)
     constant = cortex.column("constant", patches=1)
+    cortex.column("joint", patches=1, inputs=(perception, constant))
     cortex.output("answer", shape=1, reads=constant)
     brain = cortex.build()
     assert brain.inspect()["sensor_coverage"] == 2
-    assert output_coverage(brain) == (0,)
-    assert brain.inspect()["output_connected_patches"] == 1
-    assert brain.predict({"sensor": [-0.8, 0.2]}) == brain.predict(
-        {"sensor": [0.9, -0.6]}
-    )
+    # The constant patch reads no sensor. The population that reads it also
+    # reads perception, so the joint settlement couples the answer to both
+    # sensor coordinates and to all five patches.
+    assert output_coverage(brain) == (2,)
+    assert brain.inspect()["output_connected_patches"] == 5
+    first = brain.predict({"sensor": [-0.8, 0.2]})["answer"][0]
+    second = brain.predict({"sensor": [0.9, -0.6]})["answer"][0]
+    assert abs(first - second) > 1e-5
+
+
+def test_sensorless_population_that_nothing_reads_is_refused():
+    cortex = Cortex()
+    sensor = cortex.input("sensor", shape=2)
+    perception = cortex.column("perception", patches=3, inputs=sensor)
+    cortex.column("integration", patches=1, inputs=perception)
+    constant = cortex.column("constant", patches=1)
+    cortex.output("answer", shape=1, reads=constant)
+    with pytest.raises(ValueError, match="'constant' settles with no other"):
+        cortex.build()
 
 
 def test_shared_fixed_input_does_not_bridge_independent_patch_components():
     cortex = Cortex(seed=7, fan_in=1)
     sensor = cortex.input("sensor", shape=3)
     processing = cortex.column("processing", patches=2, inputs=sensor)
+    cortex.column("readers", patches=2, inputs=processing)
     cortex.output("answer", shape=1, reads=processing)
     brain = cortex.build()
     sources = [
@@ -44,7 +60,8 @@ def test_shared_fixed_input_does_not_bridge_independent_patch_components():
     assert len(sources[0] & sources[1]) == 1
     assert brain.inspect()["sensor_coverage"] == 3
     assert output_coverage(brain) == (2,)
-    assert brain.inspect()["output_connected_patches"] == 1
+    # The output patch and the one reader patch that settles with it.
+    assert brain.inspect()["output_connected_patches"] == 2
     missing = (sources[1] - sources[0]).pop()
     answers = []
     for value in (-0.8, 0.8):
@@ -54,7 +71,7 @@ def test_shared_fixed_input_does_not_bridge_independent_patch_components():
     assert answers == [0.0, 0.0]
 
 
-@pytest.mark.parametrize("join", [None, "column", "observer"])
+@pytest.mark.parametrize("join", ["column", "observer"])
 def test_shared_downstream_population_returns_influence_to_upstream_output(join):
     cortex = Cortex(seed=7, initial_scale=1.5, tolerance=1e-9, settle_budget=2048)
     first = cortex.input("first", shape=1)
@@ -63,7 +80,7 @@ def test_shared_downstream_population_returns_influence_to_upstream_output(join)
     right = cortex.column("right", patches=1, inputs=second)
     if join == "column":
         cortex.column("joint", patches=1, inputs=(left, right))
-    elif join == "observer":
+    else:
         cortex.observer("joint", patches=1, observes=(left, right))
     cortex.output("answer", shape=1, reads=left)
     brain = cortex.build()
@@ -72,29 +89,27 @@ def test_shared_downstream_population_returns_influence_to_upstream_output(join)
         brain.predict({"first": [0.0], "second": [value]})["answer"][0]
         for value in (-0.8, 0.8)
     ]
-    if join is None:
-        assert output_coverage(brain) == (1,)
-        assert brain.inspect()["output_connected_patches"] == 1
-        assert answers == [0.0, 0.0]
-    else:
-        # No forward read path runs from second to left. The joint energy
-        # nevertheless couples them through the shared downstream population.
-        assert output_coverage(brain) == (2,)
-        assert brain.inspect()["output_connected_patches"] == 3
-        assert abs(answers[0] - answers[1]) > 1e-5
+    # No forward read path runs from second to left. The joint energy
+    # nevertheless couples them through the shared downstream population.
+    assert output_coverage(brain) == (2,)
+    assert brain.inspect()["output_connected_patches"] == 3
+    assert abs(answers[0] - answers[1]) > 1e-5
     assert brain.snapshot() == before
 
 
-def test_output_aliases_and_selected_indices_do_not_count_unused_flat_width():
+def test_output_aliases_and_selected_indices_report_coverage_and_coupled_patches():
     cortex = Cortex()
     sensor = cortex.input("sensor", shape=2)
     processing = cortex.column("processing", patches=4, inputs=sensor)
+    cortex.column("reader", patches=1, inputs=processing)
     cortex.output("pair", shape=(1, 2), reads=processing, indices=(3, 1))
     cortex.output("alias", shape=(), reads=processing, indices=(1,))
     brain = cortex.build()
     assert output_coverage(brain, "pair") == (2, 2)
     assert output_coverage(brain, "alias") == (2,)
-    assert brain.inspect()["output_connected_patches"] == 2
+    # The reader settles with all four processing patches, so every patch of
+    # the brain is coupled to the outputs.
+    assert brain.inspect()["output_connected_patches"] == 5
 
 
 @pytest.mark.parametrize(
@@ -129,12 +144,13 @@ def test_sparse_error_contacts_extend_coverage_beyond_state_contacts(
 def test_constant_brain_has_valid_zero_coverage_and_inspection_is_owned():
     cortex = Cortex()
     constant = cortex.column("constant", patches=2)
+    cortex.column("echo", patches=1, inputs=constant)
     cortex.output("answer", shape=1, reads=constant)
     brain = cortex.build()
     original = brain.inspect()
     assert output_coverage(brain) == (0,)
     assert original["sensor_coverage"] == 0
-    assert original["output_connected_patches"] == 1
+    assert original["output_connected_patches"] == 3
     changed = brain.inspect()
     changed["outputs"][0]["sensor_coverage_by_coordinate"] = (999,)
     changed["output_connected_patches"] = 999
