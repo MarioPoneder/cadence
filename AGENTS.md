@@ -11,6 +11,31 @@ it also defines the documentation rules for System 1 and System 2.
 repair is driven by that state's mismatch with reality.** This is the main
 hypothesis, and everything in this repository serves it.
 
+The goal is a simulated human-like brain built from simplified biological
+mechanisms, including cortical-column organization, short-term memory,
+long-term plasticity and recursive self-correction. Make each abstraction's
+bounded state, ports, readback, records and repair explicit. Biological
+inspiration guides the design; a name or analogy does not establish a capability.
+Prefer the smallest mechanism that demonstrates the intended function.
+
+Preserve prior mechanisms and evidence when revising the substrate. Version
+0.11 implemented Trace/Afterglow and fast/slow synaptic memory; the 0.20 rewrite
+removed those modules. Do not describe memory as a new requirement, or substitute
+warm starts and parameter persistence for demonstrated temporal recall and
+retention. Current design/proof owners are [short-term memory #84](https://github.com/muellerberndt/cadence/issues/84),
+[long-term plasticity #85](https://github.com/muellerberndt/cadence/issues/85)
+and [recursive integration #86](https://github.com/muellerberndt/cadence/issues/86).
+The formal library belongs beside the paper in `cadence-flagship/lean` in the
+OPH workspace. State theorem assumptions and the bridge to the runtime; older
+model proofs do not automatically certify a replacement implementation.
+
+Minimalism must preserve demonstrated capabilities. Before retiring a working
+mechanism, retain its behavioral contract and compare the replacement on the
+same task, information and declared resources. A smaller API, new solver tests
+or success on a different task does not establish parity. Experimental resets
+must name the capabilities they drop and keep their source-bound baselines;
+never treat removed tests or closed issues as completed requirements.
+
 Every patch has local state, ports, a prediction relation and live disagreement.
 Clamped sensory samples stay fixed; connected patches repair their shared state.
 Actual outcome clamps can also make relations eligible for learning. An answer

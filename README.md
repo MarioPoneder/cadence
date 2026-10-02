@@ -14,6 +14,12 @@
 **Patches repair local disagreement to reach a coherent brain state. Further
 repair is driven by that state's mismatch with reality.**
 
+Cadence aims to build a simulated human-like brain using simplified biological
+mechanisms: local interpretation and repair, cortical-column organization,
+short-term memory, long-term plasticity and recursive self-correction. These
+are engineering abstractions, with behavior to demonstrate, rather than a
+detailed model of cortical biology.
+
 Cadence is an alpha learning library built from bounded patches with local
 state, ports, prediction-error readback and retained relations. Input samples
 are held fixed while connected patches repair a shared state. The whole
@@ -63,6 +69,14 @@ explicit recent context, `History` provides bounded storage. Automatic memory
 allocation, protected consolidation and surprise-gated recursive attention
 remain research work; [the experimental guide](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/EXPERIMENTAL.md) describes
 the integration contract.
+
+Earlier versions already implemented temporal memory: `0.11.0` had
+Trace/Afterglow context and fast/slow synaptic consolidation. The `0.20` rewrite
+removed those modules. Their historical capabilities are a starting point for
+the current [short-term memory](https://github.com/muellerberndt/cadence/issues/84)
+and [long-term plasticity](https://github.com/muellerberndt/cadence/issues/85)
+work, alongside [recursive cortical-column integration](https://github.com/muellerberndt/cadence/issues/86).
+These issues track the remaining design and proof goals.
 
 Every answer is checked against the whole brain. Equilibrium here means that
 no eligible projected repair direction exceeds the tolerance. Competing

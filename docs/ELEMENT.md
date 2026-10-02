@@ -3,8 +3,10 @@
 Every processing patch owns a live scalar state `x_i` and retained relation
 parameters: one weight per incoming signal and one bias. A population groups
 patches; an observer is a population connected to other populations' current
-states and prediction errors. These are software abstractions inspired by
-cortical organization, not simulations of biological cortical columns.
+states and prediction errors. These are simplified software models inspired by
+cortical organization; they do not reproduce detailed cortical biology. Their
+purpose is to support the memory, learning and self-correction of a simulated
+human-like brain through explicit local mechanisms.
 
 All populations must form one connected graph. State contacts return influence
 through the joint energy; optional error contacts add exact current mismatch

@@ -23,8 +23,20 @@ forecast or cannot meet a goal. These are intended roles within one brain, not
 architecture classes, depth settings or bootstrapping/live switches. The complete
 routine → disturbance → useful correction → retained inexpensive routine cycle
 has not been demonstrated by this public runtime. Private experiments linked
-from [issue 72](https://github.com/muellerberndt/cadence/issues/72) do not become
+from [historical issue 72](https://github.com/muellerberndt/cadence/issues/72) do not become
 released capabilities merely because the package version changes.
+
+The current design/proof goals have three owners:
+[short-term memory](https://github.com/muellerberndt/cadence/issues/84),
+[long-term memory and plasticity](https://github.com/muellerberndt/cadence/issues/85),
+and [recursive cortical-column integration](https://github.com/muellerberndt/cadence/issues/86).
+They develop simplified biological abstractions within the common equilibrium.
+Historical `0.11.0` Trace/Afterglow supplied decaying context to later events,
+and SynapticMemory combined a transient component with persistent consolidation.
+Those modules were removed in the `0.20` rewrite; current activity retention,
+plastic parameters and external `History` are not evidence of their recovery.
+The formal library is developed beside the paper in `cadence-flagship/lean`;
+its model-specific theorems need an explicit bridge to any claimed runtime guarantee.
 
 Current patch disagreement, a miss of a previously issued forecast, and task
 value are distinct quantities. A stationary state can retain prediction error

@@ -7,6 +7,14 @@ settling against each other. For API spelling and numerical semantics, use
 practical explanation is [brain design](BRAIN_DESIGN.md); start a small
 application from [the quickstart](QUICKSTART.md).
 
+The design goal is a simulated human-like brain built from simplified biological
+mechanisms. Cortical organization, memory, plasticity and recursive correction
+must earn their functional claims through explicit models and measured behavior.
+Preserve useful historical mechanisms such as Afterglow when evaluating a new
+substrate; consult the current [memory](https://github.com/muellerberndt/cadence/issues/84),
+[plasticity](https://github.com/muellerberndt/cadence/issues/85) and
+[recursive integration](https://github.com/muellerberndt/cadence/issues/86) goals.
+
 ## Explain the supported model first
 
 Use `Cortex` to declare one connected graph, then `build()` to create its
