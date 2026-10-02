@@ -8,8 +8,10 @@ how to set up, what the checks are, and what a change needs.
 
 The goal is a simulated human-like brain built from simplified biological
 mechanisms. Memory, plasticity, imagination and continuing interaction are
-working parts of the foundation. Optional cortical observation must extend
-that brain, whose base can already be deep and modular.
+working parts of the default System 1 foundation. Optional System 2 adds
+recursive cortical feedback to that brain, whose base can already be deep and
+modular. The optional mechanism can ship without a proven task advantage; do
+not turn research on its benefit into a release gate.
 
 A replacement must preserve demonstrated behavior and saved continuation before
 removing its predecessor. Keep source-bound evidence, original application

@@ -6,8 +6,9 @@ and [API reference](docs/api.md) before changing semantics.
 ## Goal and governing mechanism
 
 Cadence aims to build a simulated human-like brain from simplified biological
-mechanisms. A continuing animal-like foundation learns, remembers, imagines and
-acts; optional cortical columns add recursive observation and feedback. The
+mechanisms. **System 1 is the default:** the recovered continuing animal-like foundation
+learns, remembers, imagines and acts. **System 2 is optional:** cortical observers
+add recursive feedback and self-correction within that same neural graph. The
 foundation can already be deep and modular. Do not equate ordinary depth with
 recursive observation or require a separate application controller for each region.
 
@@ -26,10 +27,12 @@ joint graph equilibrium, and an imagined outcome is not an actual witness.
 
 ## Preserve working capabilities
 
-The default package restores the pre-reset foundation from 930ee807, including
+The 0.70 package restores the pre-reset foundation from 930ee807, including
 memory and imagination mechanisms present in 0.11 and subsequent hardening.
 The narrower population solver is preserved under
-`cadence.experimental.equilibrium`, with its own docs, examples and tests.
+`cadence.experimental.equilibrium`, with its own docs, examples and tests. Its
+frozen implementation keeps its own 0.62 identity inside package 0.70; preserve
+its source bytes and historical receipts.
 Do not let experimental construction restrictions silently remove a supported
 foundation mechanism or reinterpret an old checkpoint.
 
@@ -66,7 +69,10 @@ through `Brain.equilibrate`; cached activity is checked afresh. A refused `act`
 preserves live state, memory, randomness and pending feedback. If `step` has
 learned an actual outcome before the next action refuses, retain that learning
 and retry `act` rather than resubmitting the reward. Free-answer qualification
-does not certify finite nudged eligibility or every training phase. Check each
+does not certify finite nudged eligibility or every training phase. Qualified
+free solves may use numerical damping within their one declared budget, with
+final residuals checked against the original model. Preserve the recovered
+finite teaching law; numerical fallback is not System 2. Check each
 API's contract rather than transferring experimental result fields or source
 hash rules to another model.
 
@@ -105,8 +111,11 @@ Their original engines, supplied search/body logic and checkpoints must stay
 identified. Static browser parity, a library checkpoint load and new native
 behavior are different checks; report which actually ran.
 
-Short-term memory is tracked in #84, long-term memory/plasticity including the
-historical reversal regression in #85, and optional recursive integration in #86.
-Earlier closed issue metadata is not proof of their old capability contracts.
-Release only after capability, continuation and installed-artifact checks pass
+Use live GitHub issues for individual missing, unproved or untested capabilities
+and optimization. Preserve historical issue criteria and GPU work when splitting
+broad owners; a closed issue label is not proof of its scientific claim. System 2
+may ship as an optional implemented mechanism without a demonstrated advantage.
+Do not require a completed theory of cognition or automatic reflection before
+releasing System 1 and the optional feedback interface. Release gates remain
+correctness, capability preservation, continuation and installed-artifact checks
 on the final source; publication status belongs in the release record.

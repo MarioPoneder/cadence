@@ -660,6 +660,12 @@ See [write a cortex](cortex.md) for regions, projections, ports and learning hea
 
 ## Generic brain (`cadence.generic`)
 
+`GenericBrain.compose` is the default System 1 entry. Its animal-like foundation
+includes continuing perception/action, plasticity and memory. Set `observers`
+to positive region widths to add optional System 2 state feedback within the
+same neural-graph settlement. This is an implemented interface, not a claim
+that recursive benefit or automatic reflective behavior has been learned.
+
 - `GenericBrain.compose(inputs, actions, *, modules=(64,), observers=(), seed=0, **options) -> GenericBrain`:
   the direct vector-input constructor. Positive `modules` widths form a reciprocal
   processing chain; the final module is the association cortex. Optional positive
@@ -684,6 +690,12 @@ See [write a cortex](cortex.md) for regions, projections, ports and learning hea
   `prefrontal` for a working memory when present. `learning` defaults to
   `LearnerConfig(beta=0.1, eta=0.5, temperature=0.2, tolerance=3e-3, free_steps=1024, nudged_steps=12, momentum=0.9)`,
   `reward` to `ActorCriticConfig(gamma=0.9, lam=0.8, eta=1.0, eta_critic=0.3)`.
+  The live model and finite teaching phases retain `dt=1.0`. Qualified free
+  settlement reserves roughly half its sweep budget for a numerical fallback:
+  if the initial finite state does not qualify, continue with half the integration
+  step and the remaining budget. Both phases together stay within the requested
+  budget, and the final residual is recomputed against the original model. This
+  preserves its equations and parameters; it is independent of System 2 wiring.
   Attributes `connectome`, `brain`, `learner`, `basal_ganglia` (`ActorCritic` reading the
   association cortex), `working_memory` (`Trace` or `None`), `hippocampus` (`SynapticMemory`
   from sensory to motor neurons, or `None`; old checkpoints retain `FastSynapses`), `sensory_index`, `association_index`,
@@ -708,7 +720,8 @@ See [write a cortex](cortex.md) for regions, projections, ports and learning hea
     state before its updates; use `step` for a continuing life.
   - `imagine(observations, *, budget=1024, tolerance=1e-6) -> tuple[Equilibrium, ...]`:
     `observations` is a sequence of finite, nonempty batches with the same stream
-    identities. Each possible observation is settled privately, with a private trace
+    identities. Each possible observation uses its own bounded free solve, including
+    the same numerical damping fallback, with a private trace
     carried through the branch and durable memory read without writes. Inspect each
     phase's `qualified` field; a refused phase ends the branch and remains in the
     tuple. The empty sequence returns `()`. Live activity, parameters, records, random
@@ -716,8 +729,9 @@ See [write a cortex](cortex.md) for regions, projections, ports and learning hea
     to supplied observations; use the separate `TemporalPatchNet.plan` interface for
     a learned external-world action/consequence model.
   - `act(observations, *, greedy=False) -> actions`: one row per continuing stream.
-    `Brain.equilibrate` checks the complete potential/adaptation equations, including
-    observers, under `learning.free_steps` and `learning.tolerance`. Cached states are
+    The bounded free solve checks complete potential/adaptation equations, including
+    observers, under `learning.free_steps` and `learning.tolerance`. Its numerical
+    fallback changes neither the live model nor teaching phases. Cached states are
     freshly checked. Exhaustion raises `RuntimeError` before changing live activity,
     memory, random state or pending feedback; `tolerance=None` raises `ValueError`.
     Qualified actions advance the working trace. Keep batch row identities fixed;

@@ -1,5 +1,6 @@
 > This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, rather than the default Cadence API.
+> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
+> engine identity remains `0.62.0`; it is separate from the default Cadence API.
 
 # GPU execution and parallel experience
 
@@ -24,10 +25,10 @@ The containing Cadence distribution also requires NumPy.
 Install the optional tensor backend for the same release when needed:
 
 ```sh
-python -m pip install "cadence-net[accel]==0.62.0"
+python -m pip install "cadence-net[accel]==0.70.0"
 ```
 
-Use the [quickstart](QUICKSTART.md) for the current `0.62.0` installation.
+Use the [quickstart](QUICKSTART.md) for the current `0.70.0` installation.
 The device measurements below retain their recorded source versions; they are
 not current-version or all-workload performance guarantees.
 

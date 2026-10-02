@@ -9,7 +9,7 @@ behind a local page as well, with the whole brain animated and the learning plot
 [the quickstarts in your browser](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart).
 
 ```bash
-python -m pip install cadence-net
+python -m pip install cadence-net==0.70.0
 ```
 
 ## A patch that learns a stream, remembers in one shot, and sleeps

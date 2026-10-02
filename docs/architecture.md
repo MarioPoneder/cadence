@@ -12,7 +12,7 @@ compares the four brains. Bounded tests do not establish the full flexibility of
 an animal or human brain. The APIs below need no experiment-repository imports.
 
 ```bash
-python -m pip install cadence-net
+python -m pip install cadence-net==0.70.0
 ```
 
 Development installs use `pip install -e .`; pin a release or a commit for reproducible

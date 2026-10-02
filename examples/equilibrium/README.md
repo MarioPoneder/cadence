@@ -1,9 +1,10 @@
 > These examples use `cadence.experimental.equilibrium` explicitly.
+> The enclosing package is 0.70.0; the preserved engine retains identity `0.62.0`.
 > Saved historical receipts describe their original, pinned sources.
 
 # Cadence examples
 
-These examples run on the `0.62.0` checkout with Python 3.11 or later. First
+These examples run on the `0.70.0` checkout with Python 3.11 or later. First
 acquire a small relation with two coupled populations, then use a learned body
 model to choose actions. Neither needs an optional dependency. The
 [quickstart](../../docs/equilibrium/QUICKSTART.md) covers installation;
@@ -130,7 +131,7 @@ Saved receipts describe their recorded source version; rerunning a command
 on this checkout produces a new result. Historical Amen, Atari, Patchworld
 and other application demonstrations used their own versioned engines,
 models and body adapters. Their published scores or musical quality are not
-current `0.62` reproduction results. See the
+current `0.70` reproduction results. See the
 [demo evidence boundary](../../docs/equilibrium/EXPERIMENTAL.md)
 before comparing or replacing one.
 

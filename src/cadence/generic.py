@@ -57,7 +57,8 @@ _REWARD_ARRAYS = (
 
 
 def _learning() -> LearnerConfig:
-    # bias-corrected momentum and a moderate step keep a visual pathway from collapsing
+    # Retain the recovered finite teaching law; numerical damping belongs to
+    # qualified free settlement, where it does not change these learning phases.
     return LearnerConfig(
         beta=0.1,
         eta=0.5,
@@ -538,16 +539,56 @@ class GenericBrain:
             history.append(self.learner.accuracy(drive, labels))
         return history
 
-    def _qualified(self, drive: np.ndarray, state: BrainState | None = None) -> BrainState:
-        """Check the complete current graph before publishing an answer."""
+    def _equilibrate(
+        self, drive: np.ndarray, state: BrainState | None, *, budget: int, tolerance: float
+    ) -> Equilibrium:
+        """One bounded free solve, with underrelaxation if fast repair does not qualify.
+
+        Reserve half the sweeps for numerical damping. The second attempt uses
+        identical parameters and fixed-point equations, with half the integration
+        step. It never changes the live model or its recovered finite teaching
+        law. Both attempts together respect the caller's exact sweep budget.
+        This numerical fallback is independent of optional observer wiring.
+        """
         from .patch import _copy_state
 
+        brain = self.brain
+        first_budget = budget if budget < 2 else (budget + 1) // 2
+        phase = brain.equilibrate(
+            drive, state=_copy_state(state), budget=first_budget, tolerance=tolerance
+        )
+        if np.all(phase.qualified) or phase.steps >= budget:
+            return phase
+        if not all(
+            np.isfinite(value).all()
+            for value in (phase.state.v, phase.state.activation, phase.state.adaptation)
+        ):
+            return phase
+        damped = Brain(
+            brain.connectome,
+            brain.neuron_model.replace(dt=brain.neuron_model.dt / 2),
+            backend=brain.backend,
+            efficacy=brain.efficacy,
+            log_gain=brain.log_gain,
+            bias=brain.bias,
+            device=str(brain._torch.device) if brain._torch is not None else None,
+            dense_limit=brain.dense_limit,
+            layout=brain.layout,
+            precision=brain.precision,
+        )
+        following = damped.equilibrate(
+            drive, state=_copy_state(phase.state), budget=budget - phase.steps, tolerance=tolerance
+        )
+        # Certify against the original model, not a changed interpretation.
+        residual = brain.residual(drive, following.state)
+        return Equilibrium(following.state, residual, phase.steps + following.steps, tolerance)
+
+    def _qualified(self, drive: np.ndarray, state: BrainState | None = None) -> BrainState:
+        """Check the complete current graph before publishing an answer."""
         cfg = self.learner.config
         if cfg.tolerance is None:
             raise ValueError("GenericBrain answers require a finite residual tolerance")
-        phase = self.brain.equilibrate(
-            drive, state=_copy_state(state), budget=cfg.free_steps, tolerance=cfg.tolerance
-        )
+        phase = self._equilibrate(drive, state, budget=cfg.free_steps, tolerance=cfg.tolerance)
         if not np.all(phase.qualified):
             raise RuntimeError(
                 f"brain did not settle within {cfg.free_steps} steps: "
@@ -695,12 +736,7 @@ class GenericBrain:
                 drive = trace.stimulate(drive)
             if self.hippocampus is not None:
                 drive = self.hippocampus.stimulate(drive)
-            phase = self.brain.equilibrate(
-                drive,
-                budget=budget,
-                tolerance=tolerance,
-                state=current,
-            )
+            phase = self._equilibrate(drive, current, budget=budget, tolerance=tolerance)
             phases.append(phase)
             if not np.all(phase.qualified):
                 break

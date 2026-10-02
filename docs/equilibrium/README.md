@@ -9,12 +9,12 @@
 
 # Cadence
 
-[Documentation](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/index.md) · [Quickstart](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/QUICKSTART.md) · [Examples](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/equilibrium/README.md) · [Interactive overview](https://floatingpragma.io/cadence/) · [Preprint](https://philpapers.org/rec/MUECAP-2) · [Pragma Research](https://floatingpragma.io/)
+[Documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/index.md) · [Quickstart](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/QUICKSTART.md) · [Examples](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/equilibrium/README.md) · [Interactive overview](https://floatingpragma.io/cadence/) · [Preprint](https://philpapers.org/rec/MUECAP-2) · [Pragma Research](https://floatingpragma.io/)
 
 [![PyPI](https://img.shields.io/pypi/v/cadence-net)](https://pypi.org/project/cadence-net/)
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
-[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/v0.62.0/LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/v0.70.0/LICENSE)
 
 **Patches repair local disagreement to reach a coherent brain state. Further
 repair is driven by that state's mismatch with reality.**
@@ -54,8 +54,8 @@ it. Add connected capacity or branches when a measured task needs them.
 the source population through the joint repair. The optional
 `observer(..., observes=population)` also reads exact current errors. Both
 participate in the same equilibrium; an observer is never a separately settled
-critic. See [wiring examples](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/VARIANTS.md) and the
-[recursive observation experiment](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/EXPERIMENTAL.md).
+critic. See [wiring examples](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/VARIANTS.md) and the
+[recursive observation experiment](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/EXPERIMENTAL.md).
 
 ## Repair, reality and memory
 
@@ -72,7 +72,7 @@ and saves. Retained activity is a warm start, not a guarantee of sequence
 memory, and later learning can overwrite earlier skills. For tasks requiring
 explicit recent context, `History` provides bounded storage. Automatic memory
 allocation, protected consolidation and surprise-gated recursive attention
-remain research work; [the experimental guide](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/EXPERIMENTAL.md) describes
+remain research work; [the experimental guide](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/EXPERIMENTAL.md) describes
 the integration contract.
 
 Earlier versions already implemented temporal memory: `0.11.0` had
@@ -100,8 +100,8 @@ carry returning state and error influence. Its distinction from a feed-forward
 predictor is the jointly adjustable activity and equilibrium answer, not the
 absence of derivative computation. The synchronized reference solver does not
 establish asynchronous distributed convergence. See the
-[patch equations](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/DRSN.md#what-a-processing-patch-computes) and
-[qualification contract](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/SPECIFICATION.md#repair-and-qualification).
+[patch equations](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/DRSN.md#what-a-processing-patch-computes) and
+[qualification contract](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/SPECIFICATION.md#repair-and-qualification).
 
 ## Install
 
@@ -109,23 +109,23 @@ Python 3.11 or later. The reference solver itself uses the standard library;
 the containing Cadence distribution also requires NumPy:
 
 ```sh
-python -m pip install "cadence-net==0.62.0"
+python -m pip install "cadence-net==0.70.0"
 python -c "import cadence.experimental.equilibrium as cadence; print(cadence.__version__)"
 ```
 
 For reproducible work, retain the installed package and its source with saved
-brains; see [checkpoint requirements](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/REFERENCE.md#checkpoints).
+brains; see [checkpoint requirements](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/REFERENCE.md#checkpoints).
 
 Optional PyTorch execution uses the same learning rule and final reference
 check. Install the `accel` extra, then choose
 `Cortex(device="cpu")`, `Cortex(device="mps")` or `Cortex(device="cuda")`:
 
 ```sh
-python -m pip install "cadence-net[accel]==0.62.0"
+python -m pip install "cadence-net[accel]==0.70.0"
 ```
 
 Small brains can be faster on the default engine. Measure the complete workload;
-see [devices, precision and batching](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/ACCELERATION.md).
+see [devices, precision and batching](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/ACCELERATION.md).
 
 ## Teach a small body model
 
@@ -185,7 +185,7 @@ assert restored.predict(inputs) == brain.predict(inputs)
 ```
 
 This learns a small forward model, not a navigation policy. The
-[live-control example](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/equilibrium/live_control.py) uses a learned model to compare
+[live-control example](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/equilibrium/live_control.py) uses a learned model to compare
 candidate actions and move an actual simulated body toward a goal. Its action
 search is supplied application code. It does not demonstrate automatic attention
 or a benefit from recursion.
@@ -211,11 +211,11 @@ python examples/equilibrium/live_learning.py --seeds 0 2 7
 
 | Example | What you can verify |
 | --- | --- |
-| [Layout learning](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/equilibrium/layout_learning.py) | Start with the two-population brain, then try additional connected populations; check fresh predictions, work and exact saved continuation. The optional `--layout recursive` experiment has different capacity and does not establish an advantage. |
-| [Learned body control](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/equilibrium/live_control.py) | Bootstrap a body model, select actions through explicit candidate search, execute them and admit actual outcomes. |
-| [History, retention and rewards](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/equilibrium/live_learning.py) | Separate small tests of explicit sensory history, old-skill replay, reward learning/reversal and saved continuation. |
+| [Layout learning](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/equilibrium/layout_learning.py) | Start with the two-population brain, then try additional connected populations; check fresh predictions, work and exact saved continuation. The optional `--layout recursive` experiment has different capacity and does not establish an advantage. |
+| [Learned body control](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/equilibrium/live_control.py) | Bootstrap a body model, select actions through explicit candidate search, execute them and admit actual outcomes. |
+| [History, retention and rewards](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/equilibrium/live_learning.py) | Separate small tests of explicit sensory history, old-skill replay, reward learning/reversal and saved continuation. |
 
-[All examples](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/equilibrium/README.md) include batch learning, independent parallel
+[All examples](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/equilibrium/README.md) include batch learning, independent parallel
 brains, delayed reward and layout costs. `History` supplies explicit external
 memory; `Reinforcement` supplies discrete action-value learning and replay.
 Neither is an automatic planner or a guarantee of long-term success.
@@ -225,21 +225,21 @@ Amen, Atari, Patch World and Doom experiments. Their original engines and
 results have different versions and representations. They are **historical
 application evidence**, not completed reproductions on `0.62.0`. In particular,
 the original Amen record-cell brain is not equivalent to one current
-population. Consult the [versioned performance evidence](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/PERFORMANCE.md) and
-[current capability boundary](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/EXPERIMENTAL.md) before comparing them.
+population. Consult the [versioned performance evidence](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/PERFORMANCE.md) and
+[current capability boundary](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/EXPERIMENTAL.md) before comparing them.
 
 ## Learn more
 
 | Guide | What it helps you do |
 | --- | --- |
-| [Quickstart](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/QUICKSTART.md) | Build, teach, query and save your first brain |
-| [Layout quickstarts](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/VARIANTS.md) | Choose connections and size, then optional error readback |
-| [Experimental capabilities](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/EXPERIMENTAL.md) | Understand observer costs, unfinished System 2 behavior and current evidence limits |
-| [Brain design](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/BRAIN_DESIGN.md) | Choose sufficient observations, connected capacity and useful evaluation checks |
-| [Bootstrapping](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/BOOTSTRAP.md) | Prepare a skill and measure acquisition, retention and learning cost |
-| [Live operation](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/LIVE.md) | Connect observations, actual outcomes, history, reward and control callbacks |
-| [Agent recipe](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/AGENTS.md) | Build integrations with the right contracts and capability claims |
-| [Architecture](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/DRSN.md) / [API reference](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/REFERENCE.md) / [Specification](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/SPECIFICATION.md) | Understand the equations, exact calls and numerical guarantees |
+| [Quickstart](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/QUICKSTART.md) | Build, teach, query and save your first brain |
+| [Layout quickstarts](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/VARIANTS.md) | Choose connections and size, then optional error readback |
+| [Experimental capabilities](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/EXPERIMENTAL.md) | Understand observer costs, unfinished System 2 behavior and current evidence limits |
+| [Brain design](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/BRAIN_DESIGN.md) | Choose sufficient observations, connected capacity and useful evaluation checks |
+| [Bootstrapping](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/BOOTSTRAP.md) | Prepare a skill and measure acquisition, retention and learning cost |
+| [Live operation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/LIVE.md) | Connect observations, actual outcomes, history, reward and control callbacks |
+| [Agent recipe](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/AGENTS.md) | Build integrations with the right contracts and capability claims |
+| [Architecture](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/DRSN.md) / [API reference](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/REFERENCE.md) / [Specification](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/SPECIFICATION.md) | Understand the equations, exact calls and numerical guarantees |
 
 Qualification means constrained numerical stationarity, not a unique global
 minimum or task success. Saved brains bind exact implementation sources; retain
@@ -249,7 +249,7 @@ and comparative efficiency require measured task evidence.
 ## Development
 
 Changes follow **minimalism**, **user-friendliness** and **agent-friendliness**,
-and the principle in the [contributor instructions](https://github.com/muellerberndt/cadence/blob/v0.62.0/AGENTS.md): every brain is
+and the principle in the [contributor instructions](https://github.com/muellerberndt/cadence/blob/v0.70.0/AGENTS.md): every brain is
 one equilibrium of patches settling against each other.
 
 ```sh
@@ -261,4 +261,4 @@ python -m ruff format --check src/cadence/experimental tests/equilibrium
 
 Tests execute the README and documentation examples and check learning,
 mathematical derivatives, refusal and checkpoint continuation.
-Licensed under [GPL-3.0-or-later](https://github.com/muellerberndt/cadence/blob/v0.62.0/LICENSE).
+Licensed under [GPL-3.0-or-later](https://github.com/muellerberndt/cadence/blob/v0.70.0/LICENSE).

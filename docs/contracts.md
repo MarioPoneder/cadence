@@ -40,7 +40,13 @@ source identity must remain attached to the action that was actually executed.
 
 `GenericBrain` uses `learning.free_steps` as the free-answer repair budget and
 `learning.tolerance` for the full potential/adaptation equation residual
-(defaults 1024 and `3e-3`). Cached activity must qualify again. Refused `act`
+(defaults 1024 and `3e-3`). The live model and finite teaching phases retain
+`dt=1.0` and 12 nudged steps. For a qualified free answer, roughly half the sweep
+budget is reserved for a fallback with half the integration step if the first
+finite phase does not qualify. Both phases share the one requested budget, and
+the final residual is recomputed against the original model. The equations,
+parameters and teaching law remain unchanged; this numerical strategy is
+independent of System 2. Cached activity must qualify again. Refused `act`
 calls issue no action and preserve activity, memory, random state and pending
 feedback. A `step` call may first learn an actual outcome and then refuse its
 next action; that real learning remains, so retry `act` without resubmitting

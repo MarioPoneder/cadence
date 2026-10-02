@@ -1,5 +1,6 @@
 > This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, rather than the default Cadence API.
+> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
+> engine identity remains `0.62.0`; it is separate from the default Cadence API.
 
 # Wire a connected brain
 
@@ -9,7 +10,7 @@ same local relation, and all eligible states repair together under one energy.
 `observes=` additionally reads exact current prediction errors. The builder
 requires at least two populations joined into one connected graph.
 
-These examples target **`0.62.0`**; follow the [quickstart](QUICKSTART.md) first.
+These examples target **Cadence 0.70.0**; follow the [quickstart](QUICKSTART.md) first.
 They keep the same `signal`/`answer` boundary while changing capacity and wiring.
 Start with a small graph, then measure whether added states or paths improve the
 task enough to justify their work. Error readback has the same execution

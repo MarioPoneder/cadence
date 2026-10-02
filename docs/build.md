@@ -7,7 +7,7 @@ if the words are new, and the [quickstarts](quickstart.md) for the shortest form
 each brain.
 
 ```bash
-python -m pip install cadence-net
+python -m pip install cadence-net==0.70.0
 ```
 
 ## A record patch on a stream

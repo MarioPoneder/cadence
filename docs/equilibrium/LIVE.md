@@ -1,9 +1,10 @@
 > This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, rather than the default Cadence API.
+> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
+> engine identity remains `0.62.0`; it is separate from the default Cadence API.
 
 # Use a learned brain with an actual body
 
-Install **0.62.0** as shown in the [quickstart](QUICKSTART.md). This guide
+Install **Cadence 0.70.0** as shown in the [quickstart](QUICKSTART.md). This guide
 covers live observations, actions, outcomes and continued learning using the
 existing public API. Begin with a skill that passes free assessment;
 [bootstrapping](BOOTSTRAP.md) explains how to acquire and check one.

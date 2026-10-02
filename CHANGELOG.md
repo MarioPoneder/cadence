@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.62.0 — 2026-10-02
+## 0.70.0 — 2026-10-02
 
 - Restore the capable pre-reset foundation from 930ee807: continuing
   `GenericBrain` interaction, `Trace`/`Afterglow`, consolidating
@@ -16,13 +16,19 @@
   equations. Exhausted action repair preserves live state and pending feedback;
   consumed real outcomes stay learned if a following action refuses. Keep finite
   eligibility/training phases distinct from this free-answer qualification.
-- Keep cortical observation optional. The foundation can already be deep and
-  modular; observer feedback extends the shared graph rather than replacing
-  working memory and learning with a narrower model.
+- Preserve GenericBrain's recovered `dt=1.0`, `3e-3` tolerance and 12-step
+  finite teaching law. Qualified free solves reserve part of their one sweep
+  budget for numerical damping when needed, then recheck the original model
+  equations. This fallback is independent of optional System 2 feedback.
+- Make the recovered animal-like System 1 brain the default. Optional System 2
+  adds recursive cortical feedback and self-correction to that same neural graph.
+  The base can already be deep and modular; release does not require proving a
+  cognitive advantage for the optional mechanism.
 - Preserve the newer state-and-error solver under
   `cadence.experimental.equilibrium`, with its own guides, examples and tests.
   Its sparse patch-connectivity checks and same-call stationary-evaluation
-  optimization remain available there, without changing the restored APIs.
+  optimization remain available there. It retains its frozen 0.62 source identity
+  inside package 0.70; historical receipts and snapshots are not relabeled.
 - Rewrite the entry guides around the biological-brain objective, working
   mechanisms and actual application source identities. The default package
   requires NumPy. Keep current GPL-3.0 licensing and historical attribution.

@@ -2,21 +2,24 @@
 
 Cadence aims to build a continuing human-like brain from simplified biological
 mechanisms. Local state, ports, plastic relationships, memory and repair form
-its foundation. That brain can be deep and modular; optional cortical-column
-observation adds feedback within the same declared equilibrium.
+its default **System 1** foundation. That animal-like brain can already be deep
+and modular. **System 2** optionally adds observing cortical regions whose
+recursive feedback joins the same neural-graph settlement. These names describe
+their roles; useful learned self-correction is measured on the task.
 
-Cadence 0.62 is an alpha release. It restores working memory,
+Cadence 0.70 is an alpha release. It restores working memory,
 record, continuous-learning and imagination mechanisms from the pre-reset
 library. Python 3.11+ and NumPy are required. Original source-bound experiments
 retain their own versions; their behavior is not automatically reproduced by
 a new package.
 
-## Start with a continuing brain
+## Start with System 1
 
 - [Quickstarts](quickstart.md): runnable learning examples.
 - `GenericBrain.compose(inputs, actions, modules=(64,), observers=())` builds
   the continuing foundation with working and consolidating memory. Optional
-  observer regions join the same graph; the base modules already provide depth.
+  `observers=()` keeps System 1 alone; observer widths enable optional System 2
+  feedback in that same graph. Base modules already provide depth.
   Actions require the full equation residual to qualify; an exhausted budget
   produces a refusal, not a partly settled action.
 - [Build a brain](brain.md) and [continuous interaction](continuous.md):

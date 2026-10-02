@@ -194,4 +194,4 @@ __all__ = [
     "stateful",
 ]
 
-__version__ = "0.62.0"
+__version__ = "0.70.0"
