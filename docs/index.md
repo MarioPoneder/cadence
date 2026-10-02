@@ -1,40 +1,82 @@
 # Cadence documentation
 
-This guide covers **`0.62.0`**. A Cadence brain is one connected graph of patches
-that repair disagreement together. Choose population sizes and the ports they
-read, teach through the same joint repair, then measure free behavior. Learned
-relations persist and remain plastic. Outputs are selected patch states from a
-qualified solve, not answers from a separate readout network.
+Cadence aims to build a continuing human-like brain from simplified biological
+mechanisms. Local state, ports, plastic relationships, memory and repair form
+its foundation. That brain can be deep and modular; optional cortical-column
+observation adds feedback within the same declared equilibrium.
 
-## A short learning path
+Cadence 0.62 is an alpha release. It restores working memory,
+record, continuous-learning and imagination mechanisms from the pre-reset
+library. Python 3.11+ and NumPy are required. Original source-bound experiments
+retain their own versions; their behavior is not automatically reproduced by
+a new package.
 
-1. [Quickstart](QUICKSTART.md): construct a brain, teach a relation, test fresh
-   predictions without targets, then save and resume.
-2. [Wiring examples](VARIANTS.md): add states, intermediate populations, branches
-   or optional error readback within the same graph.
-3. [Brain design](BRAIN_DESIGN.md): choose observations, temporal context,
-   connected capacity and a cost budget.
-4. [Bootstrapping](BOOTSTRAP.md), then [live operation](LIVE.md): acquire a
-   behavior, execute it, learn from actual outcomes and check retained skills.
+## Start with a continuing brain
 
-Bootstrapping and live operation use the same brain and learning rule. Numerical
-qualification and useful behavior need separate checks. The
-[experimental boundary](EXPERIMENTAL.md) explains recursive observation, intended
-routine/correction roles and what historical demos establish.
+- [Quickstarts](quickstart.md): runnable learning examples.
+- `GenericBrain.compose(inputs, actions, modules=(64,), observers=())` builds
+  the continuing foundation with working and consolidating memory. Optional
+  observer regions join the same graph; the base modules already provide depth.
+  Actions require the full equation residual to qualify; an exhausted budget
+  produces a refusal, not a partly settled action.
+- [Build a brain](brain.md) and [continuous interaction](continuous.md):
+  observations, actual action outcomes, working traces, associative memory and
+  complete `GenericBrain` continuation.
+- [Memory and imagination example](../examples/memory_imagination.py): retained
+  cues, finite response protection and private planning with actual toy outcomes.
+- [Learn, act and observe](interaction.md): learn a temporal world model,
+  privately consider controls and learn from the actual consequence.
+- [Build from your data](build.md), [orientation](orientation.md) and
+  [troubleshooting](troubleshooting.md): shapes, preprocessing and first checks.
 
-## Reference and examples
+## Memory, imagination and optional observation
 
-| Read | Purpose |
+| Capability | Guide |
 | --- | --- |
-| [Runnable examples](../examples/README.md) | Learning, body control, explicit history, reward, batching and cost measurement |
-| [Agent recipe](AGENTS.md) | Application workflow and documentation rules |
-| [GPU execution and parallel experience](ACCELERATION.md) | Devices, precision, batch repair and independent lives |
-| [Architecture guide](DRSN.md) | Patch equations, connected populations and recursive readback |
-| [Capability and cost](PERFORMANCE.md) | Query and learning work, comparison controls and versioned evidence |
-| [Processing patch](ELEMENT.md) | Local state, prediction errors, repair and retained relations |
-| [API reference](REFERENCE.md) | Classes, parameters, methods and diagnostics |
-| [Specification](SPECIFICATION.md) | Qualification, refusal, witness admission and saved continuation |
+| Traces, records and plastic associations | [Memory](memory.md), [continued learning](continuous.md) |
+| Event context, individual records and learning during sleep | [Record patch](record-patch.md) |
+| Learned temporal paths and private imagination | [Temporal model](temporal.md) |
+| Continuous action proposals under the learned model | [Planning](planning.md) |
+| Bounded protection of declared learned responses | [Temporal memory](temporal-memory.md) |
+| Jointly settled observer and observed populations | [Recursive settlement](recursive-settlement.md), [recursive training](recursive-training.md) |
+| Explicit regions, ports and custom wiring | [Cortices](cortex.md), [structured ports](api.md), [genomes](evolution.md) |
 
-[Source](https://github.com/muellerberndt/cadence) ·
-[Public demos](https://github.com/muellerberndt/cadence-demos) ·
-[Release notes](../CHANGELOG.md)
+These mechanisms have different numerical and learning contracts. Read
+[contracts](contracts.md) before combining them. The newer state-and-error
+population solver remains a separate
+[experimental implementation](equilibrium/index.md); it does not replace the
+foundation or prove the older memory capabilities redundant.
+
+<a id="kept-for-existing-experiments"></a>
+
+## Other supported compositions
+
+[Belief patches](belief.md), [steering and life](steering.md),
+[record composition](record-patch.md), [PatchNet](patchnet.md) and
+[population execution](population.md) remain available for their declared uses.
+Their guides state how computation and learning proceed. Sequential steering
+or finite repair must not be described as a jointly qualified observer graph
+without that guarantee.
+
+## Measure and reproduce
+
+Use [task design](task-design.md), [common missteps](missteps.md),
+[certificates](certificate.md), [protocols](protocols.md) and [receipts](receipts.md)
+to separate numerical qualification from acquired behavior. Check free recall,
+interference, actual outcomes and saved continuation. Use
+[backends](backends.md) and [scaling](scaling.md) for declared device/work costs.
+
+The [examples repository](https://github.com/muellerberndt/cadence-examples)
+preserves Amen, Connect Four and other applications with their own sources and
+receipts. [Atari Arcade](https://github.com/muellerberndt/cadence-demos/tree/main/atari-arcade)
+uses a separate population-engine browser port. Keep each application's actual
+runtime, learned checkpoint and supplied assistance explicit during recovery.
+
+## Reference
+
+[API](api.md) · [Changelog](../CHANGELOG.md) · [Contributing](../CONTRIBUTING.md) ·
+[Architecture](architecture.md) · [World models](equilibrium-world-models.md) ·
+[Creativity and self-reflection](creativity.md) · [Paper](https://philpapers.org/rec/MUECAP-2)
+
+Formal theorems and their audit live in the canonical
+[Cadence flagship Lean library](https://github.com/FloatingPragma/oph-meta/blob/main/cadence-flagship/lean/README.md).

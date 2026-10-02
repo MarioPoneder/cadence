@@ -2,29 +2,36 @@
 
 ## 0.62.0 — 2026-10-02
 
-- Enforce one connected equilibrium at the individual patch level after sparse
-  wiring is resolved. Connected population declarations can otherwise conceal
-  independent patch groups. Refuse these layouts with an actionable error;
-  do not insert hidden contacts or count shared sensors as coupling.
-- Avoid a duplicate full evaluation when no repair proposal was attempted.
-  The same call's fresh, complete initial evaluation certifies the unchanged
-  state. Every attempted proposal still receives a fresh final check. There
-  is no cross-call certificate cache, changed tolerance or new runtime mode.
-- Simplify the guides around one patch graph with explicit size and wiring.
-  Correct the distinction between stationarity, remaining prediction error
-  and agreement with reality, and document returning analytic derivatives.
-  Current state and learned relations persist through their documented calls;
-  automatic temporal memory and protected consolidation are not claimed.
-- Keep recursive error readback optional through the existing `observer` API,
-  with its patches participating in the same equilibrium. Document the proposed
-  surprise/goal-driven correction cycle without adding an untested scheduler.
-- Repair the installed-package outcome-ownership CI example to build a coupled
-  brain. Strengthen sparse-connectivity, unchanged-state, clamp and continuation
-  checks, including reference and optional tensor execution.
-- Identify the package as alpha. Historical Amen, Connect Four and Atari
-  demonstrations remain their original applications pending reproduction on
-  this engine. Checkpoints require this release's exact implementation sources;
-  preserve older source artifacts with their models.
+- Restore the capable pre-reset foundation from 930ee807: continuing
+  `GenericBrain` interaction, `Trace`/`Afterglow`, consolidating
+  `SynapticMemory`, record patches and sleep, temporal learning, private
+  imagination, action planning and response protection. Preserve subsequent
+  numerical, continuation and recursive-wiring hardening.
+- Add `GenericBrain.compose` as a direct modular entry with working trace and
+  consolidating memory, optional reciprocal observer regions, and the existing
+  continuing interaction interface. Add private `GenericBrain.imagine` over
+  supplied hypothetical observations; environment prediction remains the
+  separate learned temporal-model contract.
+- Qualify `GenericBrain.act`, `predict` and `accuracy` against the full state
+  equations. Exhausted action repair preserves live state and pending feedback;
+  consumed real outcomes stay learned if a following action refuses. Keep finite
+  eligibility/training phases distinct from this free-answer qualification.
+- Keep cortical observation optional. The foundation can already be deep and
+  modular; observer feedback extends the shared graph rather than replacing
+  working memory and learning with a narrower model.
+- Preserve the newer state-and-error solver under
+  `cadence.experimental.equilibrium`, with its own guides, examples and tests.
+  Its sparse patch-connectivity checks and same-call stationary-evaluation
+  optimization remain available there, without changing the restored APIs.
+- Rewrite the entry guides around the biological-brain objective, working
+  mechanisms and actual application source identities. The default package
+  requires NumPy. Keep current GPL-3.0 licensing and historical attribution.
+- Preserve original Amen, Connect Four and Atari checkpoints and browser
+  engines. Library recovery, checkpoint parity and native application behavior
+  require separate verification; no old receipt is silently promoted.
+- Recover the capable foundation before releasing the narrower candidate as the
+  default. Its separate numerical, CI and package evidence stays source-bound;
+  the restored package requires its own verification.
 
 ## 0.61.0 — 2026-10-02
 

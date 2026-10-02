@@ -1,0 +1,16 @@
+{
+  "artifacts": {
+    "1103_partitioned_initial.npz": "917219eda4d041f9d3a082da515508302144ef253f00254e1565fd18f40eda6c",
+    "1103_partitioned_step0.npz": "d4fc03b9dc16abb2e93bd6633ba731cb0c466a04718b484a28432c9153fce603",
+    "step0.json": "d15e5e8da6e6d2238716e0fd34adb75b329c641c6a01092486b4e9e63c8c1d23"
+  },
+  "frozen_helper_sha256": "6a7415fed550499991e88f77fb15531123887e1ba6c07008a686c4e68e95758d",
+  "independent_verification_sha256": "835d5a6ad2ceb67e5e587f2c8a10ee17d52e550366f0ef02e0f990767580eaf1",
+  "meaning": "A single source-bound numerical parity fixture from a capped fixed-routing development assay; no behavioral advantage claim. No audio/corpus dependency.",
+  "parent_receipt_sha256": "73b67d1f62caa119bd452495ca3960c8c9a66be4a0c907103068c6ea2bd5f2b9",
+  "schema": "cadence.partitioned-frozen-pilot-fixture/v1",
+  "seed": 1103,
+  "updates_represented": [
+    0
+  ]
+}

@@ -1,126 +1,115 @@
-"""Execute documented examples and keep the public constructor reference current."""
+"""Run the reader's actual introductory snippets and check local documentation links."""
 
-import inspect
 import re
 import runpy
-import time
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 
-import cadence
-
 ROOT = Path(__file__).resolve().parents[1]
-DOCUMENTS = [
-    ROOT / "README.md",
-    ROOT / "examples" / "README.md",
-    *sorted((ROOT / "docs").glob("*.md")),
-]
-FENCE = re.compile(r"^```([^\n]*)\n(.*?)^```[ \t]*$", re.MULTILINE | re.DOTALL)
+# A block right after this marker is illustrative (it reads data the page cannot build) and is
+# not run; every other ``python`` block on a page is.
+NOT_RUN = "<!-- not-run"
+BLOCK = re.compile(r"(<!-- not-run[^\n]*-->\n)?```python\n(.*?)```", re.S)
+# pages whose blocks need an optional dependency
+REQUIRES = {"docs/backends.md": "torch", "docs/population.md": "torch"}
 
 
-@pytest.mark.parametrize(
-    "path", DOCUMENTS, ids=lambda path: str(path.relative_to(ROOT))
-)
-def test_documented_python(path):
-    """Each document has one namespace, as if its examples formed a script."""
-    text = path.read_text()
-    namespace = {"__name__": "__main__", "__file__": str(path)}
-    for block in FENCE.finditer(text):
-        language = block.group(1).strip()
-        if not language.startswith(("python", "py ")) and language != "py":
-            continue
-        assert language in ("python", "py"), "Put signatures in text fences"
-        prefix = text[: block.start()].rstrip()
-        marker = re.search(r"<!--\s*not-run\b([^<>]*?)-->$", prefix, re.DOTALL)
-        if marker:
-            reason = marker.group(1).strip().removeprefix(":").strip()
-            assert reason, "Every unexecuted Python example needs an explicit reason"
-            continue
-        line = text.count("\n", 0, block.start()) + 2
-        code = "\n" * (line - 1) + block.group(2)
-        exec(compile(code, str(path), "exec"), namespace)
+def snippets(page: str) -> list[str]:
+    return [code for marker, code in BLOCK.findall((ROOT / page).read_text()) if not marker]
 
 
-def test_public_exports_are_documented():
-    reference = (ROOT / "docs" / "REFERENCE.md").read_text()
-    for name in cadence.__all__:
-        assert re.search(rf"\b{re.escape(name)}\b", reference), name
-
-
-@pytest.mark.parametrize("kind", ("small", "deep", "recursive"))
-@pytest.mark.parametrize("seed", (0, 2, 7))
-def test_layout_learning_example(kind, seed):
-    example = runpy.run_path(str(ROOT / "examples" / "layout_learning.py"))
-    report = example["learn"](kind, seed=seed)
-    assert report["updates"] > 0
-    assert report["accepted_examples"] == 4 * report["updates"]
-    assert report["max_fresh_error"] < 0.1
-    assert report["resume_exact"]
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "Cortex",
-        "bootstrap",
-        "History",
-        "LearningProgress",
-        "Reinforcement",
-        "LiveController",
-        "slew",
-    ],
-)
-def test_constructor_reference_matches_api(name):
-    reference = (ROOT / "docs" / "REFERENCE.md").read_text()
-    match = re.search(rf"(?ms)^{name}\(.*?\)", reference)
-    assert match, f"Missing complete {name} constructor signature"
-    namespace = {"time": time}
-    exec(f"def {match.group()}:\n    pass\n", namespace)
-    documented = inspect.signature(namespace[name]).parameters
-    actual = inspect.signature(getattr(cadence, name)).parameters
-    assert list(documented) == list(actual)
-    for parameter_name, parameter in actual.items():
-        assert documented[parameter_name].kind == parameter.kind
-        assert documented[parameter_name].default == parameter.default
-        assert f"`{parameter_name}`" in reference
-
-
-PUBLIC_METHODS = [
-    (owner, name)
-    for owner in (
-        cadence.Cortex,
-        cadence.Brain,
-        cadence.History,
-        cadence.LearningProgress,
-        cadence.Reinforcement,
-        cadence.LiveController,
-    )
-    for name, member in inspect.getmembers(owner)
-    if not name.startswith("_")
-    and (inspect.isfunction(member) or inspect.ismethod(member))
+PAGES = [
+    "README.md",
+    "docs/patchnet.md",
+    "docs/temporal.md",
+    "docs/architecture.md",
+    "docs/temporal-memory.md",
+    "docs/quickstart.md",
+    "docs/concepts.md",
+    "docs/memory.md",
+    "docs/continuous.md",
+    "docs/tasks.md",
+    "docs/reward.md",
+    "docs/certificate.md",
+    "docs/cortex.md",
+    "docs/brain.md",
+    "docs/evolution.md",
+    "docs/build.md",
+    "docs/belief.md",
+    "docs/steering.md",
+    "docs/recursive-settlement.md",
+    "docs/recursive-training.md",
+    "docs/api.md",
+    "docs/backends.md",
+    "docs/interaction.md",
+    "docs/learning.md",
+    "docs/partitioned.md",
+    "docs/planning.md",
+    "docs/population.md",
+    "docs/protocols.md",
+    "docs/receipts.md",
+    "docs/record-patch.md",
 ]
 
 
-@pytest.mark.parametrize(
-    ("owner", "name"),
-    PUBLIC_METHODS,
-    ids=[f"{c.__name__}.{n}" for c, n in PUBLIC_METHODS],
-)
-def test_public_method_reference_matches_api(owner, name):
-    """Examples alone cannot detect misleading optional/required parameters."""
-    reference = (ROOT / "docs" / "REFERENCE.md").read_text()
-    match = re.search(rf"`(?:{owner.__name__}\.)?{name}(\([^`]*\))`", reference)
-    assert match, f"Missing exact {owner.__name__}.{name} signature"
-    namespace = {}
-    exec(f"def documented{match.group(1)}:\n    pass\n", namespace)
-    documented = inspect.signature(namespace["documented"]).parameters
-    actual = {
-        key: parameter
-        for key, parameter in inspect.signature(getattr(owner, name)).parameters.items()
-        if key != "self"
-    }
-    assert list(documented) == list(actual)
-    for key, parameter in actual.items():
-        assert documented[key].kind == parameter.kind
-        assert documented[key].default == parameter.default
+@pytest.mark.parametrize("page", PAGES)
+def test_introductory_python_snippets(page, tmp_path, monkeypatch):
+    if page in REQUIRES:
+        pytest.importorskip(REQUIRES[page])
+    monkeypatch.chdir(tmp_path)
+    blocks = snippets(page)
+    assert blocks, f"{page} has no runnable python block; drop it from PAGES"
+    # a reader runs the page as a script of their own; ``__file__`` names it
+    script = tmp_path / "documentation_example.py"
+    script.write_text("\n\n".join(blocks))
+    namespace = {"__name__": "documentation_example", "__file__": str(script)}
+    for index, code in enumerate(blocks):
+        exec(compile(code, f"{page}:python-block-{index + 1}", "exec"), namespace)
+    if page == "docs/quickstart.md":
+        assert namespace["night"]["updates"] > 200 and namespace["learner"].updates == 80
+
+
+def test_every_python_block_is_run_or_marked_illustrative():
+    """A new page with python blocks must join PAGES, or mark each block ``<!-- not-run -->``."""
+    # The preserved engine has its own executable-documentation parametrization.
+    # Read that owner's actual inventory so adding an untested page still fails.
+    experimental = runpy.run_path(str(ROOT / "tests/equilibrium/test_documentation.py"))
+    covered = set(PAGES) | {path.relative_to(ROOT).as_posix() for path in experimental["DOCUMENTS"]}
+    unrun = [
+        page.relative_to(ROOT).as_posix()
+        for page in sorted((ROOT / "docs").rglob("*.md"))
+        if snippets(page.relative_to(ROOT).as_posix())
+        and page.relative_to(ROOT).as_posix() not in covered
+    ]
+    assert not unrun, f"python blocks never executed: {unrun}"
+
+
+def test_local_documentation_links_resolve():
+    problems = []
+    for page in [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]:
+        for target in re.findall(r"\[[^\]\n]*\]\(([^\s)]+)\)", page.read_text()):
+            if re.match(r"[a-z]+:", target):
+                continue
+            path, _, anchor = unquote(target).partition("#")
+            destination = (page.parent / path).resolve() if path else page
+            if not destination.exists():
+                problems.append(f"{page.name}: missing {target}")
+            elif anchor and destination.suffix == ".md":
+                content = destination.read_text()
+                headings = re.findall(r"^#+\s+(.+)$", content, re.M)
+                slugs = {re.sub(r"[^\w\- ]", "", h.lower()).replace(" ", "-") for h in headings}
+                if anchor not in slugs and f'id="{anchor}"' not in content:
+                    problems.append(f"{page.name}: missing anchor {target}")
+    assert not problems, "\n".join(problems)
+
+
+def test_minimal_install_ci_guides_exist():
+    """The installed-wheel smoke must not depend on a retired source guide."""
+    workflow = ROOT / ".github/workflows/ci.yml"
+    if not workflow.exists():
+        pytest.skip("CI workflows are not included in the source distribution")
+    pages = re.findall(r'"(docs/[^"\n]+\.md)"', workflow.read_text())
+    assert pages, "The minimal-install job must exercise documented examples"
+    assert all((ROOT / page).is_file() for page in pages)

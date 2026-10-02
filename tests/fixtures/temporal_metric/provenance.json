@@ -1,0 +1,9 @@
+{
+  "scope": "Generated numerical regression fixtures; no recorded audio or old raw training paths. Accepted fixture reproduces the first C-metric update at beta .001 and damping .0001. Branch fixture is the pre-update state at step68 of the failed beta .1 pilot.",
+  "main_receipt_digest": "c61fa622ce68f8bac97a551116d63119287421460455313b89166c61d65445a7",
+  "branch_parent_sha256": "13263f35ab97b7440391a24e2267438c60726aedb9190fe99f463dc3cb89fb6a",
+  "fixtures": {
+    "branch.npz": "8580aeafb1659a67cf15b89c034bf639b4785b0c85c2412b796ea423e9052d6d",
+    "accepted.npz": "eda8d679fab8c9880fc280d4732aa8d8d0145a27a0e8248fe01a9958dd2e36f8"
+  }
+}

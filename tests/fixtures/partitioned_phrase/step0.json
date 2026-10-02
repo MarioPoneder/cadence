@@ -1,0 +1,77 @@
+{
+  "accepted_rate": 8.0,
+  "after_parameters_sha256": "4b2ddbbf2cee332e5e5fb66d6c5f931321c5beef9f99b4d65680188e06b9a3a1",
+  "after_snapshot_sha256": "4fa45f0f4b4a9b80628273365d3eb3faad54c9cdbd617bc6925eb7954b54c08c",
+  "arm": "partitioned",
+  "before_snapshot_sha256": "72532fb757d34370d4f12ad8ab1d24a33d3cd246ac8bbf2802b1b8c0e57424d7",
+  "cpu_seconds": 0.13068599999999997,
+  "delta_norm_squared": 0.0010407776047921232,
+  "final_loss": 0.051841302562680325,
+  "index": 0,
+  "initial_loss": 0.059555645796924905,
+  "phases": [
+    {
+      "accepted_damping": [],
+      "accepted_step_sizes": [],
+      "block_chain_attempts": 0,
+      "converged": true,
+      "energy_evaluations": 1,
+      "energy_history": [
+        6.151333962465013e-32
+      ],
+      "iterations": 0,
+      "message_bytes": 0,
+      "minimum_pivot_eigenvalue": null,
+      "reason": "exact_free",
+      "residual": 1.1102230246251565e-16
+    },
+    {
+      "accepted_damping": [
+        0.0
+      ],
+      "accepted_step_sizes": [
+        1.0
+      ],
+      "block_chain_attempts": 2,
+      "converged": true,
+      "energy_evaluations": 2,
+      "energy_history": [
+        0.0005955514449099484,
+        0.0005955442748584637
+      ],
+      "iterations": 1,
+      "message_bytes": 4392960,
+      "minimum_pivot_eigenvalue": 0.18592362474988183,
+      "reason": "converged",
+      "residual": 1.382961595438563e-10
+    },
+    {
+      "accepted_damping": [
+        0.0
+      ],
+      "accepted_step_sizes": [
+        1.0
+      ],
+      "block_chain_attempts": 2,
+      "converged": true,
+      "energy_evaluations": 2,
+      "energy_history": [
+        -0.0005955614711129452,
+        -0.0005955686418970838
+      ],
+      "iterations": 1,
+      "message_bytes": 4392960,
+      "minimum_pivot_eigenvalue": 0.1859112650107113,
+      "reason": "converged",
+      "residual": 1.3831793671466103e-10
+    }
+  ],
+  "reason": "updated",
+  "replay_calls": 1,
+  "replay_losses": [
+    0.051841302562680325
+  ],
+  "seed": 1103,
+  "updated": true,
+  "wall_seconds": 0.1306902500000433
+}

@@ -1,223 +1,112 @@
 # Building on Cadence
 
-Read [the guide](docs/DRSN.md), [API reference](docs/REFERENCE.md) and
-[specification](docs/SPECIFICATION.md) before changing semantics.
-Use [the agent recipe](docs/AGENTS.md) to construct and assess an application;
-it also defines the documentation rules for System 1 and System 2.
+Read [the documentation index](docs/index.md), [numerical contracts](docs/contracts.md)
+and [API reference](docs/api.md) before changing semantics.
 
-## The principle: one equilibrium by local settlement
+## Goal and governing mechanism
 
-**Patches repair local disagreement to reach a coherent brain state. Further
-repair is driven by that state's mismatch with reality.** This is the main
-hypothesis, and everything in this repository serves it.
+Cadence aims to build a simulated human-like brain from simplified biological
+mechanisms. A continuing animal-like foundation learns, remembers, imagines and
+acts; optional cortical columns add recursive observation and feedback. The
+foundation can already be deep and modular. Do not equate ordinary depth with
+recursive observation or require a separate application controller for each region.
 
-The goal is a simulated human-like brain built from simplified biological
-mechanisms, including cortical-column organization, short-term memory,
-long-term plasticity and recursive self-correction. Make each abstraction's
-bounded state, ports, readback, records and repair explicit. Biological
-inspiration guides the design; a name or analogy does not establish a capability.
-Prefer the smallest mechanism that demonstrates the intended function.
+The central mechanism is local disagreement repair through bounded state,
+ports, readback, records and plastic relationships. Observers and observed
+regions must participate in the equilibrium claimed for their connected graph.
+A historical trace may be a fixed boundary for a present solve; distinguish it
+from a live coordinate that must still qualify. Never freeze unresolved live
+state or weaken a certificate to claim a whole-brain answer.
 
-Preserve prior mechanisms and evidence when revising the substrate. Version
-0.11 implemented Trace/Afterglow and fast/slow synaptic memory; the 0.20 rewrite
-removed those modules. Do not describe memory as a new requirement, or substitute
-warm starts and parameter persistence for demonstrated temporal recall and
-retention. Current design/proof owners are [short-term memory #84](https://github.com/muellerberndt/cadence/issues/84),
-[long-term plasticity #85](https://github.com/muellerberndt/cadence/issues/85)
-and [recursive integration #86](https://github.com/muellerberndt/cadence/issues/86).
-The formal library belongs beside the paper in `cadence-flagship/lean` in the
-OPH workspace. State theorem assumptions and the bridge to the runtime; older
-model proofs do not automatically certify a replacement implementation.
+Different restored numerical implementations have different contracts.
+Graph and temporal learners use free/nudged equilibrium contrasts; record and
+belief models also use explicit adjoints and record writes. Preserve those
+mathematics honestly. A successful record scan is not a certificate for a
+joint graph equilibrium, and an imagined outcome is not an actual witness.
 
-Minimalism must preserve demonstrated capabilities. Before retiring a working
-mechanism, retain its behavioral contract and compare the replacement on the
-same task, information and declared resources. A smaller API, new solver tests
-or success on a different task does not establish parity. Experimental resets
-must name the capabilities they drop and keep their source-bound baselines;
-never treat removed tests or closed issues as completed requirements.
+## Preserve working capabilities
 
-Every patch has local state, ports, a prediction relation and live disagreement.
-Clamped sensory samples stay fixed; connected patches repair their shared state.
-Actual outcome clamps can also make relations eligible for learning. An answer
-is admitted only when every eligible coordinate passes the same whole-brain
-stationarity check. The answer can retain disagreement and can be wrong about
-reality. Compare it with actual outcomes.
+The default package restores the pre-reset foundation from 930ee807, including
+memory and imagination mechanisms present in 0.11 and subsequent hardening.
+The narrower population solver is preserved under
+`cadence.experimental.equilibrium`, with its own docs, examples and tests.
+Do not let experimental construction restrictions silently remove a supported
+foundation mechanism or reinterpret an old checkpoint.
 
-Enforce the principle at the resolved patch graph, not merely population names:
-every patch must be connected by state or error contacts. Shared fixed sensors
-do not connect patches. Sparse wiring must pass this check too; never add a
-bypass or silently connect a refused layout. The current builder's smallest
-layout has two populations. Populations group one common patch primitive.
+Before removing or replacing a mechanism:
 
-Connectivity does not require all-to-all wiring. Preserve sparse chains,
-branches and modular networks joined by a few contacts. The requirement is
-one repair-connected component, not biological or computational uniformity.
+1. Identify its actual consumers, source-bound checkpoints and behavioral tests.
+2. Preserve the original source/evidence and every relevant failed comparison.
+3. Make the replacement pass acquisition, free behavior, memory, continuation
+   and complete-cost checks that the capability requires.
+4. State any remaining differences. A renamed API, green solver tests or fewer
+   public classes cannot substitute for recovered behavior.
 
-There are no flat/deep operating modes. Patch count, connectivity and nested
-error readback are distinct properties of one graph. `inputs=` supplies state
-contacts; optional `observes=` adds error readback within the same equilibrium.
-Neither contacts nor population names by themselves prove useful cognition.
+Memory is implemented. `Trace`/`Afterglow` retain temporal input;
+`SynapticMemory` has fast and persistent associations; record patches keep
+context, learned relations and a record store; temporal models retain a boundary
+and support private imagination, action planning and response protection.
+These mechanisms have bounded capacities and specific learning rules. Neither
+their existence nor their removal establishes general lifelong retention.
 
-Fast settlement starts from retained activity and skips repair proposals when
-already qualified. Retain the full numerical check. A smaller surprise need
-not imply a smaller solve in a nonlinear model. Numerical stationarity, local
-prediction error, historical forecast surprise and task success are distinct.
-The reference implementation uses synchronized analytic-gradient repair and
-reverse derivative traversal; do not claim it has no backward arithmetic or
-proves asynchronous confluence. Nonlinear stationary states need not be unique.
-Strict convexity guarantees a unique constrained minimum; quadratic form alone
-does not.
+`GenericBrain.compose` is the simple entry: base `modules` form reciprocal
+paths and optional `observers` read and return to that same graph. Working trace
+and consolidating memory are included by default. `GenericBrain.build` retains
+its original construction contract. `GenericBrain.imagine` evaluates supplied
+hypothetical observations with a private trace and read-only durable memory;
+it does not predict environmental transitions. Use `TemporalPatchNet.plan`
+with a learned world model for action-consequence planning.
 
-Keep the substrate small. Add complexity only for a demonstrated need, preserve
-checkpoint and refusal semantics, and use one brain/body boundary. A separate
-predictor or lookup can be a comparison, never a substitute for the mechanism.
+`GenericBrain` owns a continuing observation/action/outcome loop. Reward concerns
+the preceding executed action; demonstration labels concern the current input.
+Preserve event order, stream identity, actual-outcome custody and complete saved
+continuation. Hypothetical queries must not teach from their own predictions.
+`GenericBrain.act`, `predict` and `accuracy` qualify the full state equations
+through `Brain.equilibrate`; cached activity is checked afresh. A refused `act`
+preserves live state, memory, randomness and pending feedback. If `step` has
+learned an actual outcome before the next action refuses, retain that learning
+and retry `act` rather than resubmitting the reward. Free-answer qualification
+does not certify finite nudged eligibility or every training phase. Check each
+API's contract rather than transferring experimental result fields or source
+hash rules to another model.
 
-## Three mandatory review gates
+## Three review gates
 
-**Minimalism, user-friendliness and agent-friendliness govern every change.**
+- **Minimalism:** reuse a working primitive and remove demonstrated duplication.
+  Added complexity needs a general measured purpose. Simplicity is not permission
+  to discard memory, imagination or plasticity because a smaller model lacks them.
+- **User-friendliness:** one clear body interface, explicit units and timing,
+  useful defaults and complete learning/save/restore examples. Columns extend
+  the base rather than forcing users to assemble disconnected brains.
+- **Agent-friendliness:** documented signatures and mutation rules match code;
+  state and topology are inspectable; numerical assumptions, refusal, retries,
+  source identities and checkpoint compatibility are explicit and tested.
 
-| Pillar | A change is ready only when |
-| --- | --- |
-| Minimalism | It builds on bounded patches, ports, readback and explicit learning/repair, keeps the public API small, and adds no compatibility machinery, application-specific core rule or mandatory runtime dependency. Optional acceleration must preserve the same mathematical rule and admission contract. A new abstraction must remove real duplication or enable a demonstrated general need. |
-| User-friendliness | A first-time user can construct, query, teach and save a brain from the quickstart. Names separate width, sensor shape and recursive observation. Configuration has validated defaults, errors explain the violated contract, and failure leaves continuation intact. |
-| Agent-friendliness | Public signatures, defaults, return fields, mutation rules and failure behavior match the reference. State and topology are inspectable; examples execute; checkpoint identity and retry semantics are explicit. No undocumented preprocessing or hidden fallback changes the task. |
+The default runtime requires NumPy. Optional PyTorch, MLX, Numba and SciPy paths
+must retain the appropriate numerical/admission contract. Do not advertise the
+restored foundation as dependency-free. Keep current GPL-3.0 licensing and
+historical source attribution; do not restore an obsolete top-level license.
 
-Minimalism measures concepts and dependencies, not file count. Separate
-responsibilities into focused modules when that makes ownership clearer.
+## Verification and evidence
 
-Before merging, explain how the change meets each applicable gate and the
-principle above, and run the checks below. Prefer improving an existing
-primitive to adding another. Do not add aliases or wrappers solely to make a
-second way to express the same thing. Performance or convenience must preserve
-qualification and witness custody. Tests enforce executable examples and
-signature/export parity; architectural simplicity and clarity still require
-review rather than a test-count claim.
+Run the checks in [CONTRIBUTING.md](CONTRIBUTING.md). Numerical changes need
+independent derivative/reference or adversarial checks as appropriate. Use
+bounded local tests first; charge all learning, query, replay, planning and
+refused work. Preserve held-out cases, failed runs and actual behavioral limits.
+Learning accuracy is assessed after teaching with outputs free.
 
-## Architecture
+Changes to the default runtime need its tests. Changes to the preserved
+population solver need `tests/equilibrium` as well. Executable documentation and
+local links must pass. Test installed wheel/sdist behavior rather than relying
+only on a source checkout. Do not repin immutable receipts to make them pass.
 
-Import `Cortex` and `Brain` from `cadence`. `Cortex` declares populations;
-`build()` returns a persistent `Brain` and refuses a population that settles
-with no other population. `column(patches=..., inputs=...)` and
-`observer(patches=..., observes=...)` use the same processing-patch rule.
-Width counts processing states. Recursive depth comes from observation wiring.
-`observes` reads current state and exact prediction error and contributes
-feedback to the same coupled solve. Do not implement recursion by chaining
-completed population predictions.
+Amen, Connect Four and Atari are separate versioned application baselines.
+Their original engines, supplied search/body logic and checkpoints must stay
+identified. Static browser parity, a library checkpoint load and new native
+behavior are different checks; report which actually ran.
 
-`brain.py` owns `Brain`, `SettlementError`, runtime state and checkpoints;
-`cortex.py` owns the `Cortex` builder and compiler; `column.py` owns immutable
-`Population` handles; `ports.py` owns `Input`, `Output` and boundary shape/value
-validation. Private `_repair.py` supplies numerical repair and `_validation.py`
-supplies numeric/JSON validation. Package exports keep the public API small and
-application-independent. The default engine is standard library only, Python 3.11+. Private `_tensor.py`
-provides optional PyTorch tensor execution with analytic derivatives; it supplies
-no autograd optimizer or separate learning rule. Final tensor proposals are
-qualified against the original float64 objective by the reference engine.
-`bootstrap.py` supplies bounded replay and unclamped readiness checks through
-those existing brain methods. It owns orchestration, not a second learning rule.
-`observe_batch` uses private per-example activity with shared parameters under
-mean example energy plus one pre-batch parameter anchor. It commits parameters
-and one event identity, preserving live state. Tensor execution vectorizes rows;
-it does not average separately learned checkpoints or introduce another solver.
-`memory.py` supplies explicit bounded sensory history and an error-progress
-heuristic. `reinforcement.py` supplies discrete Q-learning target orchestration
-and transition replay through that same repair law; derived teaching targets
-must use `source="estimate"`. `runtime.py` supplies a serial callback owner and
-actuator rate limits, without hard deadlines or solver cancellation. These
-helpers are not new patch primitives or biological chemistry.
-
-## Routine and optional recursive observation
-
-Recommend a small connected state-contact network for initial applications.
-`step` retains activity; `observe` retains activity and learned relations.
-Neither automatic memory allocation nor protected skill retention follows from
-those storage mechanisms. Batches retain shared parameters, not a sequence of
-live states. Explicit history and replay must remain visible.
-
-Recursive self-observation is opt-in through `observer(..., observes=...)`.
-Its patches read and constrain the same live equilibrium, using the same patch
-rule. They currently participate in every solve. Keep examples experimental
-until learned benefit is measured against capable connected controls.
-
-System 1 and System 2 name cheap routine and additional useful correction,
-not different brain classes or flat/deep layouts. The intended cycle is routine,
-actual surprise or unmet goal, useful correction, then retained cheap routine.
-No automatic semantic attention or independent population clocks are claimed.
-Future scheduling must preserve unresolved needs, factual outcome ownership,
-current whole-brain qualification and saved continuation. Do not certify a
-sleeping branch by leaving it out of the check. See
-[experimental scope](docs/EXPERIMENTAL.md).
-
-## Changes and verification
-
-```sh
-python -m pip install -e ".[dev]"
-python -m pytest -q
-python -m ruff check src tests
-python -m ruff format --check src tests
-```
-
-Tests execute Python examples in the README and every documentation page.
-Basic learning tests must also pass: multiple seeds, independently varied inputs,
-unclamped recall after replay, and saved continuation across connected state-contact and
-error-reading populations. Keep these gates small enough to run in ordinary CI.
-Numerical qualification alone cannot pass an acquisition test.
-Constructor signatures and package exports must match the reference. Add
-independent mathematical or adversarial tests for changes to derivatives,
-qualification, witness custody or serialization. Preserve bounded construction
-and refuse malformed shapes before expensive materialization.
-Batch tests must check shared-parameter derivatives, unaveraged per-row
-qualification, all-or-nothing admission, order-sensitive retry identity,
-preserved live state and separate example/update counters. Check both one-row
-equivalence of parameter solves and the distinct live-state commitment rules.
-
-## Application rules
-
-- Use **bootstrapping phase** for initial preparation and **live phase** for
-  ongoing operation. These application lifecycle terms use the same repair law;
-  do not introduce an automatic phase toggle or phase-wide parameter freeze.
-  The live phase can continue learning through actual witnesses supplied to
-  `observe`. The `Reinforcement` helper assigns explicit estimated action-value
-  targets from observed transitions; neither primitive admission alone nor that
-  helper is a complete biological learning mechanism.
-- `settle` and `predict` are pure queries. `step` retains qualified live state;
-  `observe` also repairs parameters from actual output witnesses.
-- `observe_batch` repairs private row states and shared parameters, retaining
-  parameters only. One batch owns one admission/event. Rows share no implicit
-  temporal state; batching does not provide delayed credit or sequence memory.
-  `bootstrap(batch_size=1)` keeps ordered `observe`; larger sizes change the
-  learning trajectory. Count `presentations`/`accepted` as examples and
-  `updates` as atomic admissions, and measure accuracy as well as throughput.
-- Check `qualified`/`accepted`. Refused or capped outputs are diagnostics,
-  not admitted actions. `predict` raises `SettlementError` on refusal.
-- Evaluate learning on subsequent **unclamped** predictions. A witnessed output
-  equal to its clamp is not a learning result.
-- `observe` is supervised learning. Use `source="estimate"` for derived targets;
-  keep source labels bound to retry identity. `Reinforcement` implements declared
-  normalized, clipped Q targets and replay; do not label a raw reward-as-action
-  target as reinforcement learning. Check behavior on later free decisions.
-- A `History` buffer is explicit external memory; do not claim learned recurrent
-  memory from it. Retention after replay requires old-skill checks.
-- Never discard unprocessed reward/action evidence in `LiveController`'s latest
-  sensory slot. Count candidate queries, learning work and complete command age;
-  a solver sweep budget is not a real-time guarantee.
-- Check input sufficiency before interpreting failure. Sparse coverage does
-  not provide learned visual/audio features or recover omitted information.
-- Start with [the bootstrapping guide](docs/BOOTSTRAP.md). Default wiring includes
-  every declared source coordinate; sparse `fan_in` is an explicit choice.
-  Patches within one population do not read each other: a population that
-  reads only sensors and is read by nobody cannot be built, and an unused
-  patch does not provide hidden capacity to a separate output.
-- Parallelize independent brains or environment collection; keep each brain's
-  experience admissions ordered. Device availability is checked on first solve;
-  do not silently substitute a different device.
-- Serialize calls to a brain. Checkpoints bind exact implementation sources;
-  source hashes are compatibility checks, not authenticated witness evidence.
-
-## Claims
-
-Report stationarity and prediction error separately. The global energy check
-and analytic derivatives are part of this reference implementation; it is not
-a proof of asynchronous distributed confluence. Extra observers do not
-establish a capability advantage without matched-information, matched-capacity
-and declared-work controls. Preserve unsuccessful outcomes and receipts.
+Short-term memory is tracked in #84, long-term memory/plasticity including the
+historical reversal regression in #85, and optional recursive integration in #86.
+Earlier closed issue metadata is not proof of their old capability contracts.
+Release only after capability, continuation and installed-artifact checks pass
+on the final source; publication status belongs in the release record.

@@ -1,258 +1,160 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: brains that settle into one equilibrium" width="100%">
+  <img src="https://raw.githubusercontent.com/muellerberndt/cadence/main/docs/assets/cadence-logo.png" alt="Cadence: a continuing brain with local state, memory and repair" width="100%">
 </p>
 
 # Cadence
 
-[Documentation](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/index.md) · [Quickstart](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/QUICKSTART.md) · [Examples](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/README.md) · [Interactive overview](https://floatingpragma.io/cadence/) · [Preprint](https://philpapers.org/rec/MUECAP-2) · [Pragma Research](https://floatingpragma.io/)
+[Website](https://floatingpragma.io/cadence/) · [Demos](https://floatingpragma.io/demos/) · [Documentation](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/index.md) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/) · [Changelog](https://github.com/muellerberndt/cadence/blob/v0.62.0/CHANGELOG.md)
 
-[![PyPI](https://img.shields.io/pypi/v/cadence-net)](https://pypi.org/project/cadence-net/)
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
-[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/v0.62.0/LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 
-**Patches repair local disagreement to reach a coherent brain state. Further
-repair is driven by that state's mismatch with reality.**
+**A simulated human-like brain, built from simplified biological mechanisms.**
 
-Cadence aims to build a simulated human-like brain using simplified biological
-mechanisms: local interpretation and repair, cortical-column organization,
-short-term memory, long-term plasticity and recursive self-correction. These
-are engineering abstractions, with behavior to demonstrate, rather than a
-detailed model of cortical biology.
+Cadence aims to grow a continuing brain that learns through experience, remembers,
+imagines alternatives and acts in the world. Its starting point is an animal-like
+sensorimotor system with plastic connections and memory. Cortical columns and
+recursive observation extend that foundation. Human-level intelligence is the
+goal; the software models selected mechanisms rather than detailed biology.
 
-Cadence is an alpha learning library built from bounded patches with local
-state, ports, prediction-error readback and retained relations. Input samples
-are held fixed while connected patches repair a shared state. The whole
-settled state is the brain's current interpretation; selected patch states
-provide its outputs. Actual outcomes can also be clamped, allowing the same
-repair to change learned relations.
+The central idea is local disagreement repair. Bounded, observer-like patches
+carry state, communicate through ports, read back activity and retain records.
+Observations disturb their relationships; repair seeks a coherent state, and
+actual consequences guide learning. A numerically settled answer can still be
+wrong about the world. Learning has to improve subsequent free behavior.
 
-**This README describes `0.62.0`.** Every compiled patch must belong to one
-connected network of state or error contacts. Shared sensor inputs alone do
-not connect patches. This is checked after sparse wiring is resolved, as well
-as at the population level.
+<a id="get-started"></a>
 
-Connected does not mean fully connected. Sparse chains, branches and modules
-joined by a few contacts can all repair one shared state. Independent groups
-can be useful separate computations; this builder requires a repair path
-between the patches declared as one brain.
+## A continuing brain
 
-## One network, different connections
+The base can contain specialized regions and deep, modular connections.
+`GenericBrain.compose` brings together sensory and association regions,
+reciprocal motor connections, reward learning, a working trace and consolidating
+associative memory. `modules` chooses the base regions; `observers` optionally
+adds regions that read and return influence to the same live graph. Its `step` method receives the next observation and the actual outcome
+of the preceding action. There is no application-wide training/inference switch.
 
-There are no flat/deep operating modes. Size tells you how many patches there
-are; wiring tells you which disagreements can influence one another. The two
-matter independently. Populations are convenient groups of the same patch
-primitive. Start with a sensing population and a response population that reads
-it. Add connected capacity or branches when a measured task needs them.
-
-`column(..., inputs=population)` reads live states. Its constraints influence
-the source population through the joint repair. The optional
-`observer(..., observes=population)` also reads exact current errors. Both
-participate in the same equilibrium; an observer is never a separately settled
-critic. See [wiring examples](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/VARIANTS.md) and the
-[recursive observation experiment](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/EXPERIMENTAL.md).
-
-## Repair, reality and memory
-
-Use `step` for live operation: it starts from retained activity and commits a
-qualified new state. An unchanged equilibrium needs no repair sweeps. Changed
-inputs or factual outcome clamps can disturb it; the solver performs the work
-needed to meet the same tolerance, within its budget. The numerical disturbance
-is distinct from surprise measured against an earlier forecast. Neither one
-alone tells the brain whether a long-term goal was achieved.
-
-`observe` retains changes to both activity and learned relations after a
-qualified experience. Those relations carry learned information across calls
-and saves. Retained activity is a warm start, not a guarantee of sequence
-memory, and later learning can overwrite earlier skills. For tasks requiring
-explicit recent context, `History` provides bounded storage. Automatic memory
-allocation, protected consolidation and surprise-gated recursive attention
-remain research work; [the experimental guide](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/EXPERIMENTAL.md) describes
-the integration contract.
-
-Earlier versions already implemented temporal memory: `0.11.0` had
-Trace/Afterglow context and fast/slow synaptic consolidation. The `0.20` rewrite
-removed those modules. Their historical capabilities are a starting point for
-the current [short-term memory](https://github.com/muellerberndt/cadence/issues/84)
-and [long-term plasticity](https://github.com/muellerberndt/cadence/issues/85)
-work, alongside [recursive cortical-column integration](https://github.com/muellerberndt/cadence/issues/86).
-These issues track the remaining design and proof goals.
-
-Every answer is checked against the whole brain. Equilibrium here means that
-no eligible projected repair direction exceeds the tolerance. Competing
-constraints may leave prediction errors, and a settled answer may still be
-wrong about reality. Evaluate free predictions against actual observations.
-
-## How the computation works
-
-Each patch predicts its state with a weighted `tanh` relation. Repair minimizes
-the sum of local squared disagreements plus a state prior. Queries adjust
-activity; learning also adjusts relations under a prior anchored to the
-preceding experience. A refusal preserves the previous continuation.
-
-The implementation uses analytic gradients, including a reverse traversal to
-carry returning state and error influence. Its distinction from a feed-forward
-predictor is the jointly adjustable activity and equilibrium answer, not the
-absence of derivative computation. The synchronized reference solver does not
-establish asynchronous distributed convergence. See the
-[patch equations](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/DRSN.md#what-a-processing-patch-computes) and
-[qualification contract](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/SPECIFICATION.md#repair-and-qualification).
-
-## Install
-
-Python 3.11 or later. The default engine needs only the standard library:
+**Cadence 0.62.0 is alpha software.** Its memory, learning and imagination
+mechanisms are implemented and tested under their stated contracts; human-like
+general intelligence remains the research goal. Python 3.11+ and NumPy are
+required. PyTorch, MLX, Numba and SciPy support optional execution paths.
 
 ```sh
-python -m pip install "cadence-net==0.62.0"
-python -c "import cadence; print(cadence.__version__)"
+python -m pip install cadence-net==0.62.0
 ```
-
-For reproducible work, retain the installed package and its source with saved
-brains; see [checkpoint requirements](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/REFERENCE.md#checkpoints).
-
-Optional PyTorch execution uses the same learning rule and final reference
-check. Install the `gpu` extra, then choose
-`Cortex(device="cpu")`, `Cortex(device="mps")` or `Cortex(device="cuda")`:
-
-```sh
-python -m pip install "cadence-net[gpu]==0.62.0"
-```
-
-Small brains can be faster on the default engine. Measure the complete workload;
-see [devices, precision and batching](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/ACCELERATION.md).
-
-## Teach a small body model
-
-This brain learns how a supplied one-dimensional simulator moves. It sees
-position and commanded velocity, then predicts the next position. Four
-`features` patches read the body and one `response` patch reads them; the two
-populations settle against each other, so the forecast is one equilibrium of
-five patches. Teaching, readiness checks and final probes use different
-inputs. Predictions come from the settled brain; the simulator supplies only
-measured teaching and test values.
 
 ```python
-from cadence import Brain, Cortex, bootstrap
+import numpy as np
+from cadence import GenericBrain
 
-# Supplied simulator: one quarter-second of movement.
-def advance(position, velocity):
-    return position + 0.25 * velocity
-
-
-def measurements(positions, velocities):
-    return [
-        ({"body": [x, u]}, {"next_position": [advance(x, u)]})
-        for x in positions for u in velocities
-    ]
-
-
-layout = Cortex(seed=2)
-body = layout.input("body", shape=2)
-features = layout.column("features", patches=4, inputs=body)
-response = layout.column("response", patches=1, inputs=features)
-layout.output("next_position", shape=1, reads=response)
-brain = layout.build()
-
-report = bootstrap(
-    brain,
-    measurements((-0.5, 0.5), (-0.8, 0.8)),
-    checks=measurements((-0.25, 0.25), (-0.4, 0.4)),
-    max_error=0.06, epochs=30,
+brain = GenericBrain.compose(
+    inputs=4, actions=2, modules=(16, 8), seed=7,
 )
-assert report["passed"], report
-
-# Final free predictions: no answer is clamped or supplied as an input.
-for position, velocity in ((0.35, -0.4), (-0.35, 0.4)):
-    forecast = brain.predict({"body": [position, velocity]})["next_position"][0]
-    assert abs(forecast - advance(position, velocity)) < 0.06
-
-# Live operation: retain activity, execute, then learn the actual consequence.
-inputs = {"body": [0.35, -0.4]}
-activity = brain.step(inputs)
-assert activity["accepted"]
-measured = advance(0.35, -0.4)
-assert brain.observe(inputs, {"next_position": [measured]})["accepted"]
-
-saved = brain.snapshot()  # JSON text: state, learned relations and source identity
-restored = Brain.from_snapshot(saved)
-assert restored.predict(inputs) == brain.predict(inputs)
+observation = np.array([[1.0, 0.0, 0.0, 0.0]])
+action = brain.step(observation)
+assert action.shape == (1,)
 ```
 
-This learns a small forward model, not a navigation policy. The
-[live-control example](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/live_control.py) uses a learned model to compare
-candidate actions and move an actual simulated body toward a goal. Its action
-search is supplied application code. It does not demonstrate automatic attention
-or a benefit from recursion.
+The body executes that action. On the next call, pass its measured reward and
+termination flag with the next observation; a teacher can instead label the
+current observation. Keep each batch row attached to the same continuing life.
+[Continuous interaction](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/continuous.md) explains the timing and complete
+save/restore. [Build a brain](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/brain.md) shows custom regions and wiring.
 
-`settle` and `predict` query without changing the brain. `step` retains qualified
-activity. `observe` also learns from supplied output witnesses; `observe_batch`
-learns from several independent examples while preserving live activity.
-Check `qualified` or `accepted`; `predict` raises `SettlementError` on refusal.
-A teaching clamp matching its target is not evidence of learning—check later
-predictions without targets.
+## Memory and imagination are working mechanisms
 
-## Run the current examples
+Short-term traces preserve earlier activity across events. `Trace` and
+`Afterglow` feed that retained information into later processing; they are more
+than a warm numerical starting point. `GenericBrain` can use a working trace and
+`SynapticMemory`, whose fast associations and persistent matrix support recall,
+consolidation and revision. Correlated memories can interfere, and finite capacity
+limits what can be retained. See [memory](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/memory.md) and
+[continued learning](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/continuous.md).
 
-From a checkout of this version:
+`RecordPatchNet` combines persistent event context, slow learned parameters and
+a writable record store. It can retain individual outcomes, privately imagine
+continuations and transfer record completions into slow weights with `sleep`.
+This mechanism powers the original Amen composer and Connect Four evaluator.
+The [record-patch guide](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/record-patch.md) gives executable examples and
+explains the different jobs of records and learned relations.
 
-```sh
-python -m pip install -e .
-python examples/layout_learning.py
-python examples/layout_learning.py --layout deep
-python examples/live_control.py --decisions 20 --seed 0
-python examples/live_learning.py --seeds 0 2 7
+`TemporalPatchNet` learns a model of observed paths. Its `imagine` operation
+queries a private continuation; `plan` repairs proposed continuous actions under
+that model while holding actual observations and learned parameters fixed.
+It executes no action and creates no new evidence. `TemporalMemory` can protect
+declared responses under its finite-capacity contract. Use
+[the learned-model interaction loop](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/interaction.md),
+[planning](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/planning.md) and [response protection](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/temporal-memory.md).
+`GenericBrain.imagine` can also examine a sequence of hypothetical observations
+on a private copy of its working trace, without changing learned memory, pending
+outcomes or random state. That predicts the brain's responses to supplied
+observations; predicting the environment's response to an action requires the
+learned world model above.
+
+Run [the memory and imagination example](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/memory_imagination.py) for a
+bounded demonstration of cue retention, response protection, private planning
+and actual toy-body outcomes. Goals and protected responses are explicit. These
+APIs provide memory and imagination; their usefulness and limits still need to
+be measured on the task they serve.
+
+## Optional recursive cortical observation
+
+A column can observe another region's current state and send feedback while
+both participate in the same recurrent repair process. Nesting this readback adds recursive
+observation to a brain that can already be deep and modular. It gives no column
+an unconditional final answer.
+
+```python
+from cadence import GenericBrain
+
+recursive = GenericBrain.compose(
+    inputs=8, actions=2, modules=(32, 16), observers=(8,), seed=7,
+)
 ```
 
-| Example | What you can verify |
-| --- | --- |
-| [Layout learning](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/layout_learning.py) | Start with the two-population brain, then try additional connected populations; check fresh predictions, work and exact saved continuation. The optional `--layout recursive` experiment has different capacity and does not establish an advantage. |
-| [Learned body control](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/live_control.py) | Bootstrap a body model, select actions through explicit candidate search, execute them and admit actual outcomes. |
-| [History, retention and rewards](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/live_learning.py) | Separate small tests of explicit sensory history, old-skill replay, reward learning/reversal and saved continuation. |
+This constructs one recurrent graph with two base modules and an observing
+region. The same `step`, memory and continuation interface applies. Before
+returning an action, the full state equations must meet the declared tolerance;
+exhausting the repair budget raises an error without issuing an action.
+The lower-level `PatchNet.recursive` constructor remains available. [Recursive settlement](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/recursive-settlement.md) explains the
+connections and causal checks; [recursive training](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/recursive-training.md)
+covers experience and saved continuation. Useful recursive correction must earn
+its cost while preserving the base brain's skills and memory.
 
-[All examples](https://github.com/muellerberndt/cadence/blob/v0.62.0/examples/README.md) include batch learning, independent parallel
-brains, delayed reward and layout costs. `History` supplies explicit external
-memory; `Reinforcement` supplies discrete action-value learning and replay.
-Neither is an automatic planner or a guarantee of long-term success.
+The newer state-and-error population solver remains available separately as
+`cadence.experimental.equilibrium`; its [guide](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/equilibrium/index.md)
+documents its own API and numerical guarantees. It does not replace the restored
+memory, record and temporal mechanisms. The implementations have different
+learning contracts: graph/temporal models use equilibrium contrasts, while
+record and belief models also use explicit adjoints and record writes. The
+[contracts guide](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/contracts.md) states those differences.
 
-The [public demos](https://github.com/muellerberndt/cadence-demos) also include
-Amen, Atari, Patch World and Doom experiments. Their original engines and
-results have different versions and representations. They are **historical
-application evidence**, not completed reproductions on `0.62.0`. In particular,
-the original Amen record-cell brain is not equivalent to one current
-population. Consult the [versioned performance evidence](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/PERFORMANCE.md) and
-[current capability boundary](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/EXPERIMENTAL.md) before comparing them.
+## Recover and preserve actual behavior
 
-## Learn more
+The original applications provide concrete baselines:
 
-| Guide | What it helps you do |
-| --- | --- |
-| [Quickstart](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/QUICKSTART.md) | Build, teach, query and save your first brain |
-| [Layout quickstarts](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/VARIANTS.md) | Choose connections and size, then optional error readback |
-| [Experimental capabilities](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/EXPERIMENTAL.md) | Understand observer costs, unfinished System 2 behavior and current evidence limits |
-| [Brain design](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/BRAIN_DESIGN.md) | Choose sufficient observations, connected capacity and useful evaluation checks |
-| [Bootstrapping](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/BOOTSTRAP.md) | Prepare a skill and measure acquisition, retention and learning cost |
-| [Live operation](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/LIVE.md) | Connect observations, actual outcomes, history, reward and control callbacks |
-| [Agent recipe](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/AGENTS.md) | Build integrations with the right contracts and capability claims |
-| [Architecture](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/DRSN.md) / [API reference](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/REFERENCE.md) / [Specification](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/SPECIFICATION.md) | Understand the equations, exact calls and numerical guarantees |
+- [Amen](https://github.com/muellerberndt/cadence-examples/tree/main/amen): a
+  0.11-trained record patch generates music from silence while hearing what it
+  plays. Ordinary playback keeps record writes off; its optional self-primer
+  writes played events into records. It is not an Afterglow demo.
+- [Connect Four](https://github.com/muellerberndt/cadence-examples/tree/main/connect4):
+  a 0.12-trained record evaluator supplies values to a declared game-tree search.
+  Browser play uses fixed learned parameters and an empty record store.
+- [Atari Arcade](https://github.com/muellerberndt/cadence-demos/tree/main/atari-arcade):
+  a separate 0.50 population-engine browser port learns from demonstrations and
+  outcomes. Its runtime and parity checks have their own source identity.
 
-Qualification means constrained numerical stationarity, not a unique global
-minimum or task success. Saved brains bind exact implementation sources; retain
-those sources and application preprocessing with checkpoints. Broader capability
-and comparative efficiency require measured task evidence.
+Each application keeps its original checkpoints, receipts and supplied body
+logic. Restored library operations must pass their relevant reproduction and
+continuation checks before an application is described as ported. A newer
+package version does not establish musical quality or playing strength.
 
-## Development
+Start with [the documentation](https://github.com/muellerberndt/cadence/blob/v0.62.0/docs/index.md). Development follows three active
+research owners: [short-term memory](https://github.com/muellerberndt/cadence/issues/84),
+[long-term memory and plasticity](https://github.com/muellerberndt/cadence/issues/85)
+and [optional recursive integration](https://github.com/muellerberndt/cadence/issues/86).
+These track stronger guarantees and integrated behavior while existing
+capabilities remain available. See [contributing](https://github.com/muellerberndt/cadence/blob/v0.62.0/CONTRIBUTING.md) for checks.
 
-Changes follow **minimalism**, **user-friendliness** and **agent-friendliness**,
-and the principle in the [contributor instructions](https://github.com/muellerberndt/cadence/blob/v0.62.0/AGENTS.md): every brain is
-one equilibrium of patches settling against each other.
-
-```sh
-python -m pip install -e ".[dev]"
-python -m pytest -q
-python -m ruff check src tests
-python -m ruff format --check src tests
-```
-
-Tests execute the README and documentation examples and check learning,
-mathematical derivatives, refusal and checkpoint continuation.
-Licensed under [GPL-3.0-or-later](https://github.com/muellerberndt/cadence/blob/v0.62.0/LICENSE).
+Licensed under [GPL-3.0](https://github.com/muellerberndt/cadence/blob/v0.62.0/LICENSE). Historical attribution and license notices
+remain with the preserved source and evidence.
