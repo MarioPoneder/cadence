@@ -1,7 +1,3 @@
-> This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
-> engine identity remains `0.62.0`; it is separate from the default Cadence API.
-
 # GPU execution and parallel experience
 
 Cadence can accelerate repair with CPU or GPU tensors and run independent

@@ -11,7 +11,7 @@ def make_learner(backend="cpu", *, rate=1.0, eta=.1):
         pytest.importorskip("torch")
     graph = cd.Connectome.from_synapses(2, pre=[0], post=[1])
     return cd.Learner(
-        cd.Brain(graph, cd.NeuronModel(), backend=backend, device="cpu"), [1],
+        cd.NeuralGraph(graph, cd.NeuronModel(), backend=backend, device="cpu"), [1],
         cd.LearnerConfig(eta=eta, eta_bias=0, momentum=.2), reciprocal=False,
         synapse_rate=np.array([rate]),
     )
@@ -103,7 +103,7 @@ def test_nonfinite_joint_solve_does_not_poison_patch_continuation(backend, budge
         pytest.importorskip("torch")
     graph = cd.Connectome.from_synapses(2, pre=[0, 1], post=[1, 0],
                                        sign=[1e308, 1e308])
-    brain = cd.Brain(graph, cd.NeuronModel(gain=1), backend=backend, device="cpu")
+    brain = cd.NeuralGraph(graph, cd.NeuronModel(gain=1), backend=backend, device="cpu")
     learner = cd.Learner(brain, [1], cd.LearnerConfig(nudge="quadratic"))
     patch = cd.PatchNet(learner, steps=budget, chunk=8)
     patch.settle(np.zeros((1, 2)))

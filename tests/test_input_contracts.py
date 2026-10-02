@@ -14,7 +14,7 @@ import cadence as cd
 def test_accuracy_counts_choices_across_rows_and_slots(slots: int | tuple[int, ...]) -> None:
     w = cd.layered(2, 3, 4 if isinstance(slots, int) else sum(slots), seed=7)
     learner = cd.Learner(
-        cd.Brain(w, cd.learning_neuron_model()), w.populations["output"], slots=slots
+        cd.NeuralGraph(w, cd.learning_neuron_model()), w.populations["output"], slots=slots
     )
     drive = np.zeros((3, w.n))
     labels = learner.predict(drive)
@@ -28,7 +28,7 @@ def test_accuracy_counts_choices_across_rows_and_slots(slots: int | tuple[int, .
 )
 def test_bad_labels_fail_before_learning(labels: np.ndarray) -> None:
     w = cd.layered(2, 3, 2, seed=1)
-    learner = cd.Learner(cd.Brain(w, cd.learning_neuron_model()), w.populations["output"])
+    learner = cd.Learner(cd.NeuralGraph(w, cd.learning_neuron_model()), w.populations["output"])
     before = learner.brain.efficacy.copy()
     with pytest.raises(ValueError, match="label"):
         learner.step(np.zeros((1, w.n)), labels)
@@ -38,7 +38,7 @@ def test_bad_labels_fail_before_learning(labels: np.ndarray) -> None:
 
 def test_one_label_cannot_silently_train_an_entire_batch() -> None:
     w = cd.layered(2, 3, 2, seed=1)
-    learner = cd.Learner(cd.Brain(w, cd.learning_neuron_model()), w.populations["output"])
+    learner = cd.Learner(cd.NeuralGraph(w, cd.learning_neuron_model()), w.populations["output"])
     for operation in (learner.step, learner.accuracy):
         with pytest.raises(ValueError, match="same batch size"):
             operation(np.zeros((3, w.n)), np.array([0]))
@@ -52,7 +52,7 @@ def test_one_label_cannot_silently_train_an_entire_batch() -> None:
 def test_output_ports_cannot_alias_or_duplicate_an_neuron(outputs: list[int | float]) -> None:
     w = cd.layered(2, 3, 2, seed=1)
     with pytest.raises(ValueError, match="output"):
-        cd.Learner(cd.Brain(w, cd.learning_neuron_model()), outputs)  # type: ignore[arg-type]
+        cd.Learner(cd.NeuralGraph(w, cd.learning_neuron_model()), outputs)  # type: ignore[arg-type]
 
 
 def test_single_softmax_nudge_matches_analytic_pull_and_batched_form() -> None:
@@ -74,7 +74,7 @@ def test_zero_steps_and_inactive_nudges_agree_across_backends(backend: str) -> N
         pytest.skip(f"{backend} not installed")
     w = cd.layered(2, 3, 2, seed=5)
     kw = {"device": "cpu"} if backend == "torch" else {}
-    brain = cd.Brain(w, cd.learning_neuron_model(), backend=backend, **kw)  # type: ignore[arg-type]
+    brain = cd.NeuralGraph(w, cd.learning_neuron_model(), backend=backend, **kw)  # type: ignore[arg-type]
     drive = np.full((2, w.n), 0.1)
     warm = brain.settle_batch(drive, steps=3)
     unchanged = brain.settle_batch(drive, state=warm, steps=0, trajectory=True)
@@ -99,7 +99,7 @@ def test_zero_steps_and_inactive_nudges_agree_across_backends(backend: str) -> N
 def test_invalid_step_count_cannot_report_a_successful_no_op(steps: int | float) -> None:
     w = cd.layered(2, 3, 2, seed=1)
     with pytest.raises(ValueError, match="steps"):
-        cd.Brain(w, cd.learning_neuron_model()).settle(steps=steps)  # type: ignore[arg-type]
+        cd.NeuralGraph(w, cd.learning_neuron_model()).settle(steps=steps)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("temperature", [0.0, -1.0, float("nan")])

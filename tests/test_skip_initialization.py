@@ -12,8 +12,8 @@ import cadence as cd
 def test_zero_skip_preserves_existing_parameters_predictions_and_learns(seed: int) -> None:
     original = cd.layered(4, 8, 2, density=1, seed=seed)
     expanded = cd.layered(4, 8, 2, density=1, seed=seed, skip=True, skip_init=0.0)
-    before = cd.Brain(original, cd.learning_neuron_model(dt=1.0))
-    brain = cd.Brain(expanded, before.neuron_model)
+    before = cd.NeuralGraph(original, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(expanded, before.neuron_model)
     np.testing.assert_array_equal(brain.dense(), before.dense())
     new_edges = (expanded.pre < 4) & (expanded.post >= 12)
     assert new_edges.sum() == 8 and expanded.synapses == original.synapses + 8

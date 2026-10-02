@@ -5,7 +5,7 @@ error without a backward computation graph. Each synapse keeps its own eligibili
 trace, and one broadcast dopamine signal gates every trace into a weight change.
 This page describes those components and the tests that check them.
 
-For application code, [`GenericBrain.step`](continuous.md) receives this moment's
+For application code, [`Brain.step`](continuous.md) receives this moment's
 observation and the preceding action's reward, updates plasticity, and returns the next
 action. There is no separate training mode. The phase-level API below exposes the same
 mechanism for custom architectures and measurement.
@@ -62,7 +62,7 @@ import cadence as cd
 
 connectome = cd.layered(2, 8, 3, density=1.0, seed=0)
 learner = cd.Learner(
-    cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"]
+    cd.NeuralGraph(connectome, cd.learning_neuron_model()), connectome.populations["output"]
 )
 drive = np.zeros((1, connectome.n))
 drive[:, list(connectome.populations["input"])] = [[0.5, 0.8]]
@@ -89,7 +89,7 @@ unchanged. Budget for both free phases and the action’s two nudged phases.
 followed by `learn`. Calling another `act` replaces the pending action. Finish the
 reward transition before changing learner parameters elsewhere, or call `reset`.
 `reset` clears stream state and centering, but preserves the learned critic, actor and
-optimizer history. `GenericBrain.save/load` includes this full state; `Learner.save`
+optimizer history. `Brain.save/load` includes this full state; `Learner.save`
 does not save a separately constructed actor-critic.
 
 ## Reward evidence

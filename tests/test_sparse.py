@@ -34,7 +34,7 @@ def neuron_sum(brain, activation, blocks=None):
 
 def test_csr_preserves_duplicates_signed_weights_and_isolated_neurons():
     pytest.importorskip("scipy.sparse")
-    brain = cd.Brain(connectome(), cd.NeuronModel(), dense_limit=0)
+    brain = cd.NeuralGraph(connectome(), cd.NeuronModel(), dense_limit=0)
     state = np.random.default_rng(12).normal(size=(32, 9))
     assert brain.to_dict()["sparse_kernel"] is None
     np.testing.assert_allclose(brain._synaptic_input(state), neuron_sum(brain, state), atol=1e-14)
@@ -49,8 +49,8 @@ def test_changing_input_trajectories_match_neuron_sum_with_mask_nudge_and_adapta
     neuron_model = cd.NeuronModel(
         dt=0.3, gain=0.2, leak=0.02, adaptation=cd.Adaptation(tau_steps=7, strength=0.25)
     )
-    brain = cd.Brain(connectome(), neuron_model, dense_limit=0)
-    reference = cd.Brain(brain.connectome, neuron_model, dense_limit=0)
+    brain = cd.NeuralGraph(connectome(), neuron_model, dense_limit=0)
+    reference = cd.NeuralGraph(brain.connectome, neuron_model, dense_limit=0)
     reference._synaptic_input = types.MethodType(neuron_sum, reference)
     rng = np.random.default_rng(33)
     keep = np.ones(9)
@@ -87,7 +87,7 @@ def test_changing_input_trajectories_match_neuron_sum_with_mask_nudge_and_adapta
 
 def test_new_parameters_cannot_reuse_stale_csr_weights_or_mutate_old_brain():
     pytest.importorskip("scipy.sparse")
-    brain = cd.Brain(connectome(), cd.NeuronModel(), dense_limit=0)
+    brain = cd.NeuralGraph(connectome(), cd.NeuronModel(), dense_limit=0)
     state = np.random.default_rng(73).normal(size=(3, 9))
     original = brain._synaptic_input(state)
     original_weights = brain.weights.copy()
@@ -114,7 +114,7 @@ def test_new_parameters_cannot_reuse_stale_csr_weights_or_mutate_old_brain():
 
 def test_numpy_only_fallback_still_runs_the_original_segmented_sum(monkeypatch):
     monkeypatch.setattr(sparse, "_csr_type", lambda: None)
-    brain = cd.Brain(connectome(), cd.NeuronModel(), dense_limit=0)
+    brain = cd.NeuralGraph(connectome(), cd.NeuronModel(), dense_limit=0)
     state = np.random.default_rng(15).normal(size=(3, 9))
     np.testing.assert_allclose(brain._synaptic_input(state), neuron_sum(brain, state), atol=1e-14)
     assert brain.to_dict()["sparse_kernel"] == "numpy_segmented"
@@ -127,7 +127,7 @@ def test_empty_graph_has_no_sparse_dependency(neurons, monkeypatch):
 
     monkeypatch.setattr(sparse, "_csr_type", forbidden)
     w = cd.Connectome.from_synapses(neurons, pre=[], post=[])
-    brain = cd.Brain(w, cd.NeuronModel(), dense_limit=0)
+    brain = cd.NeuralGraph(w, cd.NeuronModel(), dense_limit=0)
     state = np.ones((3, neurons))
     np.testing.assert_array_equal(brain._synaptic_input(state), np.zeros_like(state))
     assert brain._csr is None

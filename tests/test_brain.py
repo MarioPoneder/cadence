@@ -21,7 +21,7 @@ def test_available_backends_names_cpu() -> None:
 
 
 def test_settle_reports_steps_and_stops_at_tolerance() -> None:
-    brain = cd.Brain(ring(), cd.NeuronModel(gain=0.03, dt=0.5))
+    brain = cd.NeuralGraph(ring(), cd.NeuronModel(gain=0.03, dt=0.5))
     loose = brain.settle(stimulus={0: 3.0}, steps=200, tolerance=1e-2)
     tight = brain.settle(stimulus={0: 3.0}, steps=200, tolerance=1e-6)
     assert 0 < loose.steps <= tight.steps <= 200
@@ -34,7 +34,7 @@ def test_settle_reports_steps_and_stops_at_tolerance() -> None:
 
 
 def test_settled_state_helpers() -> None:
-    brain = cd.Brain(ring(), cd.NeuronModel(gain=0.03))
+    brain = cd.NeuralGraph(ring(), cd.NeuronModel(gain=0.03))
     batch = brain.settle_batch(
         np.stack([brain.stimulus_vector({0: 3.0}), brain.stimulus_vector({3: 3.0})]), steps=40
     )
@@ -48,7 +48,7 @@ def test_settled_state_helpers() -> None:
 
 
 def test_stimulus_vector_and_levels() -> None:
-    brain = cd.Brain(ring(), cd.NeuronModel(stimulus_amplitude=2.0))
+    brain = cd.NeuralGraph(ring(), cd.NeuronModel(stimulus_amplitude=2.0))
     v = brain.stimulus_vector({2: 1.5})
     assert v.shape == (6,) and v[2] == 3.0 and v.sum() == 3.0  # level times the stimulus amplitude
     levels = brain.stimulus_levels(np.array([[0.5, 0, 0, 0, 0, 1.0]]))
@@ -60,8 +60,8 @@ def test_dense_and_segmented_transports_agree_with_nudges_and_adaptation() -> No
     neuron_model = cd.learning_neuron_model(dt=0.5).replace(
         adaptation=cd.Adaptation(tau_steps=10, strength=0.2)
     )
-    dense = cd.Brain(connectome, neuron_model, dense_limit=10_000)
-    segmented = cd.Brain(connectome, neuron_model, dense_limit=1)
+    dense = cd.NeuralGraph(connectome, neuron_model, dense_limit=10_000)
+    segmented = cd.NeuralGraph(connectome, neuron_model, dense_limit=1)
     assert (
         dense.to_dict()["transport"] == "dense" and segmented.to_dict()["transport"] == "segmented"
     )
@@ -98,12 +98,12 @@ def test_brain_validates_inputs() -> None:
     connectome = ring()
     neuron_model = cd.NeuronModel()
     with pytest.raises(ValueError):
-        cd.Brain(connectome, neuron_model, efficacy=np.ones(3))
+        cd.NeuralGraph(connectome, neuron_model, efficacy=np.ones(3))
     with pytest.raises(ValueError):
-        cd.Brain(connectome, neuron_model, bias=np.ones(2))
+        cd.NeuralGraph(connectome, neuron_model, bias=np.ones(2))
     with pytest.raises(ValueError):
-        cd.Brain(connectome, neuron_model, backend="abacus")  # type: ignore[arg-type]
-    brain = cd.Brain(connectome, neuron_model)
+        cd.NeuralGraph(connectome, neuron_model, backend="abacus")  # type: ignore[arg-type]
+    brain = cd.NeuralGraph(connectome, neuron_model)
     with pytest.raises(ValueError):
         brain.settle_batch(np.zeros((2, 5)))
     state = brain.settle_batch(np.zeros((2, 6)), steps=2)
@@ -115,7 +115,7 @@ def test_brain_validates_inputs() -> None:
 
 def test_with_parameters_and_readings() -> None:
     connectome = ring().with_populations(head=[0, 1], tail=[4, 5])
-    brain = cd.Brain(connectome, cd.NeuronModel(gain=0.03))
+    brain = cd.NeuralGraph(connectome, cd.NeuronModel(gain=0.03))
     changed = brain.with_parameters(efficacy=brain.efficacy * 2.0, bias=np.full(6, 0.1))
     assert np.allclose(changed.efficacy, brain.efficacy * 2.0) and changed.bias[0] == 0.1
     state = brain.settle(stimulus={0: 3.0}, steps=40)
@@ -129,9 +129,9 @@ def test_torch_kernel_matches_cpu_with_every_feature() -> None:
     neuron_model = cd.learning_neuron_model(dt=0.5, leak=0.2).replace(
         adaptation=cd.Adaptation(tau_steps=15, strength=0.1)
     )
-    cpu = cd.Brain(connectome, neuron_model)
-    torch_dense = cd.Brain(connectome, neuron_model, backend="torch", dense_limit=10_000)
-    torch_segmented = cd.Brain(connectome, neuron_model, backend="torch", dense_limit=1)
+    cpu = cd.NeuralGraph(connectome, neuron_model)
+    torch_dense = cd.NeuralGraph(connectome, neuron_model, backend="torch", dense_limit=10_000)
+    torch_segmented = cd.NeuralGraph(connectome, neuron_model, backend="torch", dense_limit=1)
     drive = cpu.stimulus_levels(np.random.default_rng(1).random((4, connectome.n)) * 0.5)
     out = list(connectome.populations["output"])
     mask = np.zeros(connectome.n)
@@ -164,8 +164,8 @@ def test_mlx_kernel_matches_cpu_with_every_feature() -> None:
     neuron_model = cd.learning_neuron_model(dt=0.5, leak=0.2).replace(
         adaptation=cd.Adaptation(tau_steps=15, strength=0.1)
     )
-    cpu = cd.Brain(connectome, neuron_model)
-    mlx = cd.Brain(connectome, neuron_model, backend="mlx")
+    cpu = cd.NeuralGraph(connectome, neuron_model)
+    mlx = cd.NeuralGraph(connectome, neuron_model, backend="mlx")
     assert mlx.to_dict()["transport"] == "dense"
     drive = cpu.stimulus_levels(np.random.default_rng(1).random((4, connectome.n)) * 0.5)
     out = list(connectome.populations["output"])
@@ -207,9 +207,9 @@ def test_device_kernels_honour_softmax_groups(backend: str) -> None:
         pytest.skip(f"{backend} not installed")
     connectome = cd.layered(6, 5, 6, density=1.0, seed=8)  # two slots of three output neurons
     neuron_model = cd.learning_neuron_model(dt=1.0)
-    cpu = cd.Brain(connectome, neuron_model)
+    cpu = cd.NeuralGraph(connectome, neuron_model)
     kw = {"device": "cpu"} if backend == "torch" else {}
-    device = cd.Brain(connectome, neuron_model, backend=backend, **kw)  # type: ignore[arg-type]
+    device = cd.NeuralGraph(connectome, neuron_model, backend=backend, **kw)  # type: ignore[arg-type]
     out = np.asarray(connectome.populations["output"])
     mask = np.zeros(connectome.n)
     mask[out] = 1.0
@@ -237,7 +237,7 @@ def test_zero_tolerance_runs_fixed_budget_without_device_scalar_read(monkeypatch
     import torch
 
     connectome = cd.Connectome.from_synapses(2, pre=[0, 1], post=[1, 0], sign=[0.4, -0.3])
-    brain = cd.Brain(connectome, cd.NeuronModel(gain=1), backend="torch", device="cpu")
+    brain = cd.NeuralGraph(connectome, cd.NeuronModel(gain=1), backend="torch", device="cpu")
     expected = brain.settle([1.0, 0.0], steps=20, tolerance=None)
 
     def forbidden_scalar_read(self):

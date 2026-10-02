@@ -12,7 +12,7 @@ def test_recording_captures_every_state_and_preserves_the_result(backend):
         pytest.importorskip("torch")
     graph = cd.layered(2, 3, 2, seed=4)
     model = cd.learning_neuron_model().replace(adaptation=cd.Adaptation(tau_steps=10, strength=0.2))
-    brain = cd.Brain(graph, model, backend=backend, device="cpu", precision="float64")
+    brain = cd.NeuralGraph(graph, model, backend=backend, device="cpu", precision="float64")
     drive = np.zeros((2, graph.n))
     drive[:, :2] = [[1, 0.5], [0.2, 0.8]]
     warm = brain.settle_batch(drive, steps=3)
@@ -45,7 +45,7 @@ def test_recording_captures_every_state_and_preserves_the_result(backend):
 
 
 def test_zero_steps_nested_scopes_and_callback_diagnostics():
-    brain = cd.Brain(cd.layered(1, 2, 1), cd.learning_neuron_model())
+    brain = cd.NeuralGraph(cd.layered(1, 2, 1), cd.learning_neuron_model())
     outer, inner = [], []
 
     def observe(record):
@@ -64,7 +64,7 @@ def test_zero_steps_nested_scopes_and_callback_diagnostics():
 
 
 def test_callback_failure_restores_the_context():
-    brain = cd.Brain(cd.layered(1, 2, 1), cd.learning_neuron_model())
+    brain = cd.NeuralGraph(cd.layered(1, 2, 1), cd.learning_neuron_model())
 
     def fail(_record):
         raise RuntimeError("disk full")
@@ -77,7 +77,7 @@ def test_callback_failure_restores_the_context():
 def test_learning_records_free_and_nudged_phases():
     graph = cd.layered(2, 3, 2)
     learner = cd.Learner(
-        cd.Brain(graph, cd.learning_neuron_model()),
+        cd.NeuralGraph(graph, cd.learning_neuron_model()),
         graph.populations["output"],
         config=cd.LearnerConfig(free_steps=4, nudged_steps=3),
     )
@@ -98,7 +98,7 @@ def test_dopamine_report_preserves_the_sign(backend, reward):
         pytest.importorskip("torch")
     graph = cd.layered(1, 2, 1)
     learner = cd.Learner(
-        cd.Brain(graph, cd.learning_neuron_model(), backend=backend, device="cpu"),
+        cd.NeuralGraph(graph, cd.learning_neuron_model(), backend=backend, device="cpu"),
         graph.populations["output"],
     )
     actor = cd.ActorCritic(

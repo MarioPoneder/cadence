@@ -83,7 +83,7 @@ checks every projection end when it is built.
 `develop(genome, seed=0)` lays the regions out in order as contiguous populations named
 after them, adds each designed region's synapses and its populations as
 `region/population`, and draws every projection. The result is one `Connectome` for one
-`Brain`, the same for the same seed. A port is a named population of that connectome.
+`NeuralGraph`, the same for the same seed. A port is a named population of that connectome.
 
 ```python
 genome = cd.Genome(
@@ -131,7 +131,7 @@ whose reverse is frozen moves by half its own step. A head owns both directions 
 reciprocal projection it learns. `Learner(synapse_rate=...)` multiplies each synapse's step
 before that averaging, so one head can learn its projections at different rates.
 
-Heads with disjoint masks share one brain. An update gives the updating head a new `Brain`
+Heads with disjoint masks share one brain. An update gives the updating head a new `NeuralGraph`
 with the changed parameters (`learner.brain`); hand that brain to the other head before
 its next phase.
 
@@ -152,7 +152,7 @@ def ports(connectome, *names):
     return mask
 
 
-brain = cd.Brain(connectome, cd.learning_neuron_model())
+brain = cd.NeuralGraph(connectome, cd.learning_neuron_model())
 policy = cd.Learner(
     brain,
     connectome.populations["motor/actions"],
@@ -201,7 +201,7 @@ assert moved[owned].any() and not moved[~owned].any()
 the application assembles: the activation of a port, the action, the reads of declared
 stores, missing flags. A fixed random expansion codes the reading, and one delta-rule write
 per witnessed outcome changes its records. No settling phase, residual check or
-certificate involves it, and a write leaves every `Brain` parameter as it was.
+certificate involves it, and a write leaves every `NeuralGraph` parameter as it was.
 [Records](memory.md#records) describes the mechanism.
 
 ```python

@@ -8,8 +8,8 @@ an API by its equations, stopping rule and update contract. Sharing the word
 
 | API | How it computes | How it learns | Qualification |
 | --- | --- | --- | --- |
-| `Brain`, `Learner` | Rate neurons exchange activity over a directed graph. | Free/nudged local contrasts; optional reward traces. | `Brain.equilibrate` checks the full fixed-point equations. `settle` alone may run a fixed budget or stop on activity movement. Directed wiring does not inherit a reciprocal energy gradient theorem. |
-| `GenericBrain` | One recurrent neural graph, optionally extended by reciprocal state-reading observers, with held trace/record input. | The underlying finite contrast/reward learner plus explicit trace and synaptic-memory updates. | `act`, `predict` and `accuracy` require the complete equation residual through `Brain.equilibrate`; exhaustion refuses an answer. This does not qualify every nudged eligibility or training phase. |
+| `NeuralGraph`, `Learner` | Rate neurons exchange activity over a directed graph. | Free/nudged local contrasts; optional reward traces. | `NeuralGraph.equilibrate` checks the full fixed-point equations. `settle` alone may run a fixed budget or stop on activity movement. Directed wiring does not inherit a reciprocal energy gradient theorem. |
+| `Brain` | One recurrent neural graph, optionally extended by reciprocal state-reading observers, with held trace/record input. | The underlying finite contrast/reward learner plus explicit trace and synaptic-memory updates. | `act`, `predict` and `accuracy` require the complete equation residual through `NeuralGraph.equilibrate`; exhaustion refuses an answer. This does not qualify every nudged eligibility or training phase. |
 | `PatchNet` | The reciprocal graph core with persistent free activity and explicit evidence ports. | Free and two nudged phases of the same network; commits only qualified phases. | All required phases must pass the equation residual. The gradient interpretation also needs compatible effective weights, a smooth stable branch and the small-nudge limit. |
 | `TemporalPatchNet` | A causal free path and jointly repaired teaching paths over a finite time window. | Centered contrasts of parameter derivatives. | Whole-path residual and branch checks; the dense hidden-width solves have a different cost from sparse graph transport. |
 | `RecordPatchNet` | A gated causal context scan with local record reads. | `observe` uses an adjoint backward scan; record writes use a local delta rule. | The causal path solves its declared free equations. `detune` separately checks quadratic continuous-output teaching phases; this is not the default training path or a categorical-port guarantee. |
@@ -38,7 +38,7 @@ improvement are separate claims. None alone establishes retention on earlier
 tasks, generalization or biological plausibility. Eligibility, reward and
 source identity must remain attached to the action that was actually executed.
 
-`GenericBrain` uses `learning.free_steps` as the free-answer repair budget and
+`Brain` uses `learning.free_steps` as the free-answer repair budget and
 `learning.tolerance` for the full potential/adaptation equation residual
 (defaults 1024 and `3e-3`). The live model and finite teaching phases retain
 `dt=1.0` and 12 nudged steps. For a qualified free answer, roughly half the sweep
@@ -72,7 +72,7 @@ attempted work may advance even when an update is rejected; it must never be
 presented as accepted learning. An `imagine` call must not teach or alter live
 activity, but an implementation can count its computational work.
 
-`Connectome` arrays and its population mapping are read-only. `Brain.efficacy`,
+`Connectome` arrays and its population mapping are read-only. `NeuralGraph.efficacy`,
 `bias`, `log_gain` and effective `weights` expose read-only arrays. Replace complete
 parameters through validated setters or `with_parameters`; rebuild topology and
 use `with_populations` for population changes. This keeps transport caches and

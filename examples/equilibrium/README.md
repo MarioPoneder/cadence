@@ -1,8 +1,4 @@
-> These examples use `cadence.experimental.equilibrium` explicitly.
-> The enclosing package is 0.70.0; the preserved engine retains identity `0.62.0`.
-> Saved historical receipts describe their original, pinned sources.
-
-# Cadence examples
+# Advanced population experiments
 
 These examples run on the `0.70.0` checkout with Python 3.11 or later. First
 acquire a small relation with two coupled populations, then use a learned body
@@ -90,8 +86,8 @@ requires a diagnostic collection. Read each script's `--help` and declared
 budgets before running a screen.
 
 `layout_cost.py` and `temporal_credit.py` deliberately retain observer arms as
-experimental comparisons. Their stored receipts remain historical; the layouts
-in other examples do not turn those records into new-version results.
+experimental comparisons. Measure their behavior and complete work on your
+chosen task and hardware.
 
 `History` is supplied external memory. `Reinforcement` supplies explicit
 action-value targets and transition replay through the same learning API.
@@ -124,39 +120,3 @@ receipt and records its protocol before measurement. Learning examples can
 take substantially longer than the query-cost probe. Optional tensor devices
 in `batch_bootstrap.py` require the `accel` extra and the corresponding runtime;
 an unavailable requested device fails explicitly.
-
-## Interpret saved receipts and public demos
-
-Saved receipts describe their recorded source version; rerunning a command
-on this checkout produces a new result. Historical Amen, Atari, Patchworld
-and other application demonstrations used their own versioned engines,
-models and body adapters. Their published scores or musical quality are not
-current `0.70` reproduction results. See the
-[demo evidence boundary](../../docs/equilibrium/EXPERIMENTAL.md)
-before comparing or replacing one.
-
-- [Cadence 0.50.0 query-cost receipt](receipts/layout_cost.json): protocol, per-query
-  outcomes, work counts, timings and implementation hashes. It includes an
-  input-only arm that `0.61.0` no longer builds; the record stays as recorded.
-  Equal patch counts do not make graph geometry or output-connected capacity
-  equal; the composition arm also has fewer edges than the other arms.
-- [Temporal-credit receipt](receipts/temporal_credit.json): the recorded
-  qualification run with its original source hashes, explicit memory and
-  credit controls. It is a historical run, not a fresh execution on every
-  checkout; its equal-width layouts have different connection counts, and its
-  input-only arms no longer build.
-- [Historical comparison excerpts](receipts/layout_cost_history.json):
-  source-hashed summaries of older CartPole and changing-body runs, with their
-  versions and conditions. These are excerpts, not full reproduction bundles.
-- [CUDA qualification receipt](receipts/cuda_audit_verified.json): the audited
-  full-suite run on an NVIDIA RTX 4000 Ada laptop GPU at commit `8892927`,
-  with source hashes before and after the run, hardware and library versions
-  and every CUDA case outcome. Two earlier runs,
-  [cuda_qualification.json](receipts/cuda_qualification.json) and
-  [cuda_audit_encoding_failure.json](receipts/cuda_audit_encoding_failure.json),
-  are retained for their failures: a platform-dependent sweep cap and a Windows
-  subprocess encoding fault. They are history, not current results.
-
-The [performance guide](../../docs/equilibrium/PERFORMANCE.md) explains what these comparisons
-support. Prefer a trained task comparison with declared information, capacity,
-learning work and query cost when deciding whether recursive observation helps.

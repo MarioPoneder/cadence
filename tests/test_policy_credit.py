@@ -11,7 +11,7 @@ def actor(nudge="cross_entropy", slots=1, backend="cpu"):
     config = cd.LearnerConfig(
         nudge=nudge, beta=0.001, temperature=0.2, free_steps=160, nudged_steps=160, tolerance=1e-9
     )
-    brain = cd.Brain(
+    brain = cd.NeuralGraph(
         graph, cd.learning_neuron_model(dt=1.0), backend=backend, device="cpu", precision="float64"
     )
     learner = cd.Learner(brain, graph.populations["output"], config, slots=slots)

@@ -20,7 +20,7 @@ def _drive(c: cd.Connectome, rng: np.random.Generator, batch: int) -> np.ndarray
 
 def _agent(backend: str = "cpu", config: cd.ActorCriticConfig | None = None) -> cd.ActorCritic:
     c, model, learning = _setup()
-    brain = cd.Brain(c, model, backend=backend, device="cpu" if backend == "torch" else None)
+    brain = cd.NeuralGraph(c, model, backend=backend, device="cpu" if backend == "torch" else None)
     learner = cd.Learner(brain, c.populations["output"], learning)
     return cd.ActorCritic(learner, c.populations["hidden"], config or cd.ActorCriticConfig(gamma=0.9, lam=0.8, eta=0.5))
 
@@ -101,7 +101,7 @@ def test_act_refreshes_after_learning_and_a_new_batch_size_drops_the_traces() ->
 def test_bins_population_code_acts_and_learns_per_dimension() -> None:
     c, model, learning = _setup()
     rng = np.random.default_rng(4)
-    learner = cd.Learner(cd.Brain(c, model), c.populations["output"], learning)
+    learner = cd.Learner(cd.NeuralGraph(c, model), c.populations["output"], learning)
     bins = cd.Bins(dims=2, size=2)
     agent = cd.ActorCritic(learner, c.populations["hidden"], population=bins)
     d = _drive(c, rng, 3)

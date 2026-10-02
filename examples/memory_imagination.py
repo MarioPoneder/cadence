@@ -155,7 +155,7 @@ def run():
             "Goal and protection are supplied; no learned importance or automatic goal formation.",
             "Finite protection covers selected boundaries/paths, not every possible cue.",
             "Private model forecasts are not measured outcomes or new learning evidence.",
-            "This temporal-model example does not assert GenericBrain world-model integration.",
+            "This temporal-model example does not assert Brain world-model integration.",
         ],
     )
     return report

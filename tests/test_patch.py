@@ -188,13 +188,13 @@ def test_corrupt_continuation_and_directed_or_adapting_models_rejected(tmp_path)
         cd.PatchNet.load(bad)
     graph = cd.layered(2, 3, 1, density=1)
     learner = cd.Learner(
-        cd.Brain(graph, cd.learning_neuron_model()),
+        cd.NeuralGraph(graph, cd.learning_neuron_model()),
         graph.populations["output"],
         cd.LearnerConfig(nudge="quadratic"),
     )
     with pytest.raises(ValueError, match="reciprocal"):
         cd.PatchNet(learner)
-    p.learner.brain = cd.Brain(
+    p.learner.brain = cd.NeuralGraph(
         p.brain.connectome, cd.learning_neuron_model().replace(adaptation=cd.Adaptation())
     )
     with pytest.raises(ValueError, match="adaptation"):
@@ -203,7 +203,7 @@ def test_corrupt_continuation_and_directed_or_adapting_models_rejected(tmp_path)
 
 def test_structure_must_remain_reciprocal_under_the_parameter_update():
     graph = cd.Connectome.from_synapses(2, pre=[0, 1], post=[1, 0], count=[1, 2])
-    brain = cd.Brain(graph, cd.learning_neuron_model(), efficacy=1 / graph.count)
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model(), efficacy=1 / graph.count)
     assert cd.ep_structure(brain).compatible  # current weights alone are insufficient
     learner = cd.Learner(brain, [1], cd.LearnerConfig(nudge="quadratic"))
     with pytest.raises(ValueError, match="contact/gain"):

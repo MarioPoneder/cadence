@@ -12,9 +12,9 @@ def _stimulus(n: int) -> np.ndarray:
     return stimulus
 
 
-def _small_brain() -> cd.Brain:
+def _small_brain() -> cd.NeuralGraph:
     c = cd.layered(4, 6, 2, density=1.0, seed=1)
-    return cd.Brain(c, cd.learning_neuron_model())
+    return cd.NeuralGraph(c, cd.learning_neuron_model())
 
 
 # ------------------------------------------------------------------ Ledger

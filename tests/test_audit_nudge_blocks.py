@@ -15,11 +15,11 @@ def test_grouped_nudge_with_unequal_slots_and_weights_agrees_on_every_kernel() -
     d = np.zeros((6, c.n))
     for p in range(2):
         d[np.arange(6), p * 10 + rng.integers(0, 10, 6)] = 1.0
-    learner = cd.Learner(cd.Brain(c, model), c.populations["output"], slots=[3, 4])
+    learner = cd.Learner(cd.NeuralGraph(c, model), c.populations["output"], slots=[3, 4])
     labels = np.stack([rng.integers(0, 3, 6), rng.integers(0, 4, 6)], axis=1)
     nudge = learner.nudge_for(learner.targets(labels), 0.3, weight=rng.normal(size=6))
     assert nudge.groups is not None and nudge.beta == pytest.approx(0.15)
-    cpu = cd.Brain(c, model)
+    cpu = cd.NeuralGraph(c, model)
     free = cpu.settle_batch(d, steps=80)
     reference = cpu.settle_batch(d, steps=40, state=free, nudge=nudge, trajectory=True).activation
     results = {"fused": (cpu.settle_batch(d, steps=40, state=free, nudge=nudge).activation, 1e-12)}
@@ -32,7 +32,7 @@ def test_grouped_nudge_with_unequal_slots_and_weights_agrees_on_every_kernel() -
             devices.append("mps")
         for device in devices:
             for dense_limit in (2048, 1):
-                brain = cd.Brain(c, model, backend="torch", device=device, dense_limit=dense_limit)
+                brain = cd.NeuralGraph(c, model, backend="torch", device=device, dense_limit=dense_limit)
                 warm = brain.settle_batch(d, steps=80)
                 state = brain.settle_batch(d, steps=40, state=warm, nudge=nudge)
                 results[f"torch-{device}-{dense_limit}"] = (
@@ -40,7 +40,7 @@ def test_grouped_nudge_with_unequal_slots_and_weights_agrees_on_every_kernel() -
                     1e-12 if device == "cpu" else 1e-5,
                 )
     if "mlx" in cd.available_backends():
-        brain = cd.Brain(c, model, backend="mlx")
+        brain = cd.NeuralGraph(c, model, backend="mlx")
         warm = brain.settle_batch(d, steps=80)
         results["mlx"] = (brain.settle_batch(d, steps=40, state=warm, nudge=nudge).activation, 1e-5)
     for name, (activation, tol) in results.items():
@@ -85,7 +85,7 @@ def test_layout_ignores_scattered_populations_and_every_transport_matches_the_re
     reference, _ = settle_neuron_by_neuron(c, model, drive[0], steps=50)
     residuals = []
     for dense_limit in (2048, 10, 1):
-        brain = cd.Brain(c, model, dense_limit=dense_limit)
+        brain = cd.NeuralGraph(c, model, dense_limit=dense_limit)
         assert brain._blocked == (dense_limit == 2048)
         state = brain.settle_batch(drive, steps=50)
         assert np.abs(state.activation[0] - reference[-1]).max() < 1e-12
@@ -102,16 +102,16 @@ def test_max_pairs_fallback_is_one_block_and_still_exact() -> None:
     assert lay.edge_index.max() < lay.size
     model = cd.NeuronModel(gain=0.05, leak=0.1)
     drive = np.random.default_rng(0).random((2, c.n))
-    state = cd.Brain(c, model).settle_batch(drive, steps=40)
+    state = cd.NeuralGraph(c, model).settle_batch(drive, steps=40)
     reference, _ = settle_neuron_by_neuron(c, model, drive[0], steps=40)
     assert np.abs(state.activation[0] - reference[-1]).max() < 1e-12
 
 
 def test_dense_limit_bounds_the_block_entries_not_the_neuron_count() -> None:
     c = cd.layered(3000, 50, 5, density=0.05, seed=0)  # n squared is far above 2048 squared
-    brain = cd.Brain(c, cd.learning_neuron_model(), dense_limit=2048)
+    brain = cd.NeuralGraph(c, cd.learning_neuron_model(), dense_limit=2048)
     assert brain.layout.size <= 2048 * 2048 and brain._blocked
-    assert cd.Brain(c, cd.learning_neuron_model(), dense_limit=300)._blocked is False
+    assert cd.NeuralGraph(c, cd.learning_neuron_model(), dense_limit=300)._blocked is False
 
 
 def test_block_reuse_csr_and_segmented_sum_agree_and_parameters_do_not_share_caches() -> None:
@@ -119,8 +119,8 @@ def test_block_reuse_csr_and_segmented_sum_agree_and_parameters_do_not_share_cac
     model = cd.NeuronModel(gain=0.05, leak=0.1)
     rng = np.random.default_rng(3)
     s = rng.random((5, c.n))
-    sparse = cd.Brain(c, model, dense_limit=1)
-    blocked = cd.Brain(c, model)
+    sparse = cd.NeuralGraph(c, model, dense_limit=1)
+    blocked = cd.NeuralGraph(c, model)
     blocks = BlockTransport(blocked.layout, blocked._blocks)
     expected = np.zeros_like(s)
     np.add.at(expected.T, c.post, (s[:, c.pre] * sparse.weights).T)

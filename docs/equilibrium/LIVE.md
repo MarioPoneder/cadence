@@ -1,7 +1,3 @@
-> This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
-> engine identity remains `0.62.0`; it is separate from the default Cadence API.
-
 # Use a learned brain with an actual body
 
 Install **Cadence 0.70.0** as shown in the [quickstart](QUICKSTART.md). This guide
@@ -498,11 +494,3 @@ saved/resumed comparison, refusal, work count and execution timing. Resuming a
 pending executed action does not execute it twice; a collection pause does not
 invent a terminal transition. These are separate controlled demonstrations,
 not one integrated autonomous life or evidence of an observer advantage.
-
-The [stored receipt](../../examples/equilibrium/receipts/temporal_credit.json) is **historical
-0.50.0 qualification evidence**, produced at commit `d9b592c` before that version
-bump. Within that release transition, only the package version string changed
-among its hashed implementation files. It is not a rerun on the current release.
-Its 66 cases include 18 passing memory cases and 16 passing TD cases; the other cases
-are controls. Current reruns must retain their own source hashes, results and
-timings rather than inheriting those numerical conclusions.

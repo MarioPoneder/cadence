@@ -59,7 +59,7 @@ offspring with the same regions and projections:
   multiplied by `exp(normal(0, 0.2))` and clipped to `[0.05, 20]`;
 - `count` and `reciprocal` stay as declared.
 
-Fix the regions whose width the environment sets. In `GenericBrain.genome` the motor
+Fix the regions whose width the environment sets. In `Brain.genome` the motor
 cortex is designed and keeps its size; the `sensory` region is blank and belongs in
 `fixed`.
 
@@ -68,7 +68,7 @@ import numpy as np
 import cadence as cd
 from cadence.genome import mutate
 
-genome = cd.GenericBrain.genome(2, 2, hidden=12)
+genome = cd.Brain.genome(2, 2, hidden=12)
 child = mutate(genome, np.random.default_rng(3), fixed=("sensory",))
 for parent, offspring in zip(genome.regions, child.regions):
     print(parent.name, parent.size, "->", offspring.size)     # association 12 -> 20
@@ -88,12 +88,12 @@ Every life develops its genome at the seed `seed + 1000 * generation + index` an
 higher is better. The remaining keyword arguments go to `mutate`.
 
 A fitness runs a short life and returns its score. This one wraps the developed connectome
-in a `GenericBrain`, which learns over forty moments which of two actions each cue pays
+in a `Brain`, which learns over forty moments which of two actions each cue pays
 for; the score is the reward of the last twenty moments less a small cost per synapse.
 
 ```python
 def life(connectome, seed):
-    brain = cd.GenericBrain(connectome, seed=seed)
+    brain = cd.Brain(connectome, seed=seed)
     rng = np.random.default_rng(seed)
     cue = int(rng.integers(2))
     action = brain.step([np.eye(2)[cue]])
@@ -191,7 +191,7 @@ The parameters, the records and the genome stay as they are; only the drive of t
 decision changes.
 
 ```python
-brain = cd.GenericBrain(cd.develop(lineage.best, seed=0), seed=0)
+brain = cd.Brain(cd.develop(lineage.best, seed=0), seed=0)
 records = cd.Records(2 + 2, {"reward": 1}, valued=["reward"], cells=2000, active=20, seed=0)
 for cue in range(2):                   # witnessed in this life: the cue's own action pays
     for action in range(2):

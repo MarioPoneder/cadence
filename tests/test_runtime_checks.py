@@ -19,7 +19,7 @@ def test_resident_residual_matches_host_and_projected_equations(
     model = cd.learning_neuron_model(dt=0.3, gain=0.4)
     if adaptation:
         model = model.replace(adaptation=cd.Adaptation(tau_steps=1e6, strength=0.3))
-    brain = cd.Brain(graph, model, backend="torch", device="cpu", dense_limit=dense_limit)
+    brain = cd.NeuralGraph(graph, model, backend="torch", device="cpu", dense_limit=dense_limit)
     rng = np.random.default_rng(6)
     drive = rng.uniform(0.1, 0.4, (2, graph.n))
     keep = rng.choice([0, 0.4, 1.0], (2, graph.n))
@@ -53,12 +53,12 @@ def test_resident_residual_matches_host_and_projected_equations(
 def test_residual_preserves_float64_reference_for_low_precision_and_edited_host_state() -> None:
     pytest.importorskip("torch")
     graph = cd.Connectome.from_synapses(1, pre=[], post=[])
-    brain = cd.Brain(
+    brain = cd.NeuralGraph(
         graph, cd.learning_neuron_model(), backend="torch", device="cpu", precision="float32"
     )
     state = brain.settle_batch(np.array([[1.00000001]]), steps=100)
     assert brain.residual(np.array([[1.00000001]]), state)[0] > 9e-9
-    brain64 = cd.Brain(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
+    brain64 = cd.NeuralGraph(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
     state64 = brain64.settle_batch(np.ones((1, 1)), steps=100)
     state64.v[:] = 0.0
     assert brain64.residual(np.ones((1, 1)), state64)[0] == 1.0
@@ -67,7 +67,7 @@ def test_residual_preserves_float64_reference_for_low_precision_and_edited_host_
 def test_resident_checks_do_not_fetch_state_or_parameters(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("torch")
     graph = cd.layered(3, 4, 2, seed=2)
-    brain = cd.Brain(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
     learner = cd.Learner(brain, graph.populations["output"])
     drive = np.ones((2, graph.n)) * 0.1
     learner.step(drive, np.array([0, 1]))  # parameters now live on the kernel
@@ -91,7 +91,7 @@ def test_resident_checks_do_not_fetch_state_or_parameters(monkeypatch: pytest.Mo
 def test_resident_residual_never_certifies_nonfinite_state() -> None:
     torch = pytest.importorskip("torch")
     graph = cd.Connectome.from_synapses(1, pre=[], post=[])
-    brain = cd.Brain(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
     state = brain.settle_batch(np.zeros((1, 1)), steps=0)
     state.device["v"].fill_(torch.nan)
     assert np.isinf(brain.residual(np.zeros((1, 1)), state)[0])
@@ -100,7 +100,7 @@ def test_resident_residual_never_certifies_nonfinite_state() -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_residual_adaptive_work_follows_input_change_without_relaxing_tolerance(seed: int) -> None:
     graph = cd.layered(6, 10, 3, density=1, seed=seed)
-    raw = cd.Brain(graph, cd.learning_neuron_model())
+    raw = cd.NeuralGraph(graph, cd.learning_neuron_model())
     brain = raw.with_parameters(efficacy=raw.efficacy / cd.row_mass(raw))
     rng = np.random.default_rng(seed)
     drive = np.zeros((4, graph.n))
@@ -138,7 +138,7 @@ def test_zero_rate_certificate_and_invalid_budgets() -> None:
 
 def test_ep_structure_uses_effective_free_weights_and_rejects_hidden_feedback() -> None:
     graph = cd.layered(3, 4, 2, density=1, seed=3)
-    brain = cd.Brain(graph, cd.learning_neuron_model())
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model())
     assert not cd.ep_structure(brain).compatible  # one-way input projections in the whole matrix
     structure = cd.ep_structure(brain, fixed_inputs=graph.populations["input"])
     assert structure.compatible and structure.free_asymmetry == 0
@@ -147,5 +147,5 @@ def test_ep_structure_uses_effective_free_weights_and_rejects_hidden_feedback() 
     assert not cd.ep_structure(
         brain, fixed_inputs=[3]
     ).compatible  # naming a hidden neuron is not a clamp
-    rhythmic = cd.Brain(graph, brain.neuron_model.replace(adaptation=cd.Adaptation()))
+    rhythmic = cd.NeuralGraph(graph, brain.neuron_model.replace(adaptation=cd.Adaptation()))
     assert not cd.ep_structure(rhythmic, fixed_inputs=graph.populations["input"]).compatible

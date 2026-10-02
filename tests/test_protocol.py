@@ -133,6 +133,6 @@ def test_score_counts_passes_by_tier() -> None:
         ],
         steps=5,
     )
-    result = protocol.score(cd.Brain(connectome, cd.NeuronModel(dt=1.0)))
+    result = protocol.score(cd.NeuralGraph(connectome, cd.NeuronModel(dt=1.0)))
     assert result["total"] == 3 and result["passed"] == 2
     assert result["passed_by_tier"] == {"core": 1, "extra": 1}

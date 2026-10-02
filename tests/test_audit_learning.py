@@ -39,7 +39,7 @@ def test_parameters_counts_pairs_ties_and_masks_like_the_sorted_reference() -> N
             mask = rng.random(c.synapses) < 0.7
             neurons = rng.random(c.n) < 0.5
             learner = cd.Learner(
-                cd.Brain(c, cd.learning_neuron_model()),
+                cd.NeuralGraph(c, cd.learning_neuron_model()),
                 c.populations["output"],
                 plastic_synapses=mask,
                 plastic_neurons=neurons,
@@ -51,7 +51,7 @@ def test_parameters_counts_pairs_ties_and_masks_like_the_sorted_reference() -> N
 
 def test_parameters_is_linear_in_the_synapses() -> None:
     c = cd.layered(1200, 2000, 8, density=1.0, seed=0)  # 2.4 million synapses
-    learner = cd.Learner(cd.Brain(c, cd.learning_neuron_model(), dense_limit=1), c.populations["output"])
+    learner = cd.Learner(cd.NeuralGraph(c, cd.learning_neuron_model(), dense_limit=1), c.populations["output"])
     t0 = time.perf_counter()
     count = learner.parameters()
     elapsed = time.perf_counter() - t0
@@ -67,7 +67,7 @@ def test_normalized_steps_move_every_synapse_by_about_eta(use_normalize: bool) -
     rng = np.random.default_rng(0)
     config = cd.LearnerConfig(eta=0.2, normalize=0.9 if use_normalize else 0.0, tolerance=1e-5)
     learner = cd.Learner(
-        cd.Brain(c, cd.learning_neuron_model()), c.populations["output"], config, reciprocal=False
+        cd.NeuralGraph(c, cd.learning_neuron_model()), c.populations["output"], config, reciprocal=False
     )
     d = np.zeros((8, c.n))
     d[:, :20] = rng.random((8, 20))
@@ -93,7 +93,7 @@ def test_bias_correction_continues_after_a_checkpoint_and_ignores_external_updat
     config = cd.LearnerConfig(momentum=0.9, normalize=0.99, tolerance=1e-6)
 
     def make() -> cd.Learner:
-        return cd.Learner(cd.Brain(c, cd.learning_neuron_model(dt=1.0)), c.populations["output"], config, tie_groups=tie)
+        return cd.Learner(cd.NeuralGraph(c, cd.learning_neuron_model(dt=1.0)), c.populations["output"], config, tie_groups=tie)
 
     steady, resumed = make(), make()
     batches = [_drive(c, rng, 8) for _ in range(6)]
@@ -131,7 +131,7 @@ def test_cap_and_decay_never_touch_a_frozen_synapse_on_host_or_device() -> None:
     start[frozen] = 9.0  # beyond the cap: a frozen synapse keeps whatever it holds
     learners = {}
     for backend in ("cpu", "torch"):
-        brain = cd.Brain(
+        brain = cd.NeuralGraph(
             c,
             cd.learning_neuron_model(dt=1.0),
             backend=backend,
@@ -166,7 +166,7 @@ def test_host_apply_keeps_the_torch_kernel_and_the_settled_states_on_it() -> Non
     pytest.importorskip("torch")
     c, tie = _net()
     rng = np.random.default_rng(0)
-    brain = cd.Brain(c, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu")
+    brain = cd.NeuralGraph(c, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu")
     learner = cd.Learner(brain, c.populations["output"], cd.LearnerConfig(tolerance=1e-5), tie_groups=tie)
     agent = cd.ActorCritic(learner, c.populations["hidden"], cd.ActorCriticConfig(normalize=0.9))
     kernel = brain._torch
@@ -184,7 +184,7 @@ def test_free_phase_reports_the_step_cap_only_through_its_step_count() -> None:
     c, _ = _net()
     rng = np.random.default_rng(0)
     learner = cd.Learner(
-        cd.Brain(c, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(c, cd.learning_neuron_model(dt=1.0)),
         c.populations["output"],
         cd.LearnerConfig(free_steps=5, tolerance=1e-9),
     )

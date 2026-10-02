@@ -49,7 +49,7 @@ jobs:
                   script.write_text(code, encoding="utf-8")
                   subprocess.run([sys.executable, str(script)], cwd=directory, check=True)
           PY
-      - name: Exercise memory, private planning and preserved experimental engine
+      - name: Exercise memory, private planning and experimental population model
         run: |
           python examples/memory_imagination.py
           python examples/equilibrium/layout_learning.py

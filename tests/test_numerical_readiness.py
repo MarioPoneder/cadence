@@ -124,7 +124,7 @@ def test_device_precision_overflow_is_rejected_at_construction(parameter, backen
     graph = cd.Connectome.from_synapses(2, pre=[0], post=[1])
     value = np.full(1 if parameter == "efficacy" else 2, 1e100)
     with pytest.raises(ValueError, match="runtime precision"):
-        cd.Brain(graph, cd.learning_neuron_model(), backend=backend, device="cpu",
+        cd.NeuralGraph(graph, cd.learning_neuron_model(), backend=backend, device="cpu",
                  precision="float32", **{parameter: value})
 
 
@@ -132,7 +132,7 @@ def test_device_precision_overflow_is_rejected_at_construction(parameter, backen
 def test_device_replacement_failure_leaves_shared_kernel_intact(invalid):
     torch = pytest.importorskip("torch")
     graph = cd.Connectome.from_synapses(2, pre=[0], post=[1], count=[1e100])
-    brain = cd.Brain(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
     kernel = brain._torch
     before = {key: getattr(kernel, key).clone() for key in ("scale", "bias_param", "flat", "bias")}
     scale, bias = kernel.scale.clone(), kernel.bias_param.clone()
@@ -154,7 +154,7 @@ def test_rejected_update_keeps_optimizer_history_and_retry(backend):
         pytest.importorskip("torch")
     graph = cd.Connectome.from_synapses(2, pre=[0], post=[1])
     learner = cd.Learner(
-        cd.Brain(graph, cd.learning_neuron_model(), backend=backend,
+        cd.NeuralGraph(graph, cd.learning_neuron_model(), backend=backend,
                  **({"device": "cpu"} if backend == "torch" else {})),
         [1], cd.LearnerConfig(momentum=.5, normalize=.5, eta_bias=1e308),
     )
@@ -185,7 +185,7 @@ def test_critic_overflow_rejects_actor_trace_and_reward_statistics_atomically(ba
         pytest.importorskip("torch")
     graph = cd.layered(1, 2, 2, seed=3)
     learner = cd.Learner(
-        cd.Brain(graph, cd.learning_neuron_model(), backend=backend,
+        cd.NeuralGraph(graph, cd.learning_neuron_model(), backend=backend,
                  **({"device": "cpu"} if backend == "torch" else {})),
         graph.populations["output"],
     )
@@ -245,7 +245,7 @@ def test_parameter_views_cannot_bypass_transport_and_setters_remain_effective(ba
     if backend == "torch":
         pytest.importorskip("torch")
     graph = cd.Connectome.from_synapses(2, pre=[0], post=[1])
-    brain = cd.Brain(graph, cd.learning_neuron_model(), backend=backend,
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model(), backend=backend,
                      **({"device": "cpu"} if backend == "torch" else {}))
     drive = np.array([[1., 0.]])
     initial = brain.settle_batch(drive, steps=10).activation.copy()
@@ -256,7 +256,7 @@ def test_parameter_views_cannot_bypass_transport_and_setters_remain_effective(ba
     brain.efficacy = np.array([2.])
     brain.bias = np.array([.1, .2])
     brain.log_gain = np.array([.3, 0.])
-    reference = cd.Brain(graph, brain.neuron_model, efficacy=brain.efficacy,
+    reference = cd.NeuralGraph(graph, brain.neuron_model, efficacy=brain.efficacy,
                          bias=brain.bias, log_gain=brain.log_gain)
     np.testing.assert_allclose(brain.settle_batch(drive, steps=10).activation,
                                reference.settle_batch(drive, steps=10).activation, atol=1e-12)
@@ -273,4 +273,4 @@ def test_runtime_precision_cannot_destroy_a_valid_float64_neuron_rule(backend, m
     pytest.importorskip(backend)
     graph = cd.Connectome.from_synapses(2, pre=[0], post=[1])
     with pytest.raises(ValueError, match="runtime precision"):
-        cd.Brain(graph, model, backend=backend, device="cpu", precision="float32")
+        cd.NeuralGraph(graph, model, backend=backend, device="cpu", precision="float32")

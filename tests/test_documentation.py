@@ -68,7 +68,9 @@ def test_introductory_python_snippets(page, tmp_path, monkeypatch):
     for index, code in enumerate(blocks):
         exec(compile(code, f"{page}:python-block-{index + 1}", "exec"), namespace)
     if page == "docs/quickstart.md":
-        assert namespace["night"]["updates"] > 200 and namespace["learner"].updates == 80
+        assert namespace["brain"].learner.updates > 0
+        assert len(namespace["phases"]) == 2
+        assert (namespace["continued"] == namespace["replayed"]).all()
 
 
 def test_every_python_block_is_run_or_marked_illustrative():

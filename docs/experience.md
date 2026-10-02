@@ -1,9 +1,8 @@
-# Experience in existing graph compositions
+# Experience in a continuing brain
 
-The examples and component table below describe the graph, Records and
-`GenericBrain` APIs of the settling brain, kept for the applications that used
-them. New work starts from the [quickstarts](quickstart.md) and
-[build your own brain](build.md).
+Use `Brain.compose` for a continuing System 1 brain, with optional System 2
+observers. This page explains experience and custom compositions; start with
+[building a brain](brain.md) and [continuous interaction](continuous.md).
 
 Design the brain and its learning life together. What can it observe and change?
 What persists, what counts as evidence, and what makes a decision useful?
@@ -33,13 +32,13 @@ language competence.
 | Language and readback | Intention, language input/output and feedback | Expressing an intention, understanding replies and asking questions |
 
 `assemble` or `Genome`/`develop` connect regions by declared synapses. Use one
-`Brain` when they should settle jointly: independent solves merged in a picture
+`NeuralGraph` when they should settle jointly: independent solves merged in a picture
 are not coupled dynamics. Auxiliary memories have separate state and clocks;
 wire recall into declared drive ports and include those stores in cost accounting.
 A named region has no function until its connections and experience make it useful.
 
-`GenericBrain` supplies a recurrent sensory/association/motor policy, a critic,
-optional working trace and associative reward memory. Its `hippocampus` remembers
+`Brain` supplies a recurrent sensory/association/motor policy, a critic,
+working trace and associative reward memory through `compose`. Its `hippocampus` remembers
 chosen-action rewards for sensory cues. A world model is a records cortex composed
 beside it ([compose a brain](brain.md)); learned hierarchical goals and language require
 additional compositions and evidence.
@@ -97,7 +96,7 @@ Preserve private episode records, random state and pending actions per stream.
 `SynapticMemory` explicitly shares slow weights across streams; a measurement
 snapshot must not modify the live learner's shared matrix. Save the environment,
 partner, curriculum and replay state alongside the brain when resuming a whole life.
-`GenericBrain.save` covers its standard composition; custom stores have their own owner.
+`Brain.save` covers its standard composition; custom stores have their own owner.
 
 Check equation residuals for equilibrium claims and task outcomes for capability
 claims. A settled system can be wrong. A unique attracting equilibrium erases its

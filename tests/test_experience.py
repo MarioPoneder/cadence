@@ -98,7 +98,7 @@ def _experience(seed: int = 0) -> dict:
 
 def _changing_rewards(seed: int = 0) -> dict[str, float]:
     rng = np.random.default_rng(seed)
-    agent = cd.GenericBrain.build(4, 4, hidden=16, seed=seed)
+    agent = cd.Brain.build(4, 4, hidden=16, seed=seed)
     context = rng.integers(4, size=32)
     action = agent.step(np.eye(4)[context])
     rewards = []

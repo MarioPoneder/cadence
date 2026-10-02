@@ -29,13 +29,13 @@ def test_device_update_matches_host_update(freeze: bool) -> None:
         eta=0.5, eta_bias=0.05, tolerance=1e-6, free_steps=200, nudged_steps=200, decay=0.01
     )
     host = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         config,
         tie_groups=tie,
     )
     dev = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu"),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu"),
         connectome.populations["output"],
         config,
         tie_groups=tie,
@@ -69,7 +69,7 @@ def test_device_brain_continues_and_reads_back_after_updates() -> None:
     connectome, tie = _net(2)
     rng = np.random.default_rng(3)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu"),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu"),
         connectome.populations["output"],
         cd.LearnerConfig(eta=0.3),
         tie_groups=tie,
@@ -80,7 +80,7 @@ def test_device_brain_continues_and_reads_back_after_updates() -> None:
     after = learner.brain.efficacy
     assert not np.allclose(before, after)
     # the kernel's weights follow the parameters: the free phase on the device equals the cpu brain's
-    cpu = cd.Brain(
+    cpu = cd.NeuralGraph(
         connectome, cd.learning_neuron_model(dt=1.0), efficacy=after, bias=learner.brain.bias
     )
     a = learner.brain.settle_batch(d, steps=200, tolerance=1e-8).activation

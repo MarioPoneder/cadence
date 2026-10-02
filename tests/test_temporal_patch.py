@@ -65,7 +65,7 @@ def test_anchor_settling_and_residual_match_independent_equations_on_backends(so
     for _ in range(23):
         expected += model.dt * force(expected)
     for backend in cd.available_backends():
-        brain = cd.Brain(
+        brain = cd.NeuralGraph(
             graph, model, backend=backend, device="cpu" if backend == "torch" else None
         )
         phase = brain.settle_batch(drive, steps=23, nudge=nudge)
@@ -102,7 +102,7 @@ def test_each_observation_holds_the_previous_boundary_across_all_phases():
 def test_fixed_boundary_contrast_matches_finite_difference_bias_gradient():
     graph = cd.Connectome.from_synapses(2, pre=[0, 1], post=[1, 0], sign=[0.2, 0.2])
     model = cd.learning_neuron_model(leak=1.0, dt=0.2)
-    brain = cd.Brain(graph, model)
+    brain = cd.NeuralGraph(graph, model)
     x, y = np.array([[0.7, 0.4]]), np.array([[0.0, 0.8]])
     anchor, gain = np.array([[0.6, 0.2]]), np.array([1.0, 1.0])
     mask = np.array([0.0, 1.0])

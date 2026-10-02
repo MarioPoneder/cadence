@@ -306,7 +306,7 @@ connectome = cd.Connectome.from_synapses(
     6, pre=[0, 1, 2, 3], post=[4, 4, 5, 5], count=[1] * 4,
     populations={"key": range(4), "value": (4, 5)},
 )
-brain = cd.Brain(connectome, cd.learning_neuron_model())
+brain = cd.NeuralGraph(connectome, cd.learning_neuron_model())
 drive = np.zeros((2, connectome.n))
 drive[:, :4] = np.eye(4)[:2]
 

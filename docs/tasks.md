@@ -27,7 +27,7 @@ import cadence as cd
 
 connectome = cd.layered(4, 8, 2, density=1.0, seed=0)
 learner = cd.Learner(
-    cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"]
+    cd.NeuralGraph(connectome, cd.learning_neuron_model()), connectome.populations["output"]
 )
 x = np.array([[1.0, 0.0, 0.0, 1.0]])  # current room and proposed action
 levels = np.zeros((len(x), learner.brain.connectome.n))
@@ -52,7 +52,7 @@ import cadence as cd
 
 connectome = cd.layered(2, 8, 2, density=1.0, seed=0)
 learner = cd.Learner(
-    cd.Brain(connectome, cd.learning_neuron_model()),
+    cd.NeuralGraph(connectome, cd.learning_neuron_model()),
     connectome.populations["output"],
     cd.LearnerConfig(nudge="quadratic"),
 )
@@ -97,7 +97,7 @@ Use separate `Learner` objects on one brain with `plastic_synapses` and
 optimizer history; manually swapping just its momentum arrays is insufficient
 when normalization or step counters also matter.
 
-An update replaces `learner.brain` with a `Brain` carrying the updated parameters.
+An update replaces `learner.brain` with a `NeuralGraph` carrying the updated parameters.
 If two learners should operate on one evolving parameter set, assign the updated
 brain to the other learner's `brain` before its next phase, while preserving that
 learner's masks and history. Check checkpoint and reset behaviour for the complete

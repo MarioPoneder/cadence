@@ -1,8 +1,9 @@
 # API reference
 
-Every public name, by module. Start with the [quickstarts](quickstart.md) and
-[build your own brain](build.md); each section links the guide that explains its
-operations. Optional arguments should be passed by keyword.
+Start with [Brain.compose](#brain-cadence) for a continuing brain with memory
+and optional observers. [NeuralGraph](#neuralgraph-cadence) is the lower-level
+graph API. The [quickstart](quickstart.md) runs the main interaction loop;
+sections below describe specialist operations. Pass optional arguments by keyword.
 
 The temporal patch: [TemporalPatchNet](#temporalpatchnet-cadencetemporal),
 [TemporalPlan](#temporalplan-cadenceplanning), [TemporalMemory](#temporalmemory-cadencetemporal_memory),
@@ -12,14 +13,14 @@ The record and belief patches: [RecordPatchNet](#recordpatchnet-cadencerecord_pa
 A brain that reads itself: [Steered](#steered-cadencesteering), [Life](#life-cadencelife),
 [Instruments](#instruments-cadenceinstruments).
 The settling brain: [Connectome](#connectome-cadenceconnectome), [Neuron model](#neuron-model-cadenceneuron),
-[Brain](#brain-cadencebrain), [Blocks](#blocks-cadenceblocks), [Streams](#streams-cadencestream),
-[Records](#records-cadencerecords), [Regions](#regions-cadenceregions), [Generic brain](#generic-brain-cadencegeneric),
+[NeuralGraph](#neuralgraph-cadence), [Blocks](#blocks-cadenceblocks), [Streams](#streams-cadencestream),
+[Records](#records-cadencerecords), [Regions](#regions-cadenceregions),
 [Genome](#genome-cadencegenome), [Learning](#learning-cadencelearning), [The agent and the valence](#the-agent-and-the-valence-cadenceplasticity),
 [Certificate](#certificate-cadencecertificate).
 Instruments: [the quickstart demos](#the-quickstart-demos), [Timing](#timing-cadencetiming),
 [the reference](#neuron-by-neuron-reference-cadencereference), [Protocols](#protocols-cadenceprotocol),
 [Checkpoints](#checkpoints-cadencecheckpoint), [Atlas](#atlas), [Receipts](#receipts-cadencereceipts),
-[recording](#record-every-settling-step). Kept compositions: [PatchNet](#patchnet-cadencepatch)
+[recording](#record-every-settling-step). Other compositions: [PatchNet](#patchnet-cadencepatch)
 and [task compositions](#optional-task-compositions).
 
 ## TemporalPatchNet (`cadence.temporal`)
@@ -362,7 +363,7 @@ sum, not a permanent bound after learning. The factory uses the smooth
 not impose executive priority. See the runnable
 [recursive-settlement guide](recursive-settlement.md).
 
-`PatchNet` composes the existing `Brain` and `Learner` for ongoing continuous
+`PatchNet` composes the existing `NeuralGraph` and `Learner` for ongoing continuous
 observations. The [guide](patchnet.md) explains the equations, memory boundaries
 and a complete runnable example.
 
@@ -425,9 +426,9 @@ and a complete runnable example.
 - `learning_neuron_model(gain=1.0, *, slope=1.0, leak=0.1, dt=0.5, stimulus_amplitude=1.0)` (in
   `cadence.learning`): responsive starting settings for local learning, to validate for your task.
 
-## Brain (`cadence.brain`)
+## NeuralGraph (`cadence`)
 
-- `Brain(connectome, neuron_model, *, backend="cpu" | "torch" | "mlx", efficacy=None, log_gain=None, bias=None, device=None, dense_limit=2048, layout=None, precision=None)`:
+- `NeuralGraph(connectome, neuron_model, *, backend="cpu" | "torch" | "mlx", efficacy=None, log_gain=None, bias=None, device=None, dense_limit=2048, layout=None, precision=None)`:
   the runnable brain. `efficacy` (the learned synaptic efficacy) defaults to the connectome's
   signs; `log_gain` and `bias` to zero. Attributes include `connectome`, `neuron_model`,
   `efficacy`, `log_gain` and `bias`. When the connectome's dense blocks fit in `dense_limit`
@@ -478,7 +479,7 @@ and a complete runnable example.
 - `stimulus_vector(stimulus)`, `stimulus_levels(levels)` (finite levels times the stimulus
   amplitude, with signed values allowed), `readings(state, names, i=0, level=0.5)`, `with_parameters(*, efficacy=None, log_gain=None, bias=None)`,
   `weights` (effective drive per synapse), `dense()` (the `W[pre, post]` matrix), `to_dict()`.
-- `Brain.contrast_on_device(plus, minus)`: the learning rule's per-synapse and per-neuron
+- `NeuralGraph.contrast_on_device(plus, minus)`: the learning rule's per-synapse and per-neuron
   contrast computed on the device when both states carry its handle; `None` otherwise.
 - `BrainState`: `v`, `activation`, `adaptation`, `steps`, `trajectory`, `activity_change`
   (the total movement of the activations while settling, per row), `device` (the same
@@ -658,15 +659,15 @@ and a complete runnable example.
 
 See [write a cortex](cortex.md) for regions, projections, ports and learning heads.
 
-## Generic brain (`cadence.generic`)
+## Brain (`cadence`)
 
-`GenericBrain.compose` is the default System 1 entry. Its animal-like foundation
+`Brain.compose` is the default System 1 entry. Its animal-like foundation
 includes continuing perception/action, plasticity and memory. Set `observers`
 to positive region widths to add optional System 2 state feedback within the
 same neural-graph settlement. This is an implemented interface, not a claim
 that recursive benefit or automatic reflective behavior has been learned.
 
-- `GenericBrain.compose(inputs, actions, *, modules=(64,), observers=(), seed=0, **options) -> GenericBrain`:
+- `Brain.compose(inputs, actions, *, modules=(64,), observers=(), seed=0, **options) -> Brain`:
   the direct vector-input constructor. Positive `modules` widths form a reciprocal
   processing chain; the final module is the association cortex. Optional positive
   `observers` widths add regions with reciprocal state-reading and returning connections
@@ -676,16 +677,16 @@ that recursive benefit or automatic reflective behavior has been learned.
   default. Constructor `options` can select the documented learning, reward, memory
   and backend settings. This state feedback is distinct from exact error readback
   in `cadence.experimental.equilibrium`.
-- `GenericBrain.build(inputs, actions, *, hidden=64, density=1.0, lateral=-0.5, working_memory=False, memory_scale=12.0, episodic=True, features=8, field=3, seed=0, **options)`:
-  develops `GenericBrain.genome(...)` and wraps it. `inputs` is a vector length, or an image
+- `Brain.build(inputs, actions, *, hidden=64, density=1.0, lateral=-0.5, working_memory=False, memory_scale=12.0, episodic=True, features=8, field=3, seed=0, **options)`:
+  develops `Brain.genome(...)` and wraps it. `inputs` is a vector length, or an image
   shape `(height, width)` or `(height, width, channels)` for a `visual_cortex`. `options` go
   to the constructor.
-- `GenericBrain.genome(inputs, actions, ...) -> Genome`: regions `sensory` (or `visual`),
+- `Brain.genome(inputs, actions, ...) -> Genome`: regions `sensory` (or `visual`),
   `association` (`hidden` neurons), `motor` (`motor_cortex(actions, lateral=lateral)`) and,
   with `working_memory`, `prefrontal`; projections sensory to association (reciprocal for a
   visual cortex), association to motor (reciprocal), and prefrontal to association at
   `memory_scale`.
-- `GenericBrain(connectome, *, episodic=True, consolidation=0.05, working_memory_decay=0.2, working_memory_amplitude=3.0, learning=None, reward=None, seed=0, backend="cpu", device=None)`:
+- `Brain(connectome, *, episodic=True, consolidation=0.05, working_memory_decay=0.2, working_memory_amplitude=3.0, learning=None, reward=None, seed=0, backend="cpu", device=None)`:
   needs populations `sensory` or `visual/input`, `association` and `motor`, and uses
   `prefrontal` for a working memory when present. `learning` defaults to
   `LearnerConfig(beta=0.1, eta=0.5, temperature=0.2, tolerance=3e-3, free_steps=1024, nudged_steps=12, momentum=0.9)`,
@@ -698,7 +699,7 @@ that recursive benefit or automatic reflective behavior has been learned.
   preserves its equations and parameters; it is independent of System 2 wiring.
   Attributes `connectome`, `brain`, `learner`, `basal_ganglia` (`ActorCritic` reading the
   association cortex), `working_memory` (`Trace` or `None`), `hippocampus` (`SynapticMemory`
-  from sensory to motor neurons, or `None`; old checkpoints retain `FastSynapses`), `sensory_index`, `association_index`,
+  from sensory to motor neurons, or `None`), `sensory_index`, `association_index`,
   `motor_index`.
   - `stimulus(observations, *, memory=True)`: the drive of a batch; with `memory`, the
     working memory and the hippocampal recall are added.
@@ -745,16 +746,15 @@ that recursive benefit or automatic reflective behavior has been learned.
   - `reset()` clears working state, action cache, eligibility and reward centering; hippocampal
     records and slow parameters are kept. `parameters()` counts actor/critic parameters
     and the shared consolidated memory matrix; per-stream state is additional storage.
-  - `save(path) -> Path`, `GenericBrain.load(path, *, backend="cpu", device=None, precision=None)`:
+  - `save(path) -> Path`, `Brain.load(path, *, backend="cpu", device=None, precision=None)`:
     complete composition checkpoints, including both optimizers, critic, random state,
     stream traces, prepared state, both memory timescales and any action awaiting feedback.
-    Format 2 also retains pending nudged states; format 1 still loads.
     The archive is replaced atomically. A learner-only checkpoint
-    is rejected by `GenericBrain.load`; `Learner.load` can extract a learner from either.
+    is rejected by `Brain.load`; `Learner.load` can extract a learner from either.
   Observations must be a nonempty finite batch, with image dimensions flattened per row.
   `fit` rejects noninteger labels and mismatched batches before updating. It resets current
   action/working state but keeps episodic records. `brain` always returns the current
-  `learner.brain`, including after learning. See [compose a brain](brain.md#genericbrain).
+  `learner.brain`, including after learning. See [compose a brain](brain.md#brain).
 
 ## Genome (`cadence.genome`)
 
@@ -823,7 +823,7 @@ that recursive benefit or automatic reflective behavior has been learned.
   among admissible candidates, maximize training facts passed and break ties by smallest
   value. `make_brain` builds the brain for a candidate, so the candidate can be the global gain
   or any number a dictionary declares, such as one population's gain through
-  `Brain(log_gain=...)`. `sparsity_cap=None` admits every candidate. An empty grid or no
+  `NeuralGraph(log_gain=...)`. `sparsity_cap=None` admits every candidate. An empty grid or no
   admissible candidate raises `ValueError`.
 
 ## Checkpoints (`cadence.checkpoint`)
@@ -837,7 +837,7 @@ that recursive benefit or automatic reflective behavior has been learned.
   saved ones; `precision` overrides saved precision and `config` replaces the saved
   configuration. `predict` and `free` read the parameters and update nothing.
   Separate `FastSynapses`, `Trace` and `ActorCritic` objects are not saved by this API.
-  Use `GenericBrain.save/load` for the full standard composition. Archive replacement is
+  Use `Brain.save/load` for the full standard composition. Archive replacement is
   atomic, so a failed write leaves the previous checkpoint intact.
 
 ## Learning (`cadence.learning`)
@@ -885,7 +885,7 @@ that recursive benefit or automatic reflective behavior has been learned.
   `settle_batch` takes them). `targets` maps a population name or neuron indices to the mean
   activation it should have over its members and the drives; one shared bias per population,
   or one per member with `per_neuron=True` (a readout's cells). Bisection, every population in
-  turn, `rounds` times; the brain is unchanged and the array is passed to `Brain(bias=...)`.
+  turn, `rounds` times; the brain is unchanged and the array is passed to `NeuralGraph(bias=...)`.
 - `naive_efficacy(connectome, plastic) -> np.ndarray`: efficacies that give every plastic
   synapse class the same weight (sign times mean count over the class's count); the other
   synapses keep their sign. For a lesson that should start naive at a memory site whose counts
@@ -1030,7 +1030,7 @@ helpers compose ordinary neuron dynamics with explicit host-side orchestration.
 region names to connectomes into one connectome. Each entry of `synapses` is
 `(source_region, local_neuron, target_region, local_neuron, weight)`, a directed synapse
 with count 1 and sign `weight`. Each region remains addressable as a population, and each
-of its populations as `region/population`. Use the result with one `Brain` and concatenate
+of its populations as `region/population`. Use the result with one `NeuralGraph` and concatenate
 drives in region insertion order. Unknown regions, neurons outside their region, autapses
 and nonfinite weights are rejected. The helper adds topology only; convergence depends on
 the combined system.
@@ -1077,7 +1077,7 @@ local repairs. Even a zero-step call has its initial row.
 import numpy as np
 import cadence as cd
 
-brain = cd.Brain(cd.layered(4, 16, 2, seed=0), cd.learning_neuron_model())
+brain = cd.NeuralGraph(cd.layered(4, 16, 2, seed=0), cd.learning_neuron_model())
 records = []
 with cd.record_settlements(records.append, label="observe and act"):
     result = brain.settle(stimulus={0: 1.0}, steps=32)

@@ -1,6 +1,6 @@
 """A generic brain for simple tasks: senses, cortex, a motor choice, dopamine and memory.
 
-``GenericBrain`` composes the standard regions into one connectome that settles as a whole:
+``Brain`` composes the standard regions into one connectome that settles as a whole:
 
 * a sensory region: a blank population for a vector observation, or a ``visual_cortex`` for
   an image;
@@ -31,7 +31,8 @@ from typing import Any
 
 import numpy as np
 
-from .brain import Backend, Brain, BrainState, Equilibrium
+from .brain import Backend, BrainState, Equilibrium
+from .brain import Brain as NeuralGraph
 from .connectome import Connectome
 from .genome import Genome, Projection, develop
 from .learning import Learner, LearnerConfig, learning_neuron_model
@@ -40,7 +41,7 @@ from .plasticity import ActorCritic, ActorCriticConfig
 from .regions import Region, motor_cortex, prefrontal_cortex, visual_cortex
 from .stream import FastSynapses, PatternSeparator, Trace
 
-__all__ = ["GenericBrain"]
+__all__ = ["Brain"]
 
 _REWARD_ARRAYS = (
     "w_critic",
@@ -262,12 +263,12 @@ def _validate_life_state(meta: dict[str, Any], data: Mapping[str, Any], learner:
             raise ValueError("invalid saved working-memory cold flags")
 
 
-class GenericBrain:
+class Brain:
     """Senses, an association cortex, a motor cortex, basal ganglia and consolidating memory.
 
     ``connectome`` needs populations ``sensory`` (or ``visual/input`` for an image),
     ``association`` and ``motor``, and ``prefrontal`` for a working memory; ``genome`` builds
-    one. Use ``GenericBrain.build`` for the default layout.
+    one. Use ``Brain.compose`` for the default brain with working memory.
     """
 
     def __init__(
@@ -295,7 +296,9 @@ class GenericBrain:
         self.sensory_index = np.asarray(populations[sensory], dtype=np.int64)
         self.motor_index = np.asarray(populations["motor"], dtype=np.int64)
         self.association_index = np.asarray(populations["association"], dtype=np.int64)
-        brain = Brain(connectome, learning_neuron_model(dt=1.0), backend=backend, device=device)
+        brain = NeuralGraph(
+            connectome, learning_neuron_model(dt=1.0), backend=backend, device=device
+        )
         self.learner = Learner(brain, list(self.motor_index), learning or _learning())
         self.basal_ganglia = ActorCritic(
             self.learner, list(self.association_index), reward or _reward(), seed=seed
@@ -320,8 +323,8 @@ class GenericBrain:
         self.last_learning: dict[str, float] = {}
 
     @property
-    def brain(self) -> Brain:
-        """The current learned dynamics; learning can replace this Brain instance."""
+    def brain(self) -> NeuralGraph:
+        """The current learned dynamics; learning can replace this NeuralGraph instance."""
         return self.learner.brain
 
     # -- construction
@@ -388,7 +391,7 @@ class GenericBrain:
         field: int = 3,
         seed: int = 0,
         **options: Any,
-    ) -> GenericBrain:
+    ) -> Brain:
         """Develop the default genome and wrap it; ``options`` go to the constructor."""
         genome = cls.genome(
             inputs,
@@ -414,7 +417,7 @@ class GenericBrain:
         observers: Sequence[int] = (),
         seed: int = 0,
         **options: Any,
-    ) -> GenericBrain:
+    ) -> Brain:
         """Compose a modular brain with working memory and consolidation.
 
         ``modules`` specifies a chain of reciprocally connected processing
@@ -564,7 +567,7 @@ class GenericBrain:
             for value in (phase.state.v, phase.state.activation, phase.state.adaptation)
         ):
             return phase
-        damped = Brain(
+        damped = NeuralGraph(
             brain.connectome,
             brain.neuron_model.replace(dt=brain.neuron_model.dt / 2),
             backend=brain.backend,
@@ -587,7 +590,7 @@ class GenericBrain:
         """Check the complete current graph before publishing an answer."""
         cfg = self.learner.config
         if cfg.tolerance is None:
-            raise ValueError("GenericBrain answers require a finite residual tolerance")
+            raise ValueError("Brain answers require a finite residual tolerance")
         phase = self._equilibrate(drive, state, budget=cfg.free_steps, tolerance=cfg.tolerance)
         if not np.all(phase.qualified):
             raise RuntimeError(
@@ -860,7 +863,7 @@ class GenericBrain:
         if agent._pending is not None:
             kind, plus, minus, value = agent._pending
             if kind != "states":
-                raise ValueError("GenericBrain checkpoints require its standard action states")
+                raise ValueError("Brain checkpoints require its standard action states")
             data["pending/value"] = value
             for name, phase in (("plus", plus), ("minus", minus)):
                 metadata["pending_" + name + "_steps"] = phase.steps
@@ -904,7 +907,7 @@ class GenericBrain:
         backend: Backend = "cpu",
         device: str | None = None,
         precision: str | None = None,
-    ) -> GenericBrain:
+    ) -> Brain:
         """Resume a complete saved brain, defaulting to portable CPU inference and learning.
 
         Keep the saved batch row identities, or call ``reset`` for new episodes.
@@ -914,13 +917,13 @@ class GenericBrain:
 
         with np.load(path, allow_pickle=False) as data:
             if "generic" not in data:
-                raise ValueError("not a GenericBrain checkpoint; use Learner.load for a learner")
+                raise ValueError("not a Brain checkpoint; use Learner.load for a learner")
             meta = json.loads(str(data["generic"]))
             if not isinstance(meta, dict) or meta.get("format") not in (
                 "cadence-generic/1",
                 "cadence-generic/2",
             ):
-                raise ValueError("unsupported GenericBrain checkpoint format")
+                raise ValueError("unsupported Brain checkpoint format")
             if "hippocampus" not in meta:
                 raise ValueError("missing hippocampus metadata")
             learner = Learner.load(path, backend=backend, device=device, precision=precision)

@@ -11,7 +11,7 @@ import cadence as cd
 def test_activity_change_is_the_path_length_of_the_activations_and_agrees_across_paths() -> None:
     w = cd.layered(6, 5, 3, density=1.0, seed=0)
     neuron_model = cd.learning_neuron_model(dt=1.0)
-    brain = cd.Brain(w, neuron_model)
+    brain = cd.NeuralGraph(w, neuron_model)
     drive = brain.stimulus_levels(np.random.default_rng(0).random((3, w.n)) * 0.5)
     fused = brain.settle_batch(drive, steps=40)
     loop = brain.settle_batch(drive, steps=40, trajectory=True)
@@ -36,10 +36,10 @@ def test_activity_change_is_the_path_length_of_the_activations_and_agrees_across
 def test_torch_reports_the_same_activity_change() -> None:
     w = cd.layered(6, 5, 3, density=1.0, seed=1)
     neuron_model = cd.learning_neuron_model(dt=1.0)
-    drive = cd.Brain(w, neuron_model).stimulus_levels(
+    drive = cd.NeuralGraph(w, neuron_model).stimulus_levels(
         np.random.default_rng(1).random((2, w.n)) * 0.5
     )
-    cpu = cd.Brain(w, neuron_model).settle_batch(drive, steps=30)
-    acc = cd.Brain(w, neuron_model, backend="torch", device="cpu").settle_batch(drive, steps=30)
+    cpu = cd.NeuralGraph(w, neuron_model).settle_batch(drive, steps=30)
+    acc = cd.NeuralGraph(w, neuron_model, backend="torch", device="cpu").settle_batch(drive, steps=30)
     assert cpu.activity_change is not None and acc.activity_change is not None
     assert np.allclose(cpu.activity_change, acc.activity_change, atol=1e-9)

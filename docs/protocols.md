@@ -19,7 +19,7 @@ connectome = cd.Connectome.from_synapses(
     populations={"sensors": [0, 1], "motors": [2, 3]},     # the other 96 neurons stay at rest
 )
 neuron_model = cd.NeuronModel(gain=0.02)
-brain = cd.Brain(connectome, neuron_model)
+brain = cd.NeuralGraph(connectome, neuron_model)
 
 protocol = cd.Protocol(
     stimuli={"rest": (), "touch": ("sensors",)},              # name -> populations stimulated at full amplitude
@@ -78,7 +78,7 @@ biological explanation or every possible graph confound.
 ## Gain selection under a sparsity cap
 
 ```python
-gain, table = cd.select_gain(lambda g: cd.Brain(connectome, neuron_model.replace(gain=g)), protocol,
+gain, table = cd.select_gain(lambda g: cd.NeuralGraph(connectome, neuron_model.replace(gain=g)), protocol,
                              grid=(0.01, 0.02, 0.03, 0.05), sparsity_cap=0.05)
 ```
 

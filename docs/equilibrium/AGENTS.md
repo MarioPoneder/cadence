@@ -1,7 +1,3 @@
-> This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
-> engine identity remains `0.62.0`; it is separate from the default Cadence API.
-
 # Agent guide: build one brain, measure its behavior
 
 Follow the repository's [contributor instructions](../../AGENTS.md), including
@@ -14,8 +10,8 @@ application from [the quickstart](QUICKSTART.md).
 The design goal is a simulated human-like brain built from simplified biological
 mechanisms. Cortical organization, memory, plasticity and recursive correction
 must earn their functional claims through explicit models and measured behavior.
-Preserve useful historical mechanisms such as Afterglow when evaluating a new
-substrate; consult the current [memory](https://github.com/muellerberndt/cadence/issues/84),
+Keep working memory, plasticity and imagination when evaluating a new
+construction; consult the current [memory](https://github.com/muellerberndt/cadence/issues/84),
 [plasticity](https://github.com/muellerberndt/cadence/issues/85) and
 [recursive integration](https://github.com/muellerberndt/cadence/issues/86) goals.
 

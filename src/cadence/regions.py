@@ -26,7 +26,7 @@ a mean-free reading sparsely and keeps one record per cell for every predicted f
 through the active cells and written by the delta rule, as in the cerebellum and the dentate
 gyrus. The basal ganglia (``ActorCritic``) read cortex through learned corticostriatal weights
 and broadcast a dopamine prediction error. The hippocampus (``FastSynapses``) keeps one-trial
-associations per stream. ``GenericBrain`` composes the regions, the basal ganglia and the
+associations per stream. ``Brain`` composes the regions, the basal ganglia and the
 hippocampus into one ready brain.
 """
 

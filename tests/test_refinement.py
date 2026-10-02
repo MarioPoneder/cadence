@@ -14,7 +14,7 @@ def brain_for(w, **rule_changes):
     post, pre = np.nonzero(w)
     graph = cd.Connectome.from_synapses(len(w), pre=pre, post=post)
     rule = cd.NeuronModel(dt=0.5, slope=1, threshold=0, leak=1, gain=1, **rule_changes)
-    return cd.Brain(graph, rule, efficacy=w[graph.post, graph.pre])
+    return cd.NeuralGraph(graph, rule, efficacy=w[graph.post, graph.pre])
 
 
 def full_residual(brain, drive, state, nudge=None):
@@ -191,7 +191,7 @@ def test_unsupported_models_effective_asymmetry_and_input_coupling_rejected():
         brain.neuron_model.replace(adaptation=cd.Adaptation()),
     ):
         with pytest.raises(ValueError, match="smooth tanh"):
-            validate_hybrid(cd.Brain(brain.connectome, rule), np.array([0]))
+            validate_hybrid(cd.NeuralGraph(brain.connectome, rule), np.array([0]))
     asymmetric = brain.with_parameters(efficacy=np.array([0.5, 0.6]))
     with pytest.raises(ValueError, match="exact reciprocal"):
         validate_hybrid(asymmetric, np.array([0]))

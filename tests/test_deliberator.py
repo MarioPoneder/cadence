@@ -128,10 +128,10 @@ def test_invalid_budgets_do_not_advance_or_replace_a_search(value):
 
 
 def test_thinking_preserves_real_action_credit_and_default_memory(tmp_path):
-    brain = cd.GenericBrain.build(2, 2, hidden=4, seed=4)
+    brain = cd.Brain.build(2, 2, hidden=4, seed=4)
     assert isinstance(brain.hippocampus, cd.SynapticMemory)
     brain.step([[1.0, 0.0]])
-    baseline = cd.GenericBrain.load(brain.save(tmp_path / "pending.npz"))
+    baseline = cd.Brain.load(brain.save(tmp_path / "pending.npz"))
     p = Deliberator(
         lambda _: (0, 1),
         lambda state, action: np.eye(2)[[action]],
@@ -159,10 +159,10 @@ def test_thinking_preserves_real_action_credit_and_default_memory(tmp_path):
 
 
 def test_explicit_memory_opt_out_and_checkpoint_preserve_configuration(tmp_path):
-    brain = cd.GenericBrain.build(2, 2, hidden=4, episodic=False)
+    brain = cd.Brain.build(2, 2, hidden=4, episodic=False)
     assert brain.hippocampus is None
-    assert cd.GenericBrain.load(brain.save(tmp_path / "without.npz")).hippocampus is None
-    assert isinstance(cd.GenericBrain(brain.connectome).hippocampus, cd.SynapticMemory)
+    assert cd.Brain.load(brain.save(tmp_path / "without.npz")).hippocampus is None
+    assert isinstance(cd.Brain(brain.connectome).hippocampus, cd.SynapticMemory)
 
 
 def test_custom_state_cloner_also_isolates_published_results():

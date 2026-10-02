@@ -1,12 +1,8 @@
-> This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
-> engine identity remains `0.62.0`; it is separate from the default Cadence API.
-
 # Runtime and mathematical specification
 
 This document specifies the population DRSN engine. The equations are in
 [the processing-patch description](ELEMENT.md); all arguments and result fields
-are in [the API reference](REFERENCE.md). Every `0.62.0` brain is one connected
+are in [the API reference](REFERENCE.md). Every `0.70.0` brain is one connected
 settlement: the builder refuses a population that settles with no other
 population and a group of populations that settles apart from the rest.
 Explicit observer wiring is experimental;

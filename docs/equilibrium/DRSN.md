@@ -1,7 +1,3 @@
-> This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
-> engine identity remains `0.62.0`; it is separate from the default Cadence API.
-
 # One connected brain, one repair problem
 
 Cadence builds one connected graph of processing populations. Each patch predicts
@@ -34,7 +30,7 @@ Here `deep` is an example label for an added intermediate population, not anothe
 kind of brain. `--layout recursive` adds explicit error readback. Its measured
 usefulness, automatic attention and the intended routine/correction cycle are
 covered by the [experimental boundary](EXPERIMENTAL.md). The
-[performance guide](PERFORMANCE.md) explains costs and historical demo evidence.
+[performance guide](PERFORMANCE.md) explains complete learning and query costs.
 
 ## Build the layout
 

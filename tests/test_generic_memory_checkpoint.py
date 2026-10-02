@@ -9,7 +9,7 @@ import cadence as cd
 
 
 def separated_brain(kind="consolidating", backend="cpu"):
-    brain = cd.GenericBrain.build(
+    brain = cd.Brain.build(
         3,
         3,
         hidden=5,
@@ -59,7 +59,7 @@ def test_expanded_memory_resumes_pending_action_and_future_learning(tmp_path, ki
     if backend not in cd.available_backends():
         pytest.skip(backend)
     original = separated_brain(kind, backend)
-    restored = cd.GenericBrain.load(
+    restored = cd.Brain.load(
         original.save(tmp_path / "separated.npz"),
         backend=backend,
         device="cpu" if backend == "torch" else None,
@@ -97,7 +97,7 @@ def rewrite_checkpoint(path, mutate):
 @pytest.mark.parametrize("version", [1, 2])
 @pytest.mark.parametrize("kind", ["consolidating", "fast", "none"])
 def test_legacy_unseparated_memory_keeps_its_original_rule(tmp_path, version, kind):
-    original = cd.GenericBrain.build(3, 3, hidden=5, working_memory=False)
+    original = cd.Brain.build(3, 3, hidden=5, working_memory=False)
     if kind == "fast":
         original.hippocampus = cd.FastSynapses(original.sensory_index, original.motor_index)
     elif kind == "none":
@@ -112,7 +112,7 @@ def test_legacy_unseparated_memory_keeps_its_original_rule(tmp_path, version, ki
             metadata["hippocampus"].pop("separator")
 
     rewrite_checkpoint(path, make_legacy)
-    restored = cd.GenericBrain.load(path)
+    restored = cd.Brain.load(path)
     np.testing.assert_array_equal(
         original.step(np.eye(3)[:2], reward=np.array([0.1, 0.5])),
         restored.step(np.eye(3)[:2], reward=np.array([0.1, 0.5])),
@@ -216,7 +216,7 @@ def test_malformed_memory_rejected_before_resumed_composition_is_constructed(
     def must_not_construct(*args, **kwargs):
         pytest.fail("malformed memory must be rejected before constructing the resumed brain")
 
-    monkeypatch.setattr(cd.GenericBrain, "__init__", must_not_construct)
+    monkeypatch.setattr(cd.Brain, "__init__", must_not_construct)
     with pytest.raises(ValueError):
-        cd.GenericBrain.load(path)
+        cd.Brain.load(path)
     assert path.read_bytes() == before

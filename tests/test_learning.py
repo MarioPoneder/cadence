@@ -23,7 +23,7 @@ def two_blobs(n_per: int = 60, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
 def test_learner_separates_two_classes_and_the_rule_is_local() -> None:
     connectome = cd.layered(8, 16, 2, density=0.6, seed=1)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()),
         connectome.populations["output"],
         cd.LearnerConfig(eta=2.0),
     )
@@ -66,7 +66,7 @@ def test_learner_separates_two_classes_and_the_rule_is_local() -> None:
 def test_free_phase_never_sees_the_target() -> None:
     connectome = cd.layered(4, 6, 2, seed=2)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"]
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()), connectome.populations["output"]
     )
     drive = learner.brain.stimulus_levels(np.pad(np.eye(4)[:2], ((0, 0), (0, connectome.n - 4))))
     a = learner.free(drive).activation
@@ -87,7 +87,7 @@ def test_contrast_tracks_the_loss_gradient() -> None:
     connectome = cd.layered(8, 12, 3, density=0.7, seed=3)
     config = cd.LearnerConfig(beta=0.05, tolerance=1e-9, free_steps=400, nudged_steps=400)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"], config
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()), connectome.populations["output"], config
     )
     rng = np.random.default_rng(0)
     x = rng.random((16, 8))
@@ -95,7 +95,7 @@ def test_contrast_tracks_the_loss_gradient() -> None:
     drive = learner.brain.stimulus_levels(np.pad(x, ((0, 0), (0, connectome.n - 8))))
     out = np.asarray(connectome.populations["output"])
 
-    def loss(brain: cd.Brain) -> float:
+    def loss(brain: cd.NeuralGraph) -> float:
         s = brain.settle_batch(drive, steps=400, tolerance=1e-9).activation[:, out]
         z = s / config.temperature
         z = z - z.max(axis=1, keepdims=True)
@@ -134,7 +134,7 @@ def test_leak_keeps_rest_exact_and_responds_below_rest() -> None:
 
 def test_brain_stops_at_tolerance_and_reports_steps() -> None:
     connectome = cd.layered(4, 6, 2, seed=4)
-    brain = cd.Brain(connectome, cd.learning_neuron_model())
+    brain = cd.NeuralGraph(connectome, cd.learning_neuron_model())
     drive = brain.stimulus_levels(np.pad(np.eye(4)[:1], ((0, 0), (0, connectome.n - 4))))
     fixed = brain.settle_batch(drive, steps=500)
     early = brain.settle_batch(drive, steps=500, tolerance=1e-6)
@@ -148,21 +148,21 @@ def test_brain_stops_at_tolerance_and_reports_steps() -> None:
 def test_dense_and_segmented_transport_agree() -> None:
     connectome = cd.layered(6, 10, 3, seed=5)
     neuron_model = cd.learning_neuron_model()
-    drive = cd.Brain(connectome, neuron_model).stimulus_levels(
+    drive = cd.NeuralGraph(connectome, neuron_model).stimulus_levels(
         np.pad(np.random.default_rng(0).random((5, 6)), ((0, 0), (0, connectome.n - 6)))
     )
-    dense = cd.Brain(connectome, neuron_model).settle_batch(drive, steps=80)
-    segmented = cd.Brain(connectome, neuron_model, dense_limit=0).settle_batch(drive, steps=80)
+    dense = cd.NeuralGraph(connectome, neuron_model).settle_batch(drive, steps=80)
+    segmented = cd.NeuralGraph(connectome, neuron_model, dense_limit=0).settle_batch(drive, steps=80)
     assert np.abs(dense.activation - segmented.activation).max() < 1e-12
-    assert cd.Brain(connectome, neuron_model).to_dict()["transport"] == "dense"
-    assert cd.Brain(connectome, neuron_model, dense_limit=0).to_dict()["transport"] == "segmented"
+    assert cd.NeuralGraph(connectome, neuron_model).to_dict()["transport"] == "dense"
+    assert cd.NeuralGraph(connectome, neuron_model, dense_limit=0).to_dict()["transport"] == "segmented"
 
 
 def test_weighted_nudge_pushes_each_row_its_own_way() -> None:
     connectome = cd.layered(4, 6, 2, seed=6)
     config = cd.LearnerConfig(tolerance=1e-12, free_steps=1000, nudged_steps=200)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"], config
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()), connectome.populations["output"], config
     )
     drive = learner.brain.stimulus_levels(np.pad(np.eye(4)[:2], ((0, 0), (0, connectome.n - 4))))
     free = learner.free(drive)
@@ -179,7 +179,7 @@ def test_normalized_steps_stay_local_and_bounded() -> None:
     connectome = cd.layered(4, 6, 2, seed=8)
     config = cd.LearnerConfig(eta=0.05, normalize=0.9)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"], config
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()), connectome.populations["output"], config
     )
     drive = learner.brain.stimulus_levels(np.pad(np.eye(4)[:2], ((0, 0), (0, connectome.n - 4))))
     before = learner.brain.efficacy.copy()
@@ -200,7 +200,7 @@ def test_adaptive_local_step_is_bias_corrected() -> None:
         eta=0.01, eta_bias=0.0, momentum=0.9, normalize=0.999, normalize_floor=1e-12
     )
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"], config
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()), connectome.populations["output"], config
     )
     drive = learner.brain.stimulus_levels(np.pad(np.eye(4)[:2], ((0, 0), (0, connectome.n - 4))))
     before = learner.brain.efficacy.copy()
@@ -211,7 +211,7 @@ def test_adaptive_local_step_is_bias_corrected() -> None:
     assert np.allclose(moved[moving], config.eta, rtol=1e-6)
     # the same net, contrasts scaled down a hundredfold by a smaller nudge: the same first step
     small = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()),
         connectome.populations["output"],
         dataclasses.replace(config, beta=0.001),
     )
@@ -223,7 +223,7 @@ def test_adaptive_local_step_is_bias_corrected() -> None:
 def test_tie_groups_share_one_scale_across_positions() -> None:
     connectome, groups = cd.embedded(vocabulary=5, positions=3, dim=2, hidden=4, outputs=2, seed=1)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()),
         connectome.populations["output"],
         tie_groups=groups,
     )
@@ -246,7 +246,7 @@ def test_tie_groups_share_one_scale_across_positions() -> None:
 
 def test_decay_fades_synapses_that_are_not_relearned() -> None:
     connectome = cd.layered(4, 3, 2, density=1.0, seed=0)
-    brain = cd.Brain(connectome, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0))
     config = cd.LearnerConfig(eta=0.0, eta_bias=0.0, decay=0.1)
     learner = cd.Learner(brain, connectome.populations["output"], config)
     before = learner.brain.efficacy.copy()
@@ -267,7 +267,7 @@ def test_decay_fades_synapses_that_are_not_relearned() -> None:
 
 def test_trainable_masks_leave_the_rest_of_the_net_alone() -> None:
     connectome = cd.layered(4, 3, 2, density=1.0, seed=0)
-    brain = cd.Brain(connectome, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0))
     synapses = np.zeros(connectome.synapses, dtype=bool)
     synapses[: connectome.synapses // 2] = True
     neurons = np.zeros(connectome.n, dtype=bool)
@@ -294,7 +294,7 @@ def test_parameters_count_only_trainable_synapses_and_biases(reciprocal: bool) -
     synapses = connectome.pre % 2 == 0  # two separate pairs, one trainable side in each
     neurons = np.array([False, True, False, True])
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model()),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model()),
         [1, 3],
         reciprocal=reciprocal,
         plastic_synapses=synapses,
@@ -316,8 +316,8 @@ def test_contrast_on_the_device_matches_the_host(backend: str) -> None:
     w = cd.layered(12, 8, 4, density=1.0, seed=3)
     neuron_model = cd.learning_neuron_model(dt=1.0)
     kw = {"device": "cpu"} if backend == "torch" else {}
-    device = cd.Brain(w, neuron_model, backend=backend, **kw)  # type: ignore[arg-type]
-    host = cd.Brain(w, neuron_model)
+    device = cd.NeuralGraph(w, neuron_model, backend=backend, **kw)  # type: ignore[arg-type]
+    host = cd.NeuralGraph(w, neuron_model)
     config = cd.LearnerConfig(eta=1.0, beta=0.1, temperature=0.1, tolerance=1e-4)
     drive = host.stimulus_levels(np.random.default_rng(4).random((6, w.n)) * 0.5)
     labels = np.array([0, 1, 2, 3, 0, 1])

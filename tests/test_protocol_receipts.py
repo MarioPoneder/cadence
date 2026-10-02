@@ -76,7 +76,7 @@ def ring_protocol() -> tuple[cd.Connectome, cd.Protocol]:
 
 def test_protocol_scores_and_shuffled_control_and_gain_selection() -> None:
     connectome, protocol = ring_protocol()
-    brain = cd.Brain(connectome, cd.NeuronModel(gain=0.03, dt=0.5))
+    brain = cd.NeuralGraph(connectome, cd.NeuronModel(gain=0.03, dt=0.5))
     result = protocol.score(brain)
     assert set(result) >= {"passed", "rows"} and 0 <= result["passed"] <= len(protocol.rows)
     assert all("id" in r and "passed" in r for r in result["rows"])
@@ -84,7 +84,7 @@ def test_protocol_scores_and_shuffled_control_and_gain_selection() -> None:
     d = protocol.to_dict()
     assert len(d["rows"]) == 3
     gain, table = cd.select_gain(
-        lambda g: cd.Brain(connectome, cd.NeuronModel(gain=g, dt=0.5)),
+        lambda g: cd.NeuralGraph(connectome, cd.NeuronModel(gain=g, dt=0.5)),
         protocol,
         [0.01, 0.03, 0.1],
         sparsity_cap=1.0,
@@ -92,7 +92,7 @@ def test_protocol_scores_and_shuffled_control_and_gain_selection() -> None:
     assert gain in (0.01, 0.03, 0.1) and len(table) == 3
     control = cd.shuffled(connectome, seed=0)
     assert control.synapses == connectome.synapses
-    assert protocol.score(cd.Brain(control, cd.NeuronModel(gain=gain, dt=0.5)))["passed"] <= len(
+    assert protocol.score(cd.NeuralGraph(control, cd.NeuronModel(gain=gain, dt=0.5)))["passed"] <= len(
         protocol.rows
     )
 
@@ -100,7 +100,7 @@ def test_protocol_scores_and_shuffled_control_and_gain_selection() -> None:
 def test_gain_selection_breaks_ties_by_gain_not_grid_order() -> None:
     connectome, protocol = ring_protocol()
     gain, table = cd.select_gain(
-        lambda g: cd.Brain(connectome, cd.NeuronModel(gain=g, dt=0.5)),
+        lambda g: cd.NeuralGraph(connectome, cd.NeuronModel(gain=g, dt=0.5)),
         protocol,
         [0.1, 0.03, 0.01],
         sparsity_cap=None,
@@ -119,7 +119,7 @@ def test_readout_comparison_uses_readout_when_stimulus_has_the_same_name(predica
         rows=[cd.Row("compare", "trial", "right", predicate, relative_to="left")],
         steps=10,
     )
-    result = protocol.score(cd.Brain(connectome, cd.NeuronModel(dt=1.0)))["rows"][0]
+    result = protocol.score(cd.NeuralGraph(connectome, cd.NeuronModel(dt=1.0)))["rows"][0]
     assert result["reference"]["mean"] == 0.0
     assert result["passed"]
 
@@ -132,14 +132,14 @@ def test_protocol_rejects_unknown_explicit_reference() -> None:
         steps=10,
     )
     with pytest.raises(KeyError, match="missing"):
-        protocol.score(cd.Brain(connectome, cd.NeuronModel(dt=1.0)))
+        protocol.score(cd.NeuralGraph(connectome, cd.NeuronModel(dt=1.0)))
 
 
 def test_gain_selection_rejects_an_empty_or_inadmissible_grid() -> None:
     connectome, protocol = ring_protocol()
 
-    def make_brain(gain: float) -> cd.Brain:
-        return cd.Brain(connectome, cd.NeuronModel(gain=gain, dt=0.5))
+    def make_brain(gain: float) -> cd.NeuralGraph:
+        return cd.NeuralGraph(connectome, cd.NeuronModel(gain=gain, dt=0.5))
 
     with pytest.raises(ValueError, match="empty"):
         cd.select_gain(make_brain, protocol, [])

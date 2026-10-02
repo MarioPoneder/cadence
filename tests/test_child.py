@@ -28,7 +28,7 @@ def _bandit_drive(
 
 def _actor(connectome: cd.Connectome, **config: float) -> tuple[cd.ActorCritic, cd.Learner]:
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         cd.LearnerConfig(beta=0.1, eta=1.0, temperature=0.2, tolerance=3e-3, nudged_steps=12),
     )
@@ -128,7 +128,7 @@ def _one_moment_ago(
         eta=2.0, beta=0.1, temperature=0.1, tolerance=3e-3, nudged_steps=12, free_steps=60
     )
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         cfg,
         tie_groups=tie,
@@ -223,7 +223,7 @@ def test_a_capped_activity_change_carries_the_moment_before_and_a_full_one_forge
     """Settling as the memory: settled for a few steps from the previous equilibrium, the
     state still holds the moment before; settled to convergence, it does not."""
     w, _ = cd.stateful(4, 1, 4, 24, 4, seed=0)
-    brain = cd.Brain(w, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0))
     hidden = list(w.populations["hidden"])
     a = np.zeros((1, w.n))
     a[:, 0] = 1.0
@@ -273,7 +273,7 @@ def test_the_eligibility_weighted_by_the_afterimage_credits_the_cue_not_the_back
         rng = np.random.default_rng(0)
         connectome = cd.develop(genome, seed=0)
         learner = cd.Learner(
-            cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+            cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
             connectome.populations["output"],
             cd.LearnerConfig(beta=0.1, eta=1.0, temperature=0.2, tolerance=3e-3, nudged_steps=12),
         )

@@ -12,7 +12,7 @@ def make_torch(device):
     if device == "mps" and not torch.backends.mps.is_available():
         pytest.skip("MPS unavailable")
     graph = cd.layered(2, 3, 2, density=1, seed=4)
-    return cd.Brain(
+    return cd.NeuralGraph(
         graph, cd.learning_neuron_model(), backend="torch", device=device, precision="float32"
     )
 
@@ -75,7 +75,7 @@ def test_row_contrast_retains_small_product_difference(device):
 def test_mlx_one_ulp_phase_change_keeps_aggregate_contrast():
     mx = pytest.importorskip("mlx.core")
     graph = cd.layered(2, 3, 2, density=1, seed=4)
-    kernel = cd.Brain(graph, cd.learning_neuron_model(), backend="mlx")._mlx
+    kernel = cd.NeuralGraph(graph, cd.learning_neuron_model(), backend="mlx")._mlx
     minus = np.full((31, graph.n), 0.5, dtype=np.float32)
     plus = np.nextafter(minus, np.float32(1))
     expected_edges, expected_neurons = reference(graph, plus, minus)

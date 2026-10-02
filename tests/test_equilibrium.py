@@ -8,8 +8,8 @@ import pytest
 import cadence as cd
 
 
-def isolated(neuron_model: cd.NeuronModel) -> cd.Brain:
-    return cd.Brain(cd.Connectome.from_synapses(1, pre=[], post=[]), neuron_model)
+def isolated(neuron_model: cd.NeuronModel) -> cd.NeuralGraph:
+    return cd.NeuralGraph(cd.Connectome.from_synapses(1, pre=[], post=[]), neuron_model)
 
 
 def test_activation_tolerance_can_stop_far_from_equilibrium() -> None:
@@ -74,7 +74,7 @@ def test_residual_matches_the_projected_neuron_equation_without_mutation(
     neuron_model = cd.learning_neuron_model(gain=0.7, dt=0.3).replace(
         adaptation=cd.Adaptation(tau_steps=8, strength=0.2)
     )
-    brain = cd.Brain(
+    brain = cd.NeuralGraph(
         connectome,
         neuron_model,
         log_gain=np.log([1, 2, 3]),
@@ -122,7 +122,7 @@ def test_ablation_requires_zero_potential_and_adaptation() -> None:
 def test_residual_does_not_claim_a_unique_equilibrium() -> None:
     connectome = cd.Connectome.from_synapses(2, pre=[0, 1], post=[1, 0], sign=[6, 6])
     neuron_model = cd.NeuronModel(gain=1.0, dt=0.5)
-    brain = cd.Brain(connectome, neuron_model)
+    brain = cd.NeuralGraph(connectome, neuron_model)
     drive = np.zeros(2)
     cold = brain.settle(drive, steps=200)
     initial = cd.BrainState(
@@ -162,7 +162,7 @@ def test_raw_contrast_needs_parameter_and_loss_units_for_exact_gradient(nudge: s
         count=[1, 1, 2, 2, 3, 3],
         sign=[0.08] * 6,
     )
-    brain = cd.Brain(
+    brain = cd.NeuralGraph(
         connectome,
         cd.learning_neuron_model(gain=1.4),
         log_gain=np.full(3, np.log(1.3)),
@@ -182,7 +182,7 @@ def test_raw_contrast_needs_parameter_and_loss_units_for_exact_gradient(nudge: s
     assert brain.residual(drive, plus, nudge=learner.nudge_for(target, config.beta)).max() < 1e-11
     assert brain.residual(drive, minus, nudge=learner.nudge_for(target, -config.beta)).max() < 1e-11
 
-    def loss(candidate: cd.Brain) -> float:
+    def loss(candidate: cd.NeuralGraph) -> float:
         s = candidate.settle_batch(drive, steps=500, tolerance=1e-13).activation[:, [1, 2]]
         if nudge == "quadratic":
             return float(0.5 * np.square(s - target[:, [1, 2]]).sum(axis=1).mean())

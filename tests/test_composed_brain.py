@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from cadence import GenericBrain, SynapticMemory, Trace
+from cadence import Brain, SynapticMemory, Trace
 
 
 def assert_same_checkpoint(first, second):
@@ -15,7 +15,7 @@ def assert_same_checkpoint(first, second):
 
 @pytest.mark.parametrize("observers", [(), (3,), (3, 2)])
 def test_modular_base_and_optional_observers_share_one_connected_brain(observers):
-    brain = GenericBrain.compose(2, 2, modules=(5, 4), observers=observers, seed=3)
+    brain = Brain.compose(2, 2, modules=(5, 4), observers=observers, seed=3)
     assert isinstance(brain.working_memory, Trace)
     assert isinstance(brain.hippocampus, SynapticMemory)
     graph = brain.connectome
@@ -49,7 +49,7 @@ def test_modular_base_and_optional_observers_share_one_connected_brain(observers
 
 
 def test_observer_feedback_changes_the_base_inside_the_same_solve():
-    brain = GenericBrain.compose(2, 2, modules=(5, 4), observers=(3,), seed=3)
+    brain = Brain.compose(2, 2, modules=(5, 4), observers=(3,), seed=3)
     drive = brain.stimulus([[0.2, -0.1]])
     ordinary = brain.brain.equilibrate(drive, budget=2048, tolerance=1e-8)
     perturbed = drive.copy()
@@ -64,11 +64,11 @@ def test_observer_feedback_changes_the_base_inside_the_same_solve():
 
 
 def test_imagination_preserves_memories_randomness_pending_outcomes_and_continuation(tmp_path):
-    brain = GenericBrain.compose(2, 2, modules=(5, 4), observers=(3,), seed=3)
+    brain = Brain.compose(2, 2, modules=(5, 4), observers=(3,), seed=3)
     brain.hippocampus.observe(np.array([[1.0, 0.0]]), np.array([[0.7, -0.2]]))
     brain.act([[0.2, -0.1]])  # A real action is still awaiting its outcome.
     before = brain.save(tmp_path / "before")
-    control = GenericBrain.load(before)
+    control = Brain.load(before)
     sequence = [[[0.0, 0.1]], [[-0.1, 0.0]]]
     branch = brain.imagine(sequence)
     assert len(branch) == 2 and all(np.all(phase.qualified) for phase in branch)
@@ -85,7 +85,7 @@ def test_imagination_preserves_memories_randomness_pending_outcomes_and_continua
 
 
 def test_private_trace_is_used_between_imagined_steps_without_becoming_real_memory():
-    brain = GenericBrain.compose(2, 2, modules=(5, 4), seed=3)
+    brain = Brain.compose(2, 2, modules=(5, 4), seed=3)
     sequence = [[[0.6, -0.3]], [[0.0, 0.0]]]
     branch = brain.imagine(sequence)
     assert len(branch) == 2 and all(np.all(phase.qualified) for phase in branch)
@@ -98,7 +98,7 @@ def test_private_trace_is_used_between_imagined_steps_without_becoming_real_memo
 
 
 def test_refused_imagined_step_ends_branch_and_leaves_real_state_untouched(tmp_path):
-    brain = GenericBrain.compose(2, 2, modules=(5, 4), seed=3)
+    brain = Brain.compose(2, 2, modules=(5, 4), seed=3)
     before = brain.save(tmp_path / "before")
     branch = brain.imagine([[[0.2, 0.1]], [[0.5, 0.3]]], budget=0)
     assert len(branch) == 1 and not np.all(branch[0].qualified)
@@ -113,7 +113,7 @@ def test_refused_imagined_step_ends_branch_and_leaves_real_state_untouched(tmp_p
 )
 def test_invalid_composition_is_refused(modules, observers):
     with pytest.raises(ValueError):
-        GenericBrain.compose(2, 2, modules=modules, observers=observers)
+        Brain.compose(2, 2, modules=modules, observers=observers)
 
 
 @pytest.mark.parametrize(
@@ -121,7 +121,7 @@ def test_invalid_composition_is_refused(modules, observers):
     [{"budget": -1}, {"budget": True}, {"tolerance": float("nan")}, {"tolerance": "small"}],
 )
 def test_empty_imagined_branch_still_validates_solver_controls(controls):
-    brain = GenericBrain.compose(2, 2, modules=(4,))
+    brain = Brain.compose(2, 2, modules=(4,))
     with pytest.raises(ValueError):
         brain.imagine([], **controls)
 
@@ -129,4 +129,4 @@ def test_empty_imagined_branch_still_validates_solver_controls(controls):
 @pytest.mark.parametrize("options", [{"seed": True}, {"seed": -1}, {"episodic": "yes"}])
 def test_invalid_composition_options_are_refused(options):
     with pytest.raises(ValueError):
-        GenericBrain.compose(2, 2, modules=(4,), **options)
+        Brain.compose(2, 2, modules=(4,), **options)

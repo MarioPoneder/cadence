@@ -73,7 +73,7 @@ class Evaluator:
         connectome = cd.layered(2, 8, 2, density=1, seed=seed)
         config = cd.LearnerConfig(eta=3, eta_bias=0.03, temperature=0.1, tolerance=1e-4)
         self.learner = cd.Learner(
-            cd.Brain(connectome, cd.learning_neuron_model(dt=1)),
+            cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1)),
             connectome.populations["output"],
             config,
         )

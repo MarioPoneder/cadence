@@ -16,7 +16,7 @@ def trained_learner(seed: int = 0) -> tuple[cd.Learner, np.ndarray]:
     tie = np.full(connectome.synapses, -1, dtype=np.int64)
     tie[:4] = 0
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         config,
         tie_groups=tie,
@@ -76,7 +76,7 @@ def test_rule_with_adaptation_and_masks_survive(tmp_path: Path) -> None:
     neurons = np.zeros(connectome.n, dtype=bool)
     neurons[-2:] = True
     learner = cd.Learner(
-        cd.Brain(connectome, neuron_model),
+        cd.NeuralGraph(connectome, neuron_model),
         connectome.populations["output"],
         plastic_synapses=synapses,
         plastic_neurons=neurons,
@@ -101,7 +101,7 @@ def test_a_checkpoint_from_an_earlier_release_loads_without_its_retired_knobs(tm
 
     connectome = cd.layered(3, 4, 2, density=1.0, seed=0)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         cd.LearnerConfig(eta=0.5),
     )
@@ -122,7 +122,7 @@ def test_checkpoint_preserves_explicit_precision_and_allows_override(tmp_path: P
     torch = pytest.importorskip("torch")
     connectome = cd.layered(3, 4, 2, density=1.0, seed=0)
     learner = cd.Learner(
-        cd.Brain(
+        cd.NeuralGraph(
             connectome,
             cd.learning_neuron_model(),
             backend="torch",

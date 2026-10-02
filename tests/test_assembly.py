@@ -18,7 +18,7 @@ def test_regions_exchange_feedback_in_one_equilibrium():
         connectome = assemble(regions, links)
         assert connectome.populations["movement"] == (1, 2, 3)
         assert connectome.populations["movement/motor"] == (2, 3)
-        brain = cd.Brain(connectome, neuron_model)
+        brain = cd.NeuralGraph(connectome, neuron_model)
         state = brain.settle(drive, steps=400, tolerance=0)
         assert brain.residual(drive, state)[0] < 1e-10
         results.append(state.activation)

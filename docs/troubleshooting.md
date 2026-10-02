@@ -14,8 +14,9 @@ for the settling brain's transport, `[accel]` adds torch and `[apple]` adds MLX 
 settling brain on a device; the temporal and record patches are NumPy, and the belief
 patch's slow half has a torch twin ([backends](backends.md)).
 
-**Which brain do I want?** The table at the end of the [quickstarts](quickstart.md#which-one);
-[build your own brain](build.md) walks each one from your data.
+**Which interface do I want?** Start with `Brain.compose`. The
+[specialist guides](quickstart.md#specialist-guides) cover other model contracts;
+[build from your data](build.md) explains their shapes and encodings.
 
 ## Shapes and encodings
 

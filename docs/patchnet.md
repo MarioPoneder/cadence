@@ -2,7 +2,7 @@
 
 `PatchNet` composes the settling brain for continuous observations and
 [recursive observers that settle together](recursive-settlement.md).
-The graph interface composes the nonlinear `Brain` and local contrastive `Learner` without
+The graph interface composes the nonlinear `NeuralGraph` and local contrastive `Learner` without
 requiring an external associative store. Its default factory creates a fully
 reciprocal graph; the older `layered` factory alone does not add every reverse
 input contact.
@@ -100,7 +100,7 @@ observed output ports and averages over batch rows. Gain is supplied teaching
 strength; it is not inferred importance or truth reliability.
 
 Each phase has an explicit step budget and checks the potential/adaptation
-equations through `Brain.equilibrate`. If a required phase does not converge,
+equations through `NeuralGraph.equilibrate`. If a required phase does not converge,
 the free activity is retained but weights, optimizer history and source IDs
 are not updated. The carried state is never replaced by the target-nudged
 state. After a successful parameter update it is an initial state for the
@@ -157,7 +157,6 @@ frozen sources, checkpoints and an independent endpoint verifier, and both the
 activity-only and the temporal-overlap outcomes were kept. They are development
 probes, not evidence of a competent controller or animal-like lifelong memory.
 
-The existing `GenericBrain` and `Records` APIs remain supported for prior
-applications. They contain additional mechanisms and should not be treated
-as evidence that the smaller `PatchNet` composition has already reproduced
-their capabilities.
+`Brain` supplies the continuing action/memory interface; `Records` supplies
+explicit event stores. Their additional mechanisms have their own contracts
+and do not establish the same capabilities for a bare `PatchNet`.

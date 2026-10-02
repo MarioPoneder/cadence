@@ -1,7 +1,3 @@
-> This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
-> engine identity remains `0.62.0`; it is separate from the default Cadence API.
-
 # The processing patch
 
 Every processing patch owns a live scalar state `x_i` and retained relation

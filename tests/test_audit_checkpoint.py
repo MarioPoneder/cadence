@@ -50,7 +50,7 @@ def test_learner_round_trip_keeps_every_array_and_count(backend: str, tmp_path) 
     for p in range(3):
         d[np.arange(8), p * 12 + rng.integers(0, 12, 8)] = 1.0
     labels = np.stack([rng.integers(0, 2, 8), rng.integers(0, 4, 8)], axis=1)
-    brain = cd.Brain(
+    brain = cd.NeuralGraph(
         c,
         cd.learning_neuron_model(dt=1.0).replace(adaptation=cd.Adaptation(20.0, 0.1)),
         backend=backend,
@@ -89,7 +89,7 @@ def test_retired_config_fields_are_dropped_and_current_ones_kept() -> None:
 
 def test_checkpoint_meta_names_the_format_and_version(tmp_path) -> None:
     c = cd.layered(3, 4, 2, seed=0)
-    learner = cd.Learner(cd.Brain(c, cd.learning_neuron_model()), c.populations["output"])
+    learner = cd.Learner(cd.NeuralGraph(c, cd.learning_neuron_model()), c.populations["output"])
     path = learner.save(tmp_path / "small")
     with np.load(path) as data:
         meta = json.loads(str(data["meta"]))
@@ -100,13 +100,13 @@ def test_checkpoint_meta_names_the_format_and_version(tmp_path) -> None:
 
 def test_generic_brain_resumes_identically(tmp_path) -> None:
     rng = np.random.default_rng(0)
-    g = cd.GenericBrain.build(6, 3, hidden=16, working_memory=True, seed=1)
+    g = cd.Brain.build(6, 3, hidden=16, working_memory=True, seed=1)
     g.step(rng.random((4, 6)))
     g.step(rng.random((4, 6)), reward=rng.normal(size=4), done=np.array([False, True, False, False]))
     g.step(rng.random((4, 6)), reward=rng.normal(size=4), teacher=np.array([0, 1, 2, 0]))
     g.step(rng.random((4, 6)), reward=rng.normal(size=4))  # a pending action awaits its reward
     path = g.save(tmp_path / "generic")
-    h = cd.GenericBrain.load(path)
+    h = cd.Brain.load(path)
     for _ in range(3):
         x, r = rng.random((4, 6)), rng.normal(size=4)
         assert np.array_equal(g.step(x, reward=r), h.step(x, reward=r))

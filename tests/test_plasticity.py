@@ -18,7 +18,7 @@ def _contextual_bandit(rng: np.random.Generator, batch: int) -> tuple[np.ndarray
 def test_actor_critic_learns_a_contextual_bandit_from_dopamine() -> None:
     connectome = cd.layered(4, 8, 2, density=1.0, seed=0)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         cd.LearnerConfig(beta=0.1, eta=1.0, temperature=0.2, tolerance=3e-3, nudged_steps=12),
     )
@@ -57,7 +57,7 @@ def test_actor_critic_learns_a_contextual_bandit_from_dopamine() -> None:
 def test_traces_reset_on_done_and_updates_are_local() -> None:
     connectome = cd.layered(4, 6, 2, density=1.0, seed=1)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         cd.LearnerConfig(eta=1.0),
     )
@@ -107,7 +107,7 @@ def test_grouped_softmax_nudge_agrees_between_kernels_and_bins_learn_a_continuou
 
     bins = cd.Bins(dims=2, size=5)
     connectome = cd.layered(4, 8, bins.dims * bins.size, density=1.0, seed=3)
-    brain = cd.Brain(connectome, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0))
     rng = np.random.default_rng(3)
     drive = brain.stimulus_levels(np.pad(rng.random((6, 4)), ((0, 0), (0, connectome.n - 4))))
     out = np.asarray(connectome.populations["output"])
@@ -185,7 +185,7 @@ def test_one_stream_learns_the_same_on_the_device_as_on_the_host() -> None:
     rewards = [0.5, -0.2, 1.0, 0.0, 0.3, -1.0]
     results = []
     for backend in ("cpu", "torch"):
-        brain = cd.Brain(
+        brain = cd.NeuralGraph(
             connectome,
             cd.learning_neuron_model(dt=1.0),
             backend=backend,
@@ -241,7 +241,7 @@ def test_a_batch_of_streams_learns_the_same_on_the_device_as_on_the_host() -> No
     dones[2][1] = True
     results = []
     for backend in ("cpu", "torch"):
-        brain = cd.Brain(
+        brain = cd.NeuralGraph(
             connectome,
             cd.learning_neuron_model(dt=1.0),
             backend=backend,
@@ -280,7 +280,7 @@ def test_actor_critic_centres_the_dopamine_per_stream() -> None:
     valence is per stream, so the small-reward stream is not always below the mean."""
     connectome = cd.layered(4, 8, 2, density=1.0, seed=0)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         cd.LearnerConfig(beta=0.1, eta=1.0, temperature=0.2, tolerance=3e-3, nudged_steps=12),
     )
@@ -306,7 +306,7 @@ def test_actor_critic_dopamine_floor_is_quiet_for_the_usual_reward() -> None:
     """With a floor, a reward at its usual level gives no dopamine and no step; a surprise does."""
     connectome = cd.layered(4, 8, 2, density=1.0, seed=0)
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         cd.LearnerConfig(beta=0.1, eta=1.0, temperature=0.2, tolerance=3e-3, nudged_steps=12),
     )
@@ -338,7 +338,7 @@ def test_actor_critic_centre_without_the_scale_keeps_the_rewards_size() -> None:
 
     def make(scale: bool) -> cd.ActorCritic:
         learner = cd.Learner(
-            cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+            cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
             connectome.populations["output"],
             cd.LearnerConfig(beta=0.1, eta=1.0, temperature=0.2, tolerance=3e-3, nudged_steps=12),
         )
@@ -382,7 +382,7 @@ def test_padding_cannot_teach_the_actor_critic_or_change_the_active_update() -> 
             continue
         results = []
         for batch in (1, 2):
-            dynamics = cd.Brain(
+            dynamics = cd.NeuralGraph(
                 connectome,
                 cd.learning_neuron_model(dt=1.0),
                 backend=backend,
@@ -445,12 +445,12 @@ def test_unobserved_rewards_do_not_enter_shared_or_per_stream_valence() -> None:
 
 def test_scale_cap_bounds_the_plastic_efficacy_and_is_validated() -> None:
     connectome = cd.layered(4, 8, 2, density=1.0, seed=0)
-    brain = cd.Brain(connectome, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0))
     learner = cd.Learner(brain, connectome.populations["output"], cd.LearnerConfig(scale_cap=0.5))
     learner.apply(np.full(connectome.synapses, 10.0), np.zeros(connectome.n))
     assert float(np.abs(learner.brain.efficacy).max()) <= 0.5
     wide = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)), connectome.populations["output"]
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)), connectome.populations["output"]
     )
     wide.apply(np.full(connectome.synapses, 10.0), np.zeros(connectome.n))
     assert float(np.abs(wide.brain.efficacy).max()) == SCALE_CAP
@@ -479,7 +479,7 @@ def test_the_report_reads_the_outputs_saturation_and_the_traces_size() -> None:
     plastic = np.zeros(connectome.synapses, dtype=bool)
     plastic[: connectome.synapses // 2] = True
     learner = cd.Learner(
-        cd.Brain(connectome, cd.learning_neuron_model(dt=1.0)),
+        cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0)),
         connectome.populations["output"],
         cd.LearnerConfig(beta=0.1, eta=1.0, temperature=0.2, tolerance=3e-3, nudged_steps=12),
         plastic_synapses=plastic,

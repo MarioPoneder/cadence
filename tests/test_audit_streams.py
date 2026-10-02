@@ -21,7 +21,7 @@ def test_trace_reads_only_its_source_slice_and_resets_rows(backend: str) -> None
     if backend == "torch":
         pytest.importorskip("torch")
     c, d = _stateful()
-    brain = cd.Brain(c, cd.learning_neuron_model(dt=1.0), backend=backend, device="cpu" if backend == "torch" else None)
+    brain = cd.NeuralGraph(c, cd.learning_neuron_model(dt=1.0), backend=backend, device="cpu" if backend == "torch" else None)
     trace = Trace(c, decay=0.5, source="hidden", target="context")
     state = brain.settle_batch(d, steps=30)
     trace.update(state)

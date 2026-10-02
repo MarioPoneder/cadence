@@ -3,7 +3,7 @@
 <!-- requires: torch -->
 
 `TemporalPatchNet`, its planner and `TemporalMemory` currently use NumPy.
-The optional backends below apply to the existing `Brain`/`PatchNet` graph
+The optional backends below apply to the existing `NeuralGraph`/`PatchNet` graph
 interfaces; installing an accelerator does not move temporal repair onto it.
 
 Begin with the NumPy-only [installation](../README.md#get-started). Optional extras
@@ -15,7 +15,7 @@ python -m pip install "cadence-net[fast]==0.70.0"
 
 Replace `[fast]` with `[accel]` for PyTorch or `[apple]` for MLX. From a checkout,
 use `python -m pip install -e ".[fast]"`. An installed accelerator library is
-not enough to select it: pass `backend="torch"` or `backend="mlx"` to `Brain`.
+not enough to select it: pass `backend="torch"` or `backend="mlx"` to `NeuralGraph`.
 
 ```python
 import cadence as cd
@@ -36,7 +36,7 @@ For a blocked connectome, transport uses dense blocks between neuron ranges; unc
 ranges can reuse their products. Each step then applies the neuron update, nudge,
 adaptation, mask, and stopping check. The device backends keep the settled state on the
 device (`state.device`) so that a phase that continues from it starts there, and the
-learning rule's contrast is read on the device (`Brain.contrast_on_device`). For blocked
+learning rule's contrast is read on the device (`NeuralGraph.contrast_on_device`). For blocked
 PyTorch learners, contrast, momentum, RMS normalization and parameter updates remain on
 the device. Scalar step reports synchronize. Reading parameters or optimizer history,
 saving a checkpoint, or entering a host-only path materializes the required arrays.
@@ -103,7 +103,7 @@ uses float32 for parameters and state because it does not support float64.
 
 ## Residual checks and synchronization
 
-`Brain.equilibrate` chooses work from the measured potential/adaptation equation residual.
+`NeuralGraph.equilibrate` chooses work from the measured potential/adaptation equation residual.
 An unchanged warm state already within tolerance takes zero settling steps, but still costs
 one residual check. `chunk` trades check frequency against overshoot: every row advances
 together and the final check must meet the same tolerance regardless of chunk size. Step
@@ -130,11 +130,11 @@ device, a comparison with an MLP, learning quality at scale or energy use in jou
 ```python
 connectome = cd.layered(4, 16, 2, seed=0)
 neuron_model = cd.learning_neuron_model()
-cd.Brain(connectome, neuron_model, backend="torch")                          # cuda, else mps, else cpu
-cd.Brain(connectome, neuron_model, backend="torch", device="cpu")             # force
-cd.Brain(connectome, neuron_model, backend="torch", precision="float32")      # speed on a consumer GPU
+cd.NeuralGraph(connectome, neuron_model, backend="torch")                          # cuda, else mps, else cpu
+cd.NeuralGraph(connectome, neuron_model, backend="torch", device="cpu")             # force
+cd.NeuralGraph(connectome, neuron_model, backend="torch", precision="float32")      # speed on a consumer GPU
 if "mlx" in cd.available_backends():
-    cd.Brain(connectome, neuron_model, backend="mlx")                         # Apple silicon through MLX
+    cd.NeuralGraph(connectome, neuron_model, backend="mlx")                         # Apple silicon through MLX
 ```
 
 A learner built on a device brain learns there; `Learner.load(path, backend="cpu")`
@@ -202,4 +202,4 @@ Use `brain.with_parameters(...)` for parameter changes. Assigning a complete `ef
 or `bias` array also refreshes the running backend. Do not mutate parameter or connectome
 arrays in place: derived transport caches assume their values stay fixed. Rebuild a
 connectome when changing topology. After a device update, always read `learner.brain`;
-older Brain objects can share the updated kernel while retaining stale host copies.
+older NeuralGraph objects can share the updated kernel while retaining stale host copies.

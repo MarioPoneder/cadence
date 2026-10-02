@@ -1,30 +1,18 @@
-"""Cadence: research toward general intelligence through local repair.
+"""Experimental brains built from local state, memory and repair.
 
-Bounded observer-like patches carry state, expose ports and readback, and repair
-shared relationships. ``TemporalPatchNet`` learns observed paths by centered
-equilibrium detuning, carries context, imagines privately and repairs continuous
-action proposals under the same learned model. ``TemporalMemory`` adds explicit
-conditional response protection. Actual outcomes remain distinct from desired
-or imagined outcomes.
-
-The research goal is reusable learning, retention, creativity and evolving
-functional self-reflection across applications. Current APIs expose tested
-operations; they do not establish general intelligence or an automatically
-learned recursive hierarchy. See the architecture and interaction guides.
-
-Graph ``PatchNet`` checks joint free/nudged equations over reciprocal weights.
-Record models use a causal scan; ``BeliefPatch`` uses finite repair iterations.
-Their slow-weight adjoints and record writes have distinct learning contracts.
-``Steered`` and ``Life`` compose those APIs; joint parameter-step admission is
-not a certificate of one joint observer-observed equilibrium. ``GenericBrain``
-is retained as a legacy composition. See ``docs/contracts.md``.
+Use ``Brain.compose`` for the default System 1 brain, adding ``observers`` for
+optional System 2 feedback in the same neural graph. ``NeuralGraph`` exposes
+lower-level neuronal dynamics. Record, belief and temporal models provide
+specialized memory, inference and planning operations with their own contracts.
+See ``docs/contracts.md`` for their numerical and learning boundaries.
 """
 
 from __future__ import annotations
 
 from . import regions
 from .belief import BeliefObservation, BeliefPatch, BeliefPath, BeliefReadback
-from .brain import Brain, BrainState, Equilibrium, Nudge, RefinementReport, available_backends
+from .brain import Brain as NeuralGraph
+from .brain import BrainState, Equilibrium, Nudge, RefinementReport, available_backends
 from .certificate import (
     Certificate,
     EPStructure,
@@ -35,7 +23,7 @@ from .certificate import (
 )
 from .checkpoint import load, save
 from .connectome import Connectome
-from .generic import GenericBrain
+from .generic import Brain
 from .genome import Genome, Projection, develop, evolve, genes
 from .instruments import dishabituation, orienting
 from .learning import (
@@ -147,7 +135,7 @@ __all__ = [
     "Bins",
     "Adaptation",
     "Region",
-    "GenericBrain",
+    "Brain",
     "regions",
     "Projection",
     "Genome",
@@ -168,7 +156,7 @@ __all__ = [
     "JointObservation",
     "Port",
     "Row",
-    "Brain",
+    "NeuralGraph",
     "BrainState",
     "Equilibrium",
     "RefinementReport",

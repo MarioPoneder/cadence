@@ -4,41 +4,30 @@
 
 # Cadence
 
-[Website](https://floatingpragma.io/cadence/) · [Demos](https://floatingpragma.io/demos/) · [Documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/) · [Changelog](https://github.com/muellerberndt/cadence/blob/v0.70.0/CHANGELOG.md)
+[Website](https://floatingpragma.io/cadence/) · [Demos](https://floatingpragma.io/demos/) · [Documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/)
 
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
-[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/v0.70.0/LICENSE)
 
-**A simulated human-like brain, built from simplified biological mechanisms.**
+**An experimental brain that learns, remembers, imagines and acts.**
 
-Cadence aims to grow a continuing brain that learns through experience, remembers,
-imagines alternatives and acts in the world. Its default **System 1** is the recovered animal-like brain: perception,
-action, plastic connections and memory, with the working foundation from 0.11
-and later safeguards. **System 2** adds optional recursive feedback and
-self-correction through observing cortical regions. Human-level intelligence is the
-goal; the software models selected mechanisms rather than detailed biology.
+Cadence aims to build a simulated human-like brain from simplified biological
+mechanisms. Its default **System 1** is a continuing animal-like brain with
+perception, plastic connections, memory and action. Optional **System 2** adds
+recursive feedback through observing cortical regions in the same neural graph.
+The base can already be deep and modular.
 
-The central idea is local disagreement repair. Bounded, observer-like patches
-carry state, communicate through ports, read back activity and retain records.
-Observations disturb their relationships; repair seeks a coherent state, and
-actual consequences guide learning. A numerically settled answer can still be
-wrong about the world. Learning has to improve subsequent free behavior.
+Bounded, observer-like regions carry local state, communicate through ports,
+read back activity and retain records. They repair disagreement to find a coherent
+state; actual observations and consequences guide learning. A settled answer can
+still be wrong about the world, so capability is measured through free behavior.
+Cadence is alpha research software, not a claim of human-level intelligence.
 
 <a id="get-started"></a>
 
-## System 1: the default continuing brain
+## Start with System 1
 
-The base can contain specialized regions and deep, modular connections.
-`GenericBrain.compose` brings together sensory and association regions,
-reciprocal motor connections, reward learning, a working trace and consolidating
-associative memory. `modules` chooses the base regions; `observers` optionally
-adds regions that read and return influence to the same live graph. Its `step` method receives the next observation and the actual outcome
-of the preceding action. There is no application-wide training/inference switch.
-
-**Cadence 0.70.0 is alpha software.** Its memory, learning and imagination
-mechanisms are implemented and tested under their stated contracts; human-like
-general intelligence remains the research goal. Python 3.11+ and NumPy are
-required. PyTorch, MLX, Numba and SciPy support optional execution paths.
+Python 3.11+ and NumPy are required.
 
 ```sh
 python -m pip install cadence-net==0.70.0
@@ -46,118 +35,74 @@ python -m pip install cadence-net==0.70.0
 
 ```python
 import numpy as np
-from cadence import GenericBrain
+from cadence import Brain
 
-brain = GenericBrain.compose(
-    inputs=4, actions=2, modules=(16, 8), seed=7,
-)
+brain = Brain.compose(inputs=4, actions=2, modules=(16, 8), seed=7)
 observation = np.array([[1.0, 0.0, 0.0, 0.0]])
 action = brain.step(observation)
+
+# A tiny environment rewards action 0 and supplies the next observation.
+reward = (action == 0).astype(float)
+next_observation = np.array([[0.0, 1.0, 0.0, 0.0]])
+action = brain.step(next_observation, reward=reward, done=np.array([False]))
 assert action.shape == (1,)
 ```
 
-The body executes that action. On the next call, pass its measured reward and
-termination flag with the next observation; a teacher can instead label the
-current observation. Keep each batch row attached to the same continuing life.
-[Continuous interaction](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/continuous.md) explains the timing and complete
-save/restore. [Build a brain](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/brain.md) shows custom regions and wiring.
+`step` learns from the **preceding action's** measured reward, then chooses the
+next action. `teacher=` can label the **current observation**. Keep each batch
+row attached to the same life. There is no training/inference mode switch.
+[Continuous interaction](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/continuous.md)
+covers teaching, resets and saved continuation.
 
-## Memory and imagination are working mechanisms
-
-Short-term traces preserve earlier activity across events. `Trace` and
-`Afterglow` feed that retained information into later processing; they are more
-than a warm numerical starting point. `GenericBrain` can use a working trace and
-`SynapticMemory`, whose fast associations and persistent matrix support recall,
-consolidation and revision. Correlated memories can interfere, and finite capacity
-limits what can be retained. See [memory](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/memory.md) and
-[continued learning](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/continuous.md).
-
-`RecordPatchNet` combines persistent event context, slow learned parameters and
-a writable record store. It can retain individual outcomes, privately imagine
-continuations and transfer record completions into slow weights with `sleep`.
-This mechanism powers the original Amen composer and Connect Four evaluator.
-The [record-patch guide](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/record-patch.md) gives executable examples and
-explains the different jobs of records and learned relations.
-
-`TemporalPatchNet` learns a model of observed paths. Its `imagine` operation
-queries a private continuation; `plan` repairs proposed continuous actions under
-that model while holding actual observations and learned parameters fixed.
-It executes no action and creates no new evidence. `TemporalMemory` can protect
-declared responses under its finite-capacity contract. Use
-[the learned-model interaction loop](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/interaction.md),
-[planning](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/planning.md) and [response protection](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/temporal-memory.md).
-`GenericBrain.imagine` can also examine a sequence of hypothetical observations
-on a private copy of its working trace, without changing learned memory, pending
-outcomes or random state. That predicts the brain's responses to supplied
-observations; predicting the environment's response to an action requires the
-learned world model above.
-
-Run [the memory and imagination example](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/memory_imagination.py) for a
-bounded demonstration of cue retention, response protection, private planning
-and actual toy-body outcomes. Goals and protected responses are explicit. These
-APIs provide memory and imagination; their usefulness and limits still need to
-be measured on the task they serve.
-
-## System 2: optional recursive feedback
-
-Enable System 2 by adding observer regions. A column reads another region's
-current state and returns feedback while both participate in the same recurrent
-repair process. Nesting this readback adds recursive
-observation to a brain that can already be deep and modular. It gives no column
-an unconditional final answer.
+The constructor includes a working trace and fast/persistent associative memory.
+Earlier activity can affect later answers, and actual outcomes change associations.
+Capacity is finite; correlated memories can interfere.
 
 ```python
-from cadence import GenericBrain
+phases = brain.imagine([observation, next_observation])
+assert phases  # Inspect phase.converged before using an imagined response.
+```
 
-recursive = GenericBrain.compose(
-    inputs=8, actions=2, modules=(32, 16), observers=(8,), seed=7,
+Imagination carries a private trace without changing live memory, random state
+or pending feedback. It evaluates responses to the observations you supply.
+For learned environmental consequences and action planning, use the separate
+[temporal model](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/interaction.md).
+
+## Add optional System 2
+
+```python
+recursive = Brain.compose(
+    inputs=4, actions=2, modules=(16, 8), observers=(8,), seed=7,
 )
 ```
 
-This constructs one recurrent graph with two base modules and an observing
-region. The same `step`, memory and continuation interface applies. Before
-returning an action, the full state equations must meet the declared tolerance;
-exhausting the repair budget raises an error without issuing an action.
-The lower-level `PatchNet.recursive` constructor remains available. [Recursive settlement](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/recursive-settlement.md) explains the
-connections and causal checks; [recursive training](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/recursive-training.md)
-covers experience and saved continuation. System 2 is available as an optional
-mechanism; its learned use and task benefits depend on experience and remain
-measurable questions. It preserves System 1 as the default.
+Observer regions read and return influence to the base, motor regions and earlier
+observers. They join the same settlement and use the same interaction interface.
+This makes recursive feedback available; learning when it helps remains a task
+for experience and evaluation.
 
-The newer state-and-error population solver remains available separately as
-`cadence.experimental.equilibrium`; its [guide](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/index.md)
-documents its own API and numerical guarantees. It does not replace the restored
-memory, record and temporal mechanisms. The implementations have different
-learning contracts: graph/temporal models use equilibrium contrasts, while
-record and belief models also use explicit adjoints and record writes. The
-[contracts guide](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/contracts.md) states those differences.
+Actions and independent predictions require the full neural equation residual
+to meet the configured tolerance. Exhausting the budget refuses an action without
+changing its live state, memory or pending feedback. If `step` has learned a real
+outcome before the next action refuses, retry `act` without submitting that reward
+again. Numerical damping stays within the total budget and does not change the
+teaching rule. See [contracts](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/contracts.md).
 
-## Recover and preserve actual behavior
+## Go further
 
-The original applications provide concrete baselines:
+[Build a brain](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/brain.md)
+for custom wiring, [memory](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/memory.md)
+for traces and associations, and [the memory/planning example](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/memory_imagination.py)
+for a bounded demonstration with actual toy-body outcomes.
+[Record patches](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/record-patch.md)
+provide event records and consolidation. The advanced
+[population solver](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/index.md)
+provides exact state-and-error readback under its own numerical contract.
 
-- [Amen](https://github.com/muellerberndt/cadence-examples/tree/main/amen): a
-  0.11-trained record patch generates music from silence while hearing what it
-  plays. Ordinary playback keeps record writes off; its optional self-primer
-  writes played events into records. It is not an Afterglow demo.
-- [Connect Four](https://github.com/muellerberndt/cadence-examples/tree/main/connect4):
-  a 0.12-trained record evaluator supplies values to a declared game-tree search.
-  Browser play uses fixed learned parameters and an empty record store.
-- [Atari Arcade](https://github.com/muellerberndt/cadence-demos/tree/main/atari-arcade):
-  a separate 0.50 population-engine browser port learns from demonstrations and
-  outcomes. Its runtime and parity checks have their own source identity.
+[Documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md) ·
+[API](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/api.md) ·
+[Contributing](https://github.com/muellerberndt/cadence/blob/v0.70.0/CONTRIBUTING.md) ·
+[Changelog](https://github.com/muellerberndt/cadence/blob/v0.70.0/CHANGELOG.md) ·
+[Research tasks](https://github.com/muellerberndt/cadence/issues)
 
-Each application keeps its original checkpoints, receipts and supplied body
-logic. Restored library operations must pass their relevant reproduction and
-continuation checks before an application is described as ported. A newer
-package version does not establish musical quality or playing strength.
-
-Start with [the documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md).
-[GitHub issues](https://github.com/muellerberndt/cadence/issues) track concrete
-remaining tests, proofs, application work and optimization. Existing memory and
-imagination remain available while those goals are pursued. See
-[contributing](https://github.com/muellerberndt/cadence/blob/v0.70.0/CONTRIBUTING.md)
-for checks.
-
-Licensed under [GPL-3.0](https://github.com/muellerberndt/cadence/blob/v0.70.0/LICENSE). Historical attribution and license notices
-remain with the preserved source and evidence.
+Licensed under [GPL-3.0](https://github.com/muellerberndt/cadence/blob/v0.70.0/LICENSE).

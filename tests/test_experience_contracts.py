@@ -12,7 +12,7 @@ import cadence as cd
 def test_next_decision_refreshes_activity_after_a_reward_update(backend):
     if backend == "torch":
         pytest.importorskip("torch")
-    brain = cd.GenericBrain.build(
+    brain = cd.Brain.build(
         3,
         2,
         hidden=8,
@@ -32,7 +32,7 @@ def test_next_decision_refreshes_activity_after_a_reward_update(backend):
 
 
 def test_actor_cache_detects_an_update_from_another_learning_head():
-    brain = cd.GenericBrain.build(2, 2, hidden=6, episodic=False)
+    brain = cd.Brain.build(2, 2, hidden=6, episodic=False)
     actor = brain.basal_ganglia
     drive = brain.stimulus(np.eye(2))
     actor.act(drive)
@@ -45,10 +45,10 @@ def test_actor_cache_detects_an_update_from_another_learning_head():
 
 
 def test_resume_between_learning_and_next_action_refreshes_the_same_way(tmp_path):
-    brain = cd.GenericBrain.build(2, 2, hidden=8, working_memory=True)
+    brain = cd.Brain.build(2, 2, hidden=8, working_memory=True)
     brain.act(np.eye(2))
     brain.learn(np.ones(2), np.zeros(2, bool), np.eye(2))
-    restored = cd.GenericBrain.load(brain.save(tmp_path / "life"))
+    restored = cd.Brain.load(brain.save(tmp_path / "life"))
     np.testing.assert_array_equal(brain.act(np.eye(2)), restored.act(np.eye(2)))
     np.testing.assert_array_equal(
         brain.basal_ganglia.state.activation, restored.basal_ganglia.state.activation
@@ -74,7 +74,7 @@ def test_hypothetical_query_batch_cannot_erase_live_memories(memory_class):
 
 
 def test_hypothetical_stimulus_cannot_erase_carried_context():
-    brain = cd.GenericBrain.build(2, 2, hidden=8, working_memory=True)
+    brain = cd.Brain.build(2, 2, hidden=8, working_memory=True)
     brain.act(np.eye(2))
     memory = brain.working_memory
     before = [memory.trace.copy(), memory.last.copy(), memory.cold.copy()]
@@ -85,7 +85,7 @@ def test_hypothetical_stimulus_cannot_erase_carried_context():
 
 @pytest.mark.parametrize("array_name", ["free/v", "pending/value", "working/trace", "valence/var"])
 def test_invalid_lifetime_arrays_are_rejected_at_load(tmp_path, array_name):
-    brain = cd.GenericBrain.build(2, 2, hidden=6, working_memory=True)
+    brain = cd.Brain.build(2, 2, hidden=6, working_memory=True)
     brain.step(np.eye(2))
     path = brain.save(tmp_path / "life")
     with np.load(path, allow_pickle=False) as saved:
@@ -93,7 +93,7 @@ def test_invalid_lifetime_arrays_are_rejected_at_load(tmp_path, array_name):
     data[array_name] = np.full_like(data[array_name], np.nan, dtype=float)
     np.savez(path, **data)
     with pytest.raises(ValueError, match="saved|checkpoint"):
-        cd.GenericBrain.load(path)
+        cd.Brain.load(path)
 
 
 @pytest.mark.parametrize("separated", [False, True])
@@ -147,7 +147,7 @@ def test_separator_can_average_large_representable_keys():
     ],
 )
 def test_invalid_continuation_structure_is_rejected(tmp_path, corruption):
-    brain = cd.GenericBrain.build(2, 2, hidden=6, working_memory=True)
+    brain = cd.Brain.build(2, 2, hidden=6, working_memory=True)
     brain.step(np.eye(2))
     path = brain.save(tmp_path / "life")
     with np.load(path, allow_pickle=False) as saved:
@@ -174,4 +174,4 @@ def test_invalid_continuation_structure_is_rejected(tmp_path, corruption):
     data["generic"] = np.array(json.dumps(meta))
     np.savez(path, **data)
     with pytest.raises(ValueError, match="saved|checkpoint"):
-        cd.GenericBrain.load(path)
+        cd.Brain.load(path)

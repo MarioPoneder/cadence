@@ -13,7 +13,7 @@ pytest.importorskip("numba")
 from cadence import fused  # noqa: E402
 
 
-def dense_brain(seed: int, adaptation: cd.Adaptation | None = None) -> cd.Brain:
+def dense_brain(seed: int, adaptation: cd.Adaptation | None = None) -> cd.NeuralGraph:
     """Input, hidden and output ranges with reciprocal hidden/output synapses: a blocked layout."""
     rng = np.random.default_rng(seed)
     inputs, hidden, outputs = 5, 7, 3
@@ -39,10 +39,10 @@ def dense_brain(seed: int, adaptation: cd.Adaptation | None = None) -> cd.Brain:
         },
     )
     model = cd.learning_neuron_model(dt=1.0).replace(adaptation=adaptation)
-    return cd.Brain(connectome, model, bias=rng.normal(0.0, 0.3, n))
+    return cd.NeuralGraph(connectome, model, bias=rng.normal(0.0, 0.3, n))
 
 
-def numpy_settle(brain: cd.Brain, drive: np.ndarray, **kw: object) -> cd.BrainState:
+def numpy_settle(brain: cd.NeuralGraph, drive: np.ndarray, **kw: object) -> cd.BrainState:
     original = brain_module._FUSED
     brain_module._FUSED = False
     try:

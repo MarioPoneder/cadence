@@ -20,7 +20,7 @@ def test_fused_masks_match_numpy_with_warm_states_and_nudges(
     neuron_model = cd.learning_neuron_model(dt=0.35, leak=0.4)
     if adaptation:
         neuron_model = neuron_model.replace(adaptation=cd.Adaptation(tau_steps=7, strength=0.2))
-    brain = cd.Brain(connectome, neuron_model, efficacy=0.08 * connectome.sign)
+    brain = cd.NeuralGraph(connectome, neuron_model, efficacy=0.08 * connectome.sign)
     rng = np.random.default_rng(11)
     drive = rng.normal(scale=0.6, size=(3, connectome.n))
     keep = np.ones(connectome.n)
@@ -72,7 +72,7 @@ def test_fused_masks_match_numpy_with_warm_states_and_nudges(
 
 @pytest.mark.parametrize("shape", [(), (2,), (3, 1), (2, 4), (1, 3, 4)])
 def test_brain_rejects_masks_without_one_entry_per_neuron(shape: tuple[int, ...]) -> None:
-    brain = cd.Brain(cd.Connectome.from_synapses(4, pre=[], post=[]), cd.learning_neuron_model())
+    brain = cd.NeuralGraph(cd.Connectome.from_synapses(4, pre=[], post=[]), cd.learning_neuron_model())
     with pytest.raises(ValueError, match="mask"):
         brain.settle_batch(np.ones((3, 4)), mask=np.ones(shape), trajectory=True)
 
@@ -81,7 +81,7 @@ def test_brain_rejects_masks_without_one_entry_per_neuron(shape: tuple[int, ...]
 @pytest.mark.parametrize("next_mask", ["removed", "shared_ones", "per_row_ones", "changed"])
 def test_warm_start_recomputes_publication_after_changing_mask(next_mask: str) -> None:
     connectome = cd.Connectome.from_synapses(3, pre=[0, 1], post=[1, 2], sign=[0.2, -0.1])
-    brain = cd.Brain(connectome, cd.learning_neuron_model(dt=0.5, leak=1.0))
+    brain = cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=0.5, leak=1.0))
     drive = np.array([[0.6, 0.0, 0.1], [0.4, 0.1, 0.0]])
     previous_mask = np.array([[0.5, 1.0, 1.0], [0.3, 1.0, 0.5]])
     state = brain.settle_batch(drive, steps=7, mask=previous_mask)
@@ -122,14 +122,14 @@ def test_device_mask_continuations_match_neuron_equations(
         device = "cpu" if backend == "torch_cpu" else "mps"
         if device == "mps" and not torch.backends.mps.is_available():
             pytest.skip("MPS unavailable")
-        brain = cd.Brain(
+        brain = cd.NeuralGraph(
             connectome, neuron_model, backend="torch", device=device, dense_limit=dense_limit
         )
     else:
         if dense_limit == 1:
             pytest.skip("MLX requires block transport")
         pytest.importorskip("mlx.core")
-        brain = cd.Brain(connectome, neuron_model, backend="mlx")
+        brain = cd.NeuralGraph(connectome, neuron_model, backend="mlx")
     drive = np.array([[0.6, 0.0, 0.1], [0.4, 0.1, 0.0]])
     old_mask = np.array([[0.5, 1.0, 1.0], [0.3, 1.0, 0.5]])
     state = brain.settle_batch(drive, steps=7, mask=old_mask)
@@ -183,7 +183,7 @@ def test_device_mask_continuations_match_neuron_equations(
 @pytest.mark.parametrize("dtype", [np.int64, np.float32, np.float64])
 @pytest.mark.parametrize("dense_limit", [0, 2048])
 def test_cpu_warm_state_keeps_potentials_and_activations_consistent(dtype, dense_limit):
-    brain = cd.Brain(
+    brain = cd.NeuralGraph(
         cd.Connectome.from_synapses(2, pre=[0], post=[1], sign=[0.3]),
         cd.NeuronModel(gain=1, slope=2, threshold=0, leak=1, dt=1, stimulus_amplitude=1),
         dense_limit=dense_limit,

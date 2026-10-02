@@ -40,7 +40,7 @@ def small_net(*, weight=0.2, beta=0.1, steps=0, refinement_steps=64, **options):
         populations={"input": (0,), "hidden": (1,), "output": (2,)},
     )
     learner = cd.Learner(
-        cd.Brain(graph, cd.learning_neuron_model(leak=1)), [2],
+        cd.NeuralGraph(graph, cd.learning_neuron_model(leak=1)), [2],
         cd.LearnerConfig(nudge="quadratic", beta=beta, momentum=0.5, normalize=0.7),
     )
     return cd.PatchNet(
@@ -232,7 +232,7 @@ def test_invalid_runtime_configuration_rejected(options):
 def test_unsupported_neuron_rules_are_not_silently_changed(changes):
     net = recursive()
     brain = net.brain
-    net.learner.brain = cd.Brain(
+    net.learner.brain = cd.NeuralGraph(
         brain.connectome, brain.neuron_model.replace(**changes), efficacy=brain.efficacy,
     )
     with pytest.raises(ValueError):
@@ -290,7 +290,7 @@ def test_empty_elimination_set_retains_every_neuron_in_energy_solve():
 def test_effective_gain_enters_refinement_and_full_equation_audit():
     net = recursive(solver="hybrid", steps=0)
     brain = net.brain
-    net.learner.brain = cd.Brain(
+    net.learner.brain = cd.NeuralGraph(
         brain.connectome, brain.neuron_model.replace(gain=0.4),
         efficacy=brain.efficacy, log_gain=np.full(brain.connectome.n, np.log(1.5)),
     )

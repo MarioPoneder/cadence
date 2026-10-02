@@ -1,6 +1,6 @@
 # Learning: the free/nudged rule
 
-Start with [a settling brain that decides](quickstart.md#a-settling-brain-that-decides).
+Start with [the continuing-brain quickstart](quickstart.md#observe-act-and-learn).
 This page explains local prediction repair and demonstrations without adaptation: the neuron
 equations, a numerical update, the gradient assumptions, and configuration choices.
 This rule changes the synapses of the settled regions. A [records cortex](memory.md#records)
@@ -14,7 +14,7 @@ rather than treating a fixed number of relaxation steps as a settled phase.
 
 ## 1. What learning changes
 
-A `Brain` carries three parameter arrays:
+A `NeuralGraph` carries three parameter arrays:
 
 - `efficacy`, one signed synaptic efficacy per synapse. The effective drive of synapse `e`
   per unit of presynaptic activation is `gain · count[e] · efficacy[e] · exp(log_gain[pre[e]])`;
@@ -172,7 +172,7 @@ import numpy as np
 import cadence as cd
 
 connectome = cd.layered(4, 16, 2, seed=0)
-learner = cd.Learner(cd.Brain(connectome, cd.learning_neuron_model()), connectome.populations["output"])
+learner = cd.Learner(cd.NeuralGraph(connectome, cd.learning_neuron_model()), connectome.populations["output"])
 drive = np.random.default_rng(0).random((8, connectome.n))
 free = learner.free(drive)
 remaining = learner.brain.residual(drive, free)  # one diagnostic value per batch row
@@ -217,7 +217,7 @@ from dataclasses import replace
 learner.config = replace(learner.config, eta=0.5)
 ```
 
-`learner.brain` is a plain `Brain` at every moment. Settle it, run `conformance` on
+`learner.brain` is a plain `NeuralGraph` at every moment. Settle it, run `conformance` on
 it, export `learner.brain.dense()` for a page, or put its `to_dict()` in a receipt.
 
 ## 7. Every knob

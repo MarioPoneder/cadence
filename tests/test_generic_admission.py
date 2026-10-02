@@ -5,7 +5,7 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from cadence import GenericBrain
+from cadence import Brain
 
 
 def checkpoint(brain, path):
@@ -21,7 +21,7 @@ def assert_checkpoint_equal(before, after):
 
 
 def composed(**options):
-    return GenericBrain.compose(2, 2, modules=(5, 4), observers=(3,), seed=3, **options)
+    return Brain.compose(2, 2, modules=(5, 4), observers=(3,), seed=3, **options)
 
 
 @pytest.mark.parametrize("backend", ["cpu", "torch"])
@@ -59,7 +59,7 @@ def test_matching_and_restored_cache_cannot_hide_observer_residual(tmp_path, res
     drive = brain.stimulus(observation)
     assert brain.brain.residual(drive, state).max() > brain.learner.config.tolerance
     if restore:
-        brain = GenericBrain.load(brain.save(tmp_path / "unqualified-cache"))
+        brain = Brain.load(brain.save(tmp_path / "unqualified-cache"))
     before = checkpoint(brain, tmp_path / "before")
     with pytest.raises(RuntimeError, match="no action issued"):
         brain.act(observation)
@@ -115,7 +115,7 @@ def test_real_feedback_is_consumed_once_before_refusal_and_act_retries_only_the_
     brain = composed()
     brain.step([[0.2, -0.1]])
     brain.learner.config = replace(brain.learner.config, free_steps=0, tolerance=1e-12)
-    control = GenericBrain.load(brain.save(tmp_path / "pending"))
+    control = Brain.load(brain.save(tmp_path / "pending"))
     following, reward, done = [[-0.1, 0.3]], np.array([0.4]), np.array([False])
     # This independent control admits the actual outcome but asks for no next action.
     control.last_learning = control.learn(reward, done, following)

@@ -15,7 +15,7 @@ def make(**options):
 
 
 def defect(patch, phase, drive, weights, bias, *, strength=0.0, target=None):
-    """Independent edge sum over every equation, without Brain's residual code."""
+    """Independent edge sum over every equation, without NeuralGraph's residual code."""
     graph = patch.brain.connectome
     v = phase.state.v
     activity = np.tanh(v / 2)

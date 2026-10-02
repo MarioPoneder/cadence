@@ -8,22 +8,22 @@ import pytest
 import cadence as cd
 
 
-def _certified_brain(mass: float, seed: int = 0) -> tuple[cd.Brain, np.ndarray]:
+def _certified_brain(mass: float, seed: int = 0) -> tuple[cd.NeuralGraph, np.ndarray]:
     connectome = cd.layered(6, 10, 3, density=1.0, seed=seed)
     model = cd.learning_neuron_model()
-    raw = cd.Brain(connectome, model)
+    raw = cd.NeuralGraph(connectome, model)
     scale = mass / cd.row_mass(raw)
-    brain = cd.Brain(connectome, model, efficacy=raw.efficacy * scale)
+    brain = cd.NeuralGraph(connectome, model, efficacy=raw.efficacy * scale)
     return brain, np.asarray(connectome.populations["input"])
 
 
-def _drive(brain: cd.Brain, inputs: np.ndarray, rng: np.random.Generator, rows: int) -> np.ndarray:
+def _drive(brain: cd.NeuralGraph, inputs: np.ndarray, rng: np.random.Generator, rows: int) -> np.ndarray:
     drive = np.zeros((rows, brain.connectome.n))
     drive[:, inputs] = rng.uniform(0.0, 1.0, size=(rows, len(inputs)))
     return drive
 
 
-def _equilibrium(brain: cd.Brain, drive: np.ndarray) -> np.ndarray:
+def _equilibrium(brain: cd.NeuralGraph, drive: np.ndarray) -> np.ndarray:
     state = brain.settle_batch(drive, steps=2000, tolerance=None)
     return np.asarray(state.v)
 
@@ -61,7 +61,7 @@ def test_certificate_rate_and_limit() -> None:
     assert np.isinf(cd.certificate(hot).error_bound(1e-3))
     with pytest.raises(ValueError):
         cd.certificate(hot).steps_for(0.1, 1e-3)
-    rhythmic = cd.Brain(
+    rhythmic = cd.NeuralGraph(
         brain.connectome,
         cd.learning_neuron_model().replace(adaptation=cd.Adaptation(40.0, 1.0)),
         efficacy=brain.efficacy,

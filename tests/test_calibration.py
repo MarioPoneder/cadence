@@ -56,7 +56,7 @@ def test_protocol_scores_a_specific_row_and_selects_on_a_specific_fact() -> None
         training=[("A", "hidden", "specific", "B")],
         steps=60,
     )
-    brain = cd.Brain(connectome, cd.NeuronModel(gain=0.05))
+    brain = cd.NeuralGraph(connectome, cd.NeuronModel(gain=0.05))
     score = protocol.score(brain)
     told, same = score["rows"]
     assert told["passed"] and told["reading"]["shared"] == pytest.approx(0.2)
@@ -69,7 +69,7 @@ def test_protocol_scores_a_specific_row_and_selects_on_a_specific_fact() -> None
     assert graded.score(brain)["rows"][0]["reading"]["fraction"] >= told["reading"]["fraction"]
     # a gain at which nothing settles cannot pass the fact; the selection lands on one that can
     gain, table = cd.select_gain(
-        lambda g: cd.Brain(connectome, cd.NeuronModel(gain=g)),
+        lambda g: cd.NeuralGraph(connectome, cd.NeuronModel(gain=g)),
         protocol,
         [0.001, 0.05, 0.1],
         sparsity_cap=None,
@@ -81,7 +81,7 @@ def test_protocol_scores_a_specific_row_and_selects_on_a_specific_fact() -> None
 
 def test_calibrate_bias_brings_populations_to_their_targets() -> None:
     connectome = cd.layered(4, 12, 2, density=0.6, seed=1)
-    brain = cd.Brain(connectome, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(connectome, cd.learning_neuron_model(dt=1.0))
     amp = brain.neuron_model.stimulus_amplitude
     drives = np.zeros((2, connectome.n))
     drives[0, [0, 1]] = amp
@@ -148,7 +148,7 @@ def test_preflight_names_each_finding_and_its_remedy() -> None:
     hidden = np.zeros(connectome.n, dtype=bool)
     hidden[[4, 5, 6, 7, 8]] = True
     plastic = hidden[connectome.pre]
-    brain = cd.Brain(connectome, cd.NeuronModel(gain=0.05))
+    brain = cd.NeuralGraph(connectome, cd.NeuronModel(gain=0.05))
     amp = brain.neuron_model.stimulus_amplitude
     drives = np.zeros((2, connectome.n))
     drives[0, [0, 1]] = amp

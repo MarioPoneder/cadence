@@ -11,11 +11,11 @@ import cadence as cd
 torch = pytest.importorskip("torch")
 
 
-def _brains() -> tuple[cd.Brain, cd.Brain, cd.Connectome]:
+def _brains() -> tuple[cd.NeuralGraph, cd.NeuralGraph, cd.Connectome]:
     connectome = cd.layered(6, 8, 3, density=1.0, lateral=-0.3, seed=3)
     bias = np.random.default_rng(1).normal(0.0, 0.3, connectome.n)
-    host = cd.Brain(connectome, cd.learning_neuron_model(), bias=bias)
-    device = cd.Brain(connectome, cd.learning_neuron_model(), bias=bias, backend="torch", device="cpu")
+    host = cd.NeuralGraph(connectome, cd.learning_neuron_model(), bias=bias)
+    device = cd.NeuralGraph(connectome, cd.learning_neuron_model(), bias=bias, backend="torch", device="cpu")
     return host, device, connectome
 
 
@@ -48,8 +48,8 @@ def test_device_residual_matches_host(softmax: float | None, masked: bool) -> No
 def test_device_residual_with_adaptation_and_equilibrate() -> None:
     connectome = cd.layered(4, 6, 2, density=1.0, seed=5)
     neuron_model = cd.learning_neuron_model().replace(adaptation=cd.Adaptation(tau_steps=5, strength=0.3))
-    host = cd.Brain(connectome, neuron_model)
-    device = cd.Brain(connectome, neuron_model, backend="torch", device="cpu")
+    host = cd.NeuralGraph(connectome, neuron_model)
+    device = cd.NeuralGraph(connectome, neuron_model, backend="torch", device="cpu")
     drive = np.zeros((3, connectome.n))
     drive[:, :4] = np.random.default_rng(2).random((3, 4))
     state = device.settle_batch(drive, steps=5)
@@ -63,14 +63,14 @@ def test_device_residual_with_adaptation_and_equilibrate() -> None:
 
 def test_device_residual_survives_a_learner_update() -> None:
     connectome = cd.layered(5, 7, 2, density=1.0, seed=8)
-    device = cd.Brain(connectome, cd.learning_neuron_model(), backend="torch", device="cpu")
+    device = cd.NeuralGraph(connectome, cd.learning_neuron_model(), backend="torch", device="cpu")
     learner = cd.Learner(device, connectome.populations["output"], cd.LearnerConfig(eta=0.5))
     drive = np.zeros((4, connectome.n))
     drive[:, :5] = np.random.default_rng(3).random((4, 5))
     learner.step(drive, np.array([0, 1, 1, 0]))
     brain = learner.brain  # parameters now live on the device
     settled = brain.equilibrate(drive, budget=1000, chunk=25, tolerance=1e-9)
-    host = cd.Brain(connectome, cd.learning_neuron_model(), efficacy=brain.efficacy, bias=brain.bias)
+    host = cd.NeuralGraph(connectome, cd.learning_neuron_model(), efficacy=brain.efficacy, bias=brain.bias)
     fetched = cd.BrainState(np.array(settled.state.v), np.array(settled.state.activation), np.array(settled.state.adaptation), 0)
     np.testing.assert_allclose(brain.residual(drive, settled.state), host.residual(drive, fetched), rtol=1e-9, atol=1e-12)
     assert settled.converged.all()

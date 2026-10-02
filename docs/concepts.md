@@ -1,7 +1,7 @@
 # Concepts of the settling brain
 
 This guide describes the neuron model, settling and the graph compositions of
-the settling brain: `Brain`, `Learner` and `Records`. [Compose a brain](brain.md)
+the settling brain: `NeuralGraph`, `Learner` and `Records`. [Compose a brain](brain.md)
 and [write a cortex](cortex.md) build one; [temporal learning](temporal.md) and
 [the record patch](record-patch.md) are the path-based patches.
 
@@ -61,7 +61,7 @@ import numpy as np
 import cadence as cd
 
 connectome = cd.layered(4, 16, 4, density=1.0, seed=1)
-brain = cd.Brain(connectome, cd.learning_neuron_model())
+brain = cd.NeuralGraph(connectome, cd.learning_neuron_model())
 latent = list(connectome.populations["hidden"])
 rng = np.random.default_rng(0)
 
@@ -88,7 +88,7 @@ population. A directed *synapse* carries one neuron's activation to another. A
 (`Learner(reciprocal=True)`, the default). `Connectome` declares the synapses and
 named populations of neurons, such as `input` and `output`.
 
-`Brain` holds the connectome, the neuron model and the parameter arrays. On each
+`NeuralGraph` holds the connectome, the neuron model and the parameter arrays. On each
 step it collects every neuron's synaptic input, then each neuron updates its own
 state:
 
@@ -120,7 +120,7 @@ Settling runs the update from rest or from a supplied state. A returned
 `BrainState` can be a transient, a fixed point, or part of an oscillation.
 `steps` limits work and `tolerance` stops on small activation movement;
 `BrainState.activity_change` reports the total movement per row.
-`Brain.residual` separately measures the remaining fixed-point equation
+`NeuralGraph.residual` separately measures the remaining fixed-point equation
 error. Saturation can produce small movement with a large residual.
 
 An equilibrium need not be unique or stable. Carrying a state between inputs can
@@ -141,7 +141,7 @@ give the learner a responsive starting point. Neither setting guarantees converg
 
 Builders start with zero bias. With signed random inputs, many hidden neurons can
 remain near rest and carry weak learning contrasts. Measure activation and contrast
-distributions for the intended experience stream. An explicit `Brain(..., bias=...)`
+distributions for the intended experience stream. An explicit `NeuralGraph(..., bias=...)`
 can shift the operating point; validate responsiveness and saturation together.
 
 `Adaptation` adds one variable per neuron that follows its activation and
@@ -164,9 +164,9 @@ A [trace](api.md#streams-cadencestream) retains fading activity.
 contrasts. Records change by one delta-rule write per witnessed outcome, without
 settling. The centered learner uses three phases: free, positive nudge, and
 negative nudge. Under its equilibrium assumptions, the small-nudge contrast
-corresponds to a loss gradient with the stated parameter scaling. A raw `Brain`
+corresponds to a loss gradient with the stated parameter scaling. A raw `NeuralGraph`
 does not update its weights because time passes or because it is settled again.
-`GenericBrain.step` schedules real-action learning; custom compositions own their
+`Brain.step` schedules real-action learning; custom compositions own their
 update clocks. A unique fixed point alone cannot preserve all past observations.
 
 ## Evidence and controls

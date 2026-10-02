@@ -44,7 +44,7 @@ for the update map.
 import cadence as cd
 
 connectome = cd.layered(8, 12, 3, density=1.0, init=0.25)   # row mass 1.39: certified
-brain = cd.Brain(connectome, cd.learning_neuron_model())
+brain = cd.NeuralGraph(connectome, cd.learning_neuron_model())
 cert = cd.certificate(brain)
 print(cert.row_mass, cert.lipschitz, cert.rate, cert.certified)
 print(cert.mass_limit)                 # the row mass below which this model is certified
@@ -56,7 +56,7 @@ print(cert.steps_for(change=0.5, tolerance=1e-3))   # warm-start budget after a 
 `cd.row_mass(brain)` and `cd.lipschitz_constant(model)` are the two ingredients. The
 certificate covers the free phase without adaptation; a nudge adds a drive the argument does
 not include, and adaptation adds a slow variable. For those, and for any brain whose row mass
-is above the limit, `Brain.residual` and `Brain.equilibrate` remain the checks: they certify
+is above the limit, `NeuralGraph.residual` and `NeuralGraph.equilibrate` remain the checks: they certify
 the equations at the state they measure, and nothing about uniqueness or convergence.
 The certificate concerns the settled regions; records are read and written without settling.
 
@@ -94,7 +94,7 @@ equations. A zero contraction rate (`dt=1`, zero coupling) needs at most one ste
 changed input. The warm-start budget assumes the old state is already the old equilibrium;
 an approximate warm state has its own remaining error, even when the stimulus is unchanged.
 
-For an unmasked free phase without adaptation, `Brain.residual` reports the equation
+For an unmasked free phase without adaptation, `NeuralGraph.residual` reports the equation
 error before multiplication by the integration step. Convert it to potential movement
 with `brain.neuron_model.dt * brain.residual(drive, state)` before passing it to
 `cert.error_bound`. This conversion and distance guarantee require the certificate's

@@ -130,7 +130,7 @@ def make_patch(weights):
                      "base": [0, 1], "observer": [2, 3]},
     )
     model = cd.learning_neuron_model(leak=1.0)
-    brain = cd.Brain(graph, model, bias=np.full(4, 0.15), backend="cpu")
+    brain = cd.NeuralGraph(graph, model, bias=np.full(4, 0.15), backend="cpu")
     learner = cd.Learner(
         brain, [1], cd.LearnerConfig(
             nudge="quadratic", beta=beta, eta=0.01, eta_bias=0.01,

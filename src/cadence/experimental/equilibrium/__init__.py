@@ -1,5 +1,6 @@
 """One connected patch network, learning and responding through local repair."""
 
+from ... import __version__
 from .bootstrap import bootstrap
 from .brain import Brain, SettlementError
 from .column import Population
@@ -8,8 +9,6 @@ from .memory import History, LearningProgress
 from .ports import Input, Output
 from .reinforcement import Reinforcement
 from .runtime import LiveController, slew
-
-__version__ = "0.62.0"
 
 __all__ = [
     "Brain",

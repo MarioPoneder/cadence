@@ -12,7 +12,7 @@ from cadence.blocks import block_contrast
 def host_learner(path):
     sizes = (5, 7, 3) if path == "blocks" else (2, 3, 2)
     graph = cd.layered(*sizes, density=1, seed=4)
-    brain = cd.Brain(graph, cd.learning_neuron_model(), dense_limit=0 if path == "sparse" else 4096)
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model(), dense_limit=0 if path == "sparse" else 4096)
     if path == "blocks":
         assert brain._blocked and graph.synapses > 4 * graph.n
     elif path == "small":
@@ -86,7 +86,7 @@ def test_saved_device_phase_values_match_host_and_numba_traces_exactly(tmp_path)
 
     graph = cd.layered(3, 4, 2, density=1, seed=9)
     config = cd.LearnerConfig(free_steps=20, nudged_steps=12, tolerance=None)
-    brain = cd.Brain(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model(), backend="torch", device="cpu")
     live = cd.Learner(brain, graph.populations["output"], config)
     drive = np.zeros((2, graph.n))
     drive[:, :3] = np.eye(3)[:2]
@@ -102,7 +102,7 @@ def test_saved_device_phase_values_match_host_and_numba_traces_exactly(tmp_path)
     np.savez(saved, plus=plus.activation, minus=minus.activation)
     with np.load(saved, allow_pickle=False) as arrays:
         saved_plus, saved_minus = arrays["plus"], arrays["minus"]
-    host = cd.Learner(cd.Brain(graph, cd.learning_neuron_model()), live.outputs, config)
+    host = cd.Learner(cd.NeuralGraph(graph, cd.learning_neuron_model()), live.outputs, config)
     edges, neurons = host.contrast_rows(free, state(saved_plus), state(saved_minus))
     np.testing.assert_array_equal(edges, expected_edges)
     np.testing.assert_array_equal(neurons, expected_neurons)

@@ -15,7 +15,7 @@ MOMENTS = ("velocity", "velocity_bias", "second_moment", "second_moment_bias")
 def make(device: str | None, momentum: float, normalize: float) -> cd.Learner:
     w, groups = cd.embedded(7, 2, 4, 9, 3, seed=11)
     return cd.Learner(
-        cd.Brain(
+        cd.NeuralGraph(
             w,
             cd.learning_neuron_model(dt=1),
             backend="cpu" if device is None else "torch",

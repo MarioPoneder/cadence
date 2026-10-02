@@ -3,7 +3,7 @@
 Every builder starts the biases at zero. Under a sign-symmetric random projection about
 half of the free hidden neurons then sit at or below rest, publish at most ``-leak``, and
 carry an order of magnitude less contrast than the active half. The strict xfail below
-records the defect: it turns into a failure the day a builder or ``Brain`` handles it, so
+records the defect: it turns into a failure the day a builder or ``NeuralGraph`` handles it, so
 the test is then updated rather than forgotten.
 """
 
@@ -20,28 +20,28 @@ def _drive_embedded(connectome: cd.Connectome, rng: np.random.Generator, batch: 
     return d
 
 
-def _silent_fraction(brain: cd.Brain, drive: np.ndarray, members: list[int]) -> float:
+def _silent_fraction(brain: cd.NeuralGraph, drive: np.ndarray, members: list[int]) -> float:
     state = brain.settle_batch(drive, steps=300, tolerance=1e-6)
     return float((np.asarray(state.activation)[:, members] <= 0.0).mean())
 
 
-def _builders() -> list[tuple[str, cd.Brain, np.ndarray, list[int]]]:
+def _builders() -> list[tuple[str, cd.NeuralGraph, np.ndarray, list[int]]]:
     rng = np.random.default_rng(0)
     out = []
     c = cd.layered(20, 40, 5, seed=0)
     d = np.zeros((16, c.n))
     d[:, :20] = rng.random((16, 20))
-    out.append(("layered", cd.Brain(c, cd.learning_neuron_model()), d, list(c.populations["hidden"])))
+    out.append(("layered", cd.NeuralGraph(c, cd.learning_neuron_model()), d, list(c.populations["hidden"])))
     c, _ = cd.embedded(12, 3, 6, 24, 5, seed=0)
-    brain = cd.Brain(c, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(c, cd.learning_neuron_model(dt=1.0))
     out.append(("embedded", brain, _drive_embedded(c, rng, 16), list(c.populations["hidden"])))
     c, _ = cd.stateful(12, 3, 6, 24, 5, seed=0)
-    brain = cd.Brain(c, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(c, cd.learning_neuron_model(dt=1.0))
     out.append(("stateful", brain, _drive_embedded(c, rng, 16), list(c.populations["hidden"])))
-    g = cd.GenericBrain.build(10, 4, hidden=64, seed=0)
+    g = cd.Brain.build(10, 4, hidden=64, seed=0)
     drive = g.stimulus(rng.random((16, 10)), memory=False)
     out.append(("generic", g.brain, drive, list(g.association_index)))
-    g = cd.GenericBrain.build((8, 8), 4, hidden=64, seed=0)
+    g = cd.Brain.build((8, 8), 4, hidden=64, seed=0)
     drive = g.stimulus(rng.random((16, 8, 8)), memory=False)
     out.append(("generic-image", g.brain, drive, list(g.connectome.populations["visual/output"])))
     return out
@@ -72,7 +72,7 @@ def test_silent_hidden_neurons_carry_little_contrast_and_a_resting_bias_repairs_
     config = cd.LearnerConfig(tolerance=1e-6, free_steps=300, nudged_steps=300)
 
     def contrast(bias: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        brain = cd.Brain(c, cd.learning_neuron_model(), bias=np.full(c.n, bias))
+        brain = cd.NeuralGraph(c, cd.learning_neuron_model(), bias=np.full(c.n, bias))
         learner = cd.Learner(brain, c.populations["output"], config)
         target = learner.targets(labels)
         free = learner.free(d)

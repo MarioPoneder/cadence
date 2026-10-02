@@ -1,121 +1,99 @@
-# Quickstarts: three kinds of brains
+# Start a continuing brain
 
-Cadence has two primitives. A **settling patch** finds the state that agrees with what its
-ports hold and with its weights, and learns by the contrast of a free and a nudged settle.
-A **record patch** adds a store that takes an observation in one write and a night in
-which the slow weights learn from the store's own dreams. Every brain below is one of
-these, or a few of them joined by ports. Each snippet runs on NumPy alone, and each runs
-behind a local page as well, with the whole brain animated and the learning plotted as it
-[the quickstarts in your browser](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart).
+Use `Brain.compose` to build **System 1**: connected processing regions,
+motor choices, a working trace and fast/persistent associative memory. Regions
+carry local state, exchange signals and repair disagreement in one neural
+settlement. Optional **System 2** adds observing regions with returning feedback
+in that same graph.
+
+Python 3.11+ and NumPy are required:
 
 ```bash
 python -m pip install cadence-net==0.70.0
 ```
 
-## A patch that learns a stream, remembers in one shot, and sleeps
-
-The record patch hears a stream of symbols and predicts what follows. By day every
-outcome is written once into its records and the slow weights do not move; at night the
-slow weights take what the store holds, from the store's own completions, with the
-stream closed. Afterwards the weights alone know the rule.
+## Observe, act and learn
 
 ```python
 import numpy as np
-from cadence import RecordPatchNet
+from cadence import Brain
 
-rng = np.random.default_rng(21)
-net = RecordPatchNet(
-    12, 12, 5, seed=4, cells=2048, active=16, record_rate=1.0, groups=(5,), slowest=8.0
+brain = Brain.compose(inputs=4, actions=2, modules=(16, 8), seed=7)
+observation = np.array([[1.0, 0.0, 0.0, 0.0]])
+action = brain.step(observation)
+
+# Execute the choice in a tiny environment: action 0 earns one unit.
+reward = (action == 0).astype(float)
+next_observation = np.array([[0.0, 1.0, 0.0, 0.0]])
+action = brain.step(next_observation, reward=reward, done=np.array([False]))
+assert action.shape == (1,)
+assert brain.learner.updates > 0
+```
+
+Each input row is one continuing stream; its output is an action index.
+`modules=(16, 8)` gives two reciprocally connected processing regions. A deeper
+base is still System 1. `step` learns from the **previous action's actual outcome**
+before choosing the next action. `teacher=` instead labels the current
+observation. Keep row identities fixed until `reset()`.
+
+This short example exercises a feedback update, not a learned policy benchmark.
+Memory and learned associations can affect later choices; capacity is finite
+and memories can interfere. [Continuous interaction](continuous.md) covers
+teaching, episodes and memory timing.
+
+## Imagine privately and resume
+
+```python
+phases = brain.imagine([observation, next_observation])
+assert len(phases) == 2 and all(np.all(phase.qualified) for phase in phases)
+
+brain.save("brain.npz")
+resumed = Brain.load("brain.npz")
+
+# Resume the same pending action with the same measured outcome.
+reward = (action == 0).astype(float)
+continued = brain.step(observation, reward=reward, done=np.array([False]))
+replayed = resumed.step(observation, reward=reward, done=np.array([False]))
+assert np.array_equal(continued, replayed)
+```
+
+`imagine` carries a private trace through supplied observations. It leaves live
+memory, parameters, random state and pending feedback unchanged. Inspect every
+phase's `qualified` flags: the result stops at the first refused phase. This
+evaluates the brain's responses to supplied observations; a learned model of
+environmental consequences belongs to [temporal planning](planning.md).
+
+Save/load preserves the current brain's full continuation, including pending
+feedback. Save the environment separately and resume its stream identities too.
+
+## Add optional observers
+
+```python
+recursive = Brain.compose(
+    inputs=4, actions=2, modules=(16, 8), observers=(8,), seed=7,
 )
-symbols = rng.integers(12, size=(3, 8))
-heard = np.eye(12)[symbols]
-outcome = np.eye(5)[(symbols + np.roll(symbols, 1, axis=1)) % 5]  # the last two symbols decide
-
-for _ in range(8):  # the day: one write per moment, slow weights at rate zero
-    net.reset()
-    net.observe(heard, outcome, rate=0.0)
-net.reset()
-awake = net.imagine(heard, state=np.zeros((3, 12)))
-assert np.array_equal(awake.output.argmax(-1), outcome.argmax(-1))  # the store recalls
-
-night = net.sleep([heard], passes=240, rate=8.0, backtrack=True)  # dreams, then dawn
-alone = RecordPatchNet.restore(net.snapshot())
-alone.records.tables["y"][:] = 0.0  # the same weights with an empty store
-assert np.array_equal(alone.imagine(heard, state=np.zeros((3, 12))).output.argmax(-1), outcome.argmax(-1))
-print(night)
+assert recursive.step(observation).shape == (1,)
 ```
 
-the records of each reading; `sleep` dreams every cue once, teaches the fixed dreams by
-`observe(write=False)`, and rewrites the store at dawn. Categorical ports (`groups`), batched writes, a store narrower
-than its port and a two-patch stack are in [the record patch guide](record-patch.md).
+Observers read and return influence to processing regions, motor regions and
+earlier observers. They participate in the same settlement and interaction API.
+This provides recursive feedback; a useful task advantage must be learned and
+measured.
 
-## A settling brain that decides
+Actions and independent predictions require the full neural equation residual
+to meet the configured tolerance. A refused `act` leaves live state, memory,
+randomness and pending feedback unchanged. If `step` already learned an outcome
+before the next action refused, retry `act` without submitting that outcome
+again. See [numerical contracts](contracts.md).
 
-A genome names regions and projections; `develop` lays them out as one connectome; a
-`Brain` settles it; a `Learner` over the motor neurons nudges the chosen action and moves
-the synapses on the contrast. Here five senses map to three actions.
+## Specialist guides
 
-```python
-import numpy as np
-import cadence as cd
-from cadence.regions import cortex, motor_cortex
-
-genome = cd.Genome(
-    regions=(cd.Region("senses", 5), cortex(24), motor_cortex(3, lateral=-0.5)),
-    projections=(
-        cd.Projection("senses", "association", reciprocal=False),
-        cd.Projection("association", "motor"),
-    ),
-)
-connectome = cd.develop(genome, seed=0)
-brain = cd.Brain(connectome, cd.learning_neuron_model())
-senses = list(connectome.populations["senses"])
-learner = cd.Learner(brain, connectome.populations["motor/actions"], cd.LearnerConfig(eta=1.0))
-
-drive = np.zeros((5, connectome.n))
-drive[np.arange(5), senses] = 1.0
-labels = np.arange(5) % 3  # sense k asks for action k mod 3
-learner.calibrate(drive)  # the gain that puts the free motor activity in its responsive range
-for _ in range(80):
-    learner.step(drive, labels)
-assert learner.accuracy(drive, labels) == 1.0
-```
-
-reads the most active motor neuron.
-Regions, ports, records beside a policy head and evolution of the genome are in
-[compose a brain](brain.md), [write a cortex](cortex.md) and [evolve a brain](evolution.md).
-
-## A temporal patch that learns a consequence and plans
-
-The temporal patch learns how its inputs move its outputs by centered detuning, keeps its
-context between calls, imagines privately, and repairs a continuous action toward a goal
-under its own learned model.
-
-```python
-import numpy as np
-from cadence import TemporalPatchNet
-
-net = TemporalPatchNet(2, 8, 1, seed=151)
-heard = np.array([[[1.0, 0.0]]])
-net.reset()
-learned = net.observe(heard, np.array([[[0.2]]]))
-assert learned.updated
-private = net.imagine(np.zeros((1, 4, 2)))
-assert private.converged
-```
-
-is replayed without its goal before acceptance, and actual readback repairing the next
-proposal; the same loop as text is [learn, act and observe](interaction.md), and protection
-of chosen responses is [response protection](temporal-memory.md).
-
-## Which one
-
-| You want | Start with |
-| --- | --- |
-| to learn from a stream of events, keep single facts, and generalise overnight | the record patch |
-| a decision or evaluation over a fixed set of inputs, an explicit graph, a policy that learns from reward | the settling brain |
-| continuous observations and actions with a learned dynamics model and private planning | the temporal patch |
-
-The reciprocal `PatchNet` and the older `GenericBrain` composition have their
-own learning and state contracts; see the
-[index](index.md#kept-for-existing-experiments).
+- [Compose a brain](brain.md): custom regions, wiring and checkpoint semantics.
+- [Memory](memory.md): working traces, fast associations and consolidation.
+- [Temporal models](temporal.md) and [response protection](temporal-memory.md):
+  learned consequences, private planning and selected durable responses.
+- [Record patches](record-patch.md): one-write event records, categorical ports
+  and learning from stored completions.
+- [Reciprocal patches](patchnet.md): explicit patch ports and local contrasts.
+- [The population solver](equilibrium/index.md): advanced exact state-and-error
+  readback under its own numerical contract.

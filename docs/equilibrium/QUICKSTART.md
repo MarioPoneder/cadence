@@ -1,11 +1,7 @@
-> This page documents the preserved experimental engine, imported from
-> `cadence.experimental.equilibrium`, inside Cadence 0.70.0. Its source-bound
-> engine identity remains `0.62.0`; it is separate from the default Cadence API.
-
 # Build a brain, teach it a routine, keep it
 
 Install **Cadence 0.70.0** with Python 3.11 or later. The containing package
-requires NumPy; this preserved solver uses the Python standard library unless
+requires NumPy; this solver uses the Python standard library unless
 you select an optional tensor backend:
 
 ```sh

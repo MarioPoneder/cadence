@@ -225,7 +225,7 @@ def test_patch_observation_equilibrium_and_ep_structure() -> None:
 
 
 def test_equilibrium_from_brain_equilibrate() -> None:
-    brain = cd.Brain(cd.layered(2, 3, 2, seed=4), cd.learning_neuron_model())
+    brain = cd.NeuralGraph(cd.layered(2, 3, 2, seed=4), cd.learning_neuron_model())
     drive = np.zeros((2, brain.connectome.n))
     drive[:, :2] = [[1.0, 0.5], [0.2, 0.8]]
     result = brain.equilibrate(drive, budget=256, tolerance=1e-6)
@@ -237,7 +237,7 @@ def test_equilibrium_from_brain_equilibrate() -> None:
 
 def test_settlement_record() -> None:
     graph = cd.layered(2, 3, 2, seed=4)
-    brain = cd.Brain(graph, cd.learning_neuron_model(), backend="cpu", precision="float64")
+    brain = cd.NeuralGraph(graph, cd.learning_neuron_model(), backend="cpu", precision="float64")
     drive = np.zeros((2, graph.n))
     drive[:, :2] = [[1.0, 0.5], [0.2, 0.8]]
     records: list[cd.SettlementRecord] = []

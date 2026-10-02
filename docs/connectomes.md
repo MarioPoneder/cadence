@@ -1,6 +1,6 @@
 # Brains from a connectome
 
-A measured wiring diagram becomes one `Brain`: every neuron a unit of the graded rate model,
+A measured wiring diagram becomes one `NeuralGraph`: every neuron a unit of the graded rate model,
 every synapse class an entry with its count and its sign, one global gain. This page is the
 recipe as two examples ran it, the worm (302 neurons) and the fruit fly (150,802 neurons, brain
 and nerve cord), with the numbers that decide each step and the limits that were measured.
@@ -37,10 +37,10 @@ rebuilt by one command and is not.
 
 <!-- not-run: reads the fly dataset built in section 1 -->
 ```python
-from cadence import Brain, Connectome, NeuronModel
+from cadence import NeuralGraph, Connectome, NeuronModel
 
 connectome = Connectome.from_synapses(n, pre=pre, post=post, count=count, sign=sign, populations=sets)
-brain = Brain(connectome, NeuronModel(gain=0.02), backend="cpu")
+brain = NeuralGraph(connectome, NeuronModel(gain=0.02), backend="cpu")
 ```
 
 Name every population the gates and the page will read (`populations` is a dict of name to
@@ -95,7 +95,7 @@ The remedy is a gain per cell class, selected the way the global gain was:
 ```python
 def make(attenuation):                       # the candidate: -log gain of the local neurons
     log_gain = np.zeros(C.n); log_gain[C.populations["ln"]] = -attenuation
-    return Brain(C, NeuronModel(gain=GAIN), log_gain=log_gain)
+    return NeuralGraph(C, NeuronModel(gain=GAIN), log_gain=log_gain)
 
 protocol = Protocol(stimuli={"fruit": (...), "yeast": (...)}, rows=[...],
                     training=[("fruit", "kc", "sparse"), ("yeast", "kc", "sparse"),
@@ -125,9 +125,8 @@ importer choices and remain explicit; no additional 60,000-neuron recruitment
 cap is used by the current local page.
 
 A reduced graph is an optional approximation requiring its own evidence.
-The historical fly subset matched selected population means while missing
-its member-level closure criterion; that does not establish equivalent
-learning or behavior. Compare individual activities, readouts and task outcomes
+Matching selected population means does not establish equivalent
+member-level behavior. Compare individual activities, readouts and task outcomes
 under the same stimuli, rather than inferring closure from size alone. Export
 in the library's order of synapses (receiving neuron, then sender) so the browser
 engine can be held to the library by a parity test
@@ -166,13 +165,13 @@ connectome does not carry, both declared and both generic:
   one half, jointly, so a cell that inhibits another is accounted for. A target
   such as 0.6/0.4 declares an engineered initial preference; it does not recover
   innate appetite from the connectome. The current export's payload and receipt
-  specify the actual calibration. The array goes into `Brain(bias=...)`.
+  specify the actual calibration. The array goes into `NeuralGraph(bias=...)`.
 - **The seam's starting strength.** Synapse counts alone do not identify what
   was inherited versus learned by the specimen. `naive_efficacy(connectome,
   plastic)` gives plastic classes equal effective magnitude as a controlled
   initialization for the learning assay. This changes their measured relative
   strengths and must be reported; it is not a reconstruction of an untrained
-  biological brain. The learner starts from it (`Brain(efficacy=...)`) and the
+  biological brain. The learner starts from it (`NeuralGraph(efficacy=...)`) and the
   measured counts stay in the receipt.
 
 Then the assay: every action the readout can take must have an outcome, and the outcomes the
@@ -181,7 +180,7 @@ decision every 0.3 s along an approach and sugar rewarded whichever nudge had be
 With the three in place the fly's T-maze reverses in both directions on the library's
 actor-critic (sugar at one odour, blows there while the sugar moves, the other found: the
 example's `tools/tmaze.py` and its receipt), where before it could not learn one.
-That historical assay does not establish reliable food seeking in the current
-full-scene demo. Transmitter signs are only a simplified fast-interaction map;
+A bounded odor assay does not establish reliable food seeking in a
+full-scene environment. Transmitter signs are only a simplified fast-interaction map;
 receptor-specific modulation, hormone and peptide signaling, innate appetite
 and detailed muscle dynamics are not imported by assigning those signs.

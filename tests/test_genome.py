@@ -26,7 +26,7 @@ def test_grow_is_deterministic_and_names_contiguous_sets() -> None:
     assert (
         a.in_degree()[list(a.populations["input"])].sum() > 0
     )  # symmetric: inputs hear the hidden neurons
-    brain = cd.Brain(a, cd.learning_neuron_model())
+    brain = cd.NeuralGraph(a, cd.learning_neuron_model())
     assert brain.layout.ranges == 3
     assert develop(c, seed=4).digest() != a.digest()
 

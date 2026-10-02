@@ -29,7 +29,7 @@ def test_connectome_sorts_merges_and_drops_autapses() -> None:
 
 
 def test_rest_is_a_fixed_point_and_a_clamp_propagates() -> None:
-    brain = cd.Brain(ring(), cd.NeuronModel(gain=0.03))
+    brain = cd.NeuralGraph(ring(), cd.NeuronModel(gain=0.03))
     assert brain.settle(None, steps=20).activation.max() == 0.0
     state = brain.settle({0: 1.0}, steps=80)
     assert state.activation.min() > 0.9  # the ring lights up all the way round
@@ -37,7 +37,7 @@ def test_rest_is_a_fixed_point_and_a_clamp_propagates() -> None:
 
 def test_ablation_silences_downstream() -> None:
     w = ring()
-    brain = cd.Brain(w, cd.NeuronModel(gain=0.03))
+    brain = cd.NeuralGraph(w, cd.NeuronModel(gain=0.03))
     mask = np.ones(w.n)
     mask[2] = 0.0
     state = brain.settle([0], steps=80, mask=mask)
@@ -47,10 +47,10 @@ def test_ablation_silences_downstream() -> None:
 def test_adaptation_turns_a_half_center_into_a_rhythm() -> None:
     # Two neurons, each excited by the stimulus and inhibiting the other: a half-center oscillator.
     w = cd.Connectome.from_synapses(2, pre=[0, 1], post=[1, 0], count=[60, 60], sign=[-1, -1])
-    still = cd.Brain(w, cd.NeuronModel(gain=0.03))
+    still = cd.NeuralGraph(w, cd.NeuronModel(gain=0.03))
     fixed = still.settle({0: 1.0, 1: 0.95}, steps=400, trajectory=True)
     assert fixed.trajectory is not None and fixed.trajectory[-100:].std(axis=0).max() < 1e-3
-    rhythmic = cd.Brain(
+    rhythmic = cd.NeuralGraph(
         w, cd.NeuronModel(gain=0.03, adaptation=cd.Adaptation(tau_steps=40, strength=2.0))
     )
     moving = rhythmic.settle({0: 1.0, 1: 0.95}, steps=400, trajectory=True)
@@ -68,7 +68,7 @@ def test_cpu_backend_matches_neuron_by_neuron_reference() -> None:
         sign=np.where(rng.random(e) < 0.3, -1.0, 1.0),
     )
     neuron_model = cd.NeuronModel(gain=0.02, adaptation=cd.Adaptation(tau_steps=25, strength=0.5))
-    brain = cd.Brain(
+    brain = cd.NeuralGraph(
         w, neuron_model, log_gain=0.1 * rng.standard_normal(n), bias=0.05 * rng.standard_normal(n)
     )
     report = cd.conformance(brain, list(range(5)), steps=40)
@@ -83,8 +83,8 @@ def test_torch_backend_agrees_with_cpu_within_its_precision() -> None:
         n, pre=rng.integers(0, n, e), post=rng.integers(0, n, e), count=rng.integers(5, 40, e)
     )
     neuron_model = cd.NeuronModel(gain=0.02)
-    cpu = cd.Brain(w, neuron_model).settle(list(range(10)), steps=30, trajectory=True)
-    acc = cd.Brain(w, neuron_model, backend="torch").settle(
+    cpu = cd.NeuralGraph(w, neuron_model).settle(list(range(10)), steps=30, trajectory=True)
+    acc = cd.NeuralGraph(w, neuron_model, backend="torch").settle(
         list(range(10)), steps=30, trajectory=True
     )
     assert cpu.trajectory is not None and acc.trajectory is not None
@@ -103,7 +103,7 @@ def test_protocol_scores_and_shuffle_keeps_counts() -> None:
         ],
         steps=80,
     )
-    brain = cd.Brain(w, cd.NeuronModel(gain=0.03))
+    brain = cd.NeuralGraph(w, cd.NeuronModel(gain=0.03))
     report = protocol.score(brain)
     assert report["training_passed"] == 1 and report["passed"] == 2
     control = cd.shuffled(w, seed=0)
@@ -113,7 +113,7 @@ def test_protocol_scores_and_shuffle_keeps_counts() -> None:
     )
     assert control.populations == w.populations
     gain, table = cd.select_gain(
-        lambda g: cd.Brain(w, cd.NeuronModel(gain=g)),
+        lambda g: cd.NeuralGraph(w, cd.NeuronModel(gain=g)),
         protocol,
         (0.005, 0.03, 0.2),
         sparsity_cap=None,  # a toy ring lights entirely; the cap is for large nets

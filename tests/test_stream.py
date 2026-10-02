@@ -17,7 +17,7 @@ def test_stateful_connectome_has_a_context_source_range_into_the_hidden_neurons(
     degree = w.in_degree()
     assert degree[list(ctx)].sum() == 0  # context neurons hear nothing
     assert all(degree[i] >= 4 for i in hid)  # every hidden neuron hears every context neuron
-    brain = cd.Brain(w, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0))
     lay = brain.layout
     assert 1 in lay.sources()  # the context range is a source of the block transport
     assert (
@@ -28,7 +28,7 @@ def test_stateful_connectome_has_a_context_source_range_into_the_hidden_neurons(
 
 def test_echo_decays_toward_the_hidden_activation_and_enters_the_clamp() -> None:
     w, _ = cd.stateful(3, 1, 2, 3, 3, seed=1)
-    brain = cd.Brain(w, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0))
     echo = cd.Echo(w, decay=0.5)
     drive = np.zeros((2, w.n))
     drive[:, 0] = 1.0
@@ -71,7 +71,7 @@ def _carried_state_accuracy(seed: int) -> float:
         eta=2.0, beta=0.1, temperature=0.1, tolerance=3e-3, nudged_steps=12, free_steps=60
     )
     learner = cd.Learner(
-        cd.Brain(w, cd.learning_neuron_model(dt=1.0)), w.populations["output"], cfg, tie_groups=tie
+        cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0)), w.populations["output"], cfg, tie_groups=tie
     )
     echo = cd.Echo(w, decay=0.0)  # the previous equilibrium, undiluted
 
@@ -185,7 +185,7 @@ def test_afterglow_is_brightest_where_the_moment_changed() -> None:
     a neuron that changed glows, one that stood still fades; with focus 0 it is the Echo."""
     w, _ = cd.stateful(3, 1, 2, 3, 3, seed=1)
     w = w.with_populations(afterglow=w.populations["context"])
-    brain = cd.Brain(w, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0))
     glow = cd.Afterglow(w, decay=0.5, focus=1.0)
     echo = cd.Afterglow(w, decay=0.5, focus=0.0)
     hidden = list(w.populations["hidden"])
@@ -222,8 +222,8 @@ def test_the_trace_reads_a_state_on_the_device_the_same_as_on_the_host() -> None
     w = w.with_populations(afterglow=w.populations["context"])
     drive = np.zeros((2, w.n))
     drive[:, 0] = 1.0
-    host = cd.Brain(w, cd.learning_neuron_model(dt=1.0)).settle_batch(drive, steps=30)
-    dev = cd.Brain(w, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu").settle_batch(
+    host = cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0)).settle_batch(drive, steps=30)
+    dev = cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu").settle_batch(
         drive, steps=30
     )
     a, b = cd.Afterglow(w, decay=0.5, source="input"), cd.Afterglow(w, decay=0.5, source="input")
@@ -232,10 +232,10 @@ def test_the_trace_reads_a_state_on_the_device_the_same_as_on_the_host() -> None
     assert np.allclose(a.trace, b.trace)
     drive[:, 1] = 1.0
     a.update(
-        cd.Brain(w, cd.learning_neuron_model(dt=1.0)).settle_batch(drive, steps=30, state=host)
+        cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0)).settle_batch(drive, steps=30, state=host)
     )
     b.update(
-        cd.Brain(w, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu").settle_batch(
+        cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0), backend="torch", device="cpu").settle_batch(
             drive, steps=30, state=dev
         )
     )

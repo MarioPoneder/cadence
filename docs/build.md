@@ -194,7 +194,7 @@ unit variance.
 ## A settling brain on a table of features
 
 The settling brain is the brain for a decision over a fixed set of inputs: a genome
-names regions and projections, `develop` lays them out as one connectome, `Brain` settles
+names regions and projections, `develop` lays them out as one connectome, `NeuralGraph` settles
 it and a `Learner` over the output neurons moves the synapses on the contrast of a free and
 a nudged settle. Use it when the wiring matters (a measured connectome, lateral inhibition,
 several heads on one brain), for a policy that learns from reward, or when you want to
@@ -236,7 +236,7 @@ genome = cd.Genome(
     ),
 )
 connectome = cd.develop(genome, seed=0)
-brain = cd.Brain(connectome, cd.learning_neuron_model())
+brain = cd.NeuralGraph(connectome, cd.learning_neuron_model())
 features = list(connectome.populations["features"])
 learner = cd.Learner(brain, connectome.populations["motor/actions"], cd.LearnerConfig(eta=1.0, beta=0.1))
 
@@ -300,15 +300,15 @@ settles in the browser under a stimulus you draw ([the brain viewer](pages.md)).
 ### 6. Grow it
 
 - Reward instead of labels: `ActorCritic` over the same learner, eligibility traces and a
-  broadcast prediction error ([reward](reward.md)); `GenericBrain` is the ready composition
-  with a critic, a working memory and an episodic store ([compose a brain](brain.md#genericbrain)).
+  broadcast prediction error ([reward](reward.md)); `Brain` is the ready composition
+  with a critic, a working memory and an episodic store ([compose a brain](brain.md#brain)).
 - Consequences and values in one write: a records cortex beside the policy
   ([compose a brain](brain.md#one-experience-step-by-hand)).
 - Let selection size the regions: `evolve` over the genome across lives
   ([evolve a brain](evolution.md)); any hand-set constant can be a gene.
 - A measured connectome: `Connectome.from_synapses` from a synapse list, then a
   protocol with a shuffled control ([protocols](protocols.md)).
-- Speed: `Brain(..., backend="torch")` for a large blocked connectome
+- Speed: `NeuralGraph(..., backend="torch")` for a large blocked connectome
   ([backends](backends.md)).
 
 ## A temporal patch on continuous observations and actions

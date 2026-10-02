@@ -32,7 +32,7 @@ def test_layout_cuts_at_contiguous_sets_and_pairs_only_wired_ranges() -> None:
 
 def test_block_transport_matches_the_full_matrix_and_reuses_still_ranges() -> None:
     w = cd.layered(5, 4, 3, density=1.0, seed=1)
-    brain = cd.Brain(w, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0))
     lay = brain.layout
     transport = BlockTransport(lay, lay.flat(brain.weights))
     rng = np.random.default_rng(0)
@@ -50,7 +50,7 @@ def test_block_transport_matches_the_full_matrix_and_reuses_still_ranges() -> No
 def test_fused_kernel_agrees_with_the_loop_with_frozen_inputs(dt: float) -> None:
     w = cd.layered(7, 5, 3, density=1.0, seed=2)
     neuron_model = cd.learning_neuron_model(dt=dt)
-    brain = cd.Brain(w, neuron_model)
+    brain = cd.NeuralGraph(w, neuron_model)
     drive = brain.stimulus_levels(np.random.default_rng(3).random((4, w.n)) * 0.5)
     fused = brain.settle_batch(drive, steps=40)
     loop = brain.settle_batch(drive, steps=40, trajectory=True)  # the NumPy loop
@@ -82,7 +82,7 @@ def test_block_contrast_matches_the_gram_matrix() -> None:
 
 def test_layout_survives_with_parameters_and_learning() -> None:
     w = cd.layered(8, 6, 3, density=1.0, seed=6)
-    brain = cd.Brain(w, cd.learning_neuron_model(dt=1.0))
+    brain = cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0))
     changed = brain.with_parameters(bias=np.full(w.n, 0.01))
     assert changed.layout is brain.layout and changed.to_dict()["layout"]["blocks"] == 4
     learner = cd.Learner(brain, w.populations["output"], cd.LearnerConfig(eta=1.0, beta=0.1))
@@ -95,14 +95,14 @@ def test_layout_survives_with_parameters_and_learning() -> None:
 def test_torch_precision_option_and_block_transport_agree_with_cpu() -> None:
     w = cd.layered(9, 7, 3, density=1.0, seed=8)
     neuron_model = cd.learning_neuron_model(dt=1.0)
-    drive = cd.Brain(w, neuron_model).stimulus_levels(
+    drive = cd.NeuralGraph(w, neuron_model).stimulus_levels(
         np.random.default_rng(9).random((3, w.n)) * 0.5
     )
-    cpu = cd.Brain(w, neuron_model).settle_batch(drive, steps=30)
-    single = cd.Brain(w, neuron_model, backend="torch", device="cpu", precision="float32")
-    double = cd.Brain(w, neuron_model, backend="torch", device="cpu", precision="float64")
+    cpu = cd.NeuralGraph(w, neuron_model).settle_batch(drive, steps=30)
+    single = cd.NeuralGraph(w, neuron_model, backend="torch", device="cpu", precision="float32")
+    double = cd.NeuralGraph(w, neuron_model, backend="torch", device="cpu", precision="float64")
     assert np.abs(single.settle_batch(drive, steps=30).activation - cpu.activation).max() < 1e-5
     assert np.abs(double.settle_batch(drive, steps=30).activation - cpu.activation).max() < 1e-12
     assert single.with_parameters(bias=np.zeros(w.n)).precision == "float32"
     with pytest.raises(ValueError):
-        cd.Brain(w, neuron_model, backend="torch", device="cpu", precision="half")
+        cd.NeuralGraph(w, neuron_model, backend="torch", device="cpu", precision="half")

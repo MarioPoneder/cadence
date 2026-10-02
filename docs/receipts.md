@@ -72,7 +72,7 @@ Source and arithmetic checks are optional and must be supplied by the caller:
 ## What belongs in the body
 
 - the connectome summary and digest, and the custody block for measured data;
-- the neuron model and the brain description (`Brain.to_dict()`);
+- the neuron model and the brain description (`NeuralGraph.to_dict()`);
 - the gain selection table, every gain tried, with its admissibility;
 - the protocol as data, including the reference for every row;
 - the score, with readings and reference readings on every row;

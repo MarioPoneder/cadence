@@ -1,98 +1,101 @@
 # Architecture and integration
 
-Cadence aims at generalized intelligence through overlap consensus, equilibrium
-detuning and evolving functional self-reflection. This page is the integration
-contract of the temporal patch (`TemporalPatchNet`, its planner and
-`TemporalMemory`): local repair, persistent
-activity, explicit response protection, private imagination and continuous action
-planning, what each operation changes, and what its bounded tests establish. The
-[record patch](record-patch.md) and the [belief patch](belief.md) state their
-contracts in their own guides, and [Cadence for machine-learning people](orientation.md)
-compares the four brains. Bounded tests do not establish the full flexibility of
-an animal or human brain. The APIs below need no experiment-repository imports.
+Cadence models a continuing brain through bounded local state, ports, readback,
+records and plastic connections. **System 1** is the default observation/action
+loop with memory and learning. **System 2** optionally adds recursive observer
+regions within that same neural graph. Local disagreement repair seeks a coherent
+state; actual consequences determine whether its behavior was useful.
 
-```bash
-python -m pip install cadence-net==0.70.0
-```
+## One continuing brain
 
-Development installs use `pip install -e .`; pin a release or a commit for reproducible
-work. The graph interfaces of earlier applications stay available.
-
-## What carries the individual forward
-
-| Requirement | Base API | Exact current meaning |
-| --- | --- | --- |
-| Short-term context | `TemporalPatchNet.advance`, `state`, `reset` | Hidden activity persists between calls. Reset clears that activity, not weights. Whether a cue survives a particular delay is tested. |
-| Acquired relationships | `TemporalPatchNet.observe` | Centered equilibrium detuning repairs a finite observed path and changes A/B/C. Supplied per-output teaching precision defines the task metric; its default is one. No gradient propagates through calls before the supplied initial boundary. |
-| Protected long-term responses | `TemporalMemory.protect`, `memory.observe` | Caller-selected local response subspaces constrain later updates. An optional local readout metric improves conditioning, with checked causal replay. Exact-path retention is conditional and available capacity is finite. |
-| Recursive temporal computation | `TemporalPatchNet` recurrence | Each moment depends on the previous hidden activity. This is recurrence, not an already learned hierarchy that observes itself. |
-| Functional self-readback | `TemporalPatchNet.readback`, plan diagnostics | Detached state, residual/energy, revision, uncertainty and proposal information can be inspected or explicitly fed back by an application. |
-| Private imagination | `TemporalPatchNet.imagine`, the planner | Private predicted paths leave live state and learned parameters unchanged. Their usefulness depends on model quality. |
-| Goal-directed action | `TemporalPatchNet.plan` | The temporal learner privately repairs bounded continuous input ports and accepts only decreasing target-free prediction cost. |
-| Continued life | Model and protection snapshots/checkpoints | Parameters, activity and supplied task settings can resume; save explicit protection together with its net. |
-
-The nonlinear temporal learner can acquire an action/consequence relation and
-use that same model to plan continuous controls. Its input gradient is another
-centered equilibrium contrast, with parameters held fixed. Every candidate is
-replayed without a goal nudge before acceptance. Its measured prediction accuracy
-and the subsequent executed outcome remain separate checks.
-
-Application adapters define sensory meanings, executable actions and teaching
-access. The base library contains no musical structure, game policy, language
-task or physical objective that silently supplies the missing skill.
-
-The application must preserve distinctions needed for its task. A sensory
-summary need not specify an action: an average event count, for example, loses
-the timing of individual events. Validate known actions and their observed
-consequences before treating forecast accuracy as performed competence. This
-applies equally to physical control, games, language and creative work.
-
-[Creativity and evolving self-reflection](creativity.md) describes the intended
-progression from private proposals to useful novel solutions, learned internal
-readback and transfer. Current readback is implemented; automatically growing
-recursive coordination remains a behavioral research requirement.
-
-## One temporal learning life
+`Brain.compose` connects sensory, processing, motor and memory regions.
+Base modules form reciprocal paths. Optional observers read and return to base,
+motor and earlier observer regions; they do not run as a separate answer
+controller. A graph can be deep and modular without observers.
 
 ```python
 import numpy as np
+from cadence import Brain
+
+brain = Brain.compose(4, 2, modules=(16, 8), observers=(8,), seed=7)
+reading = np.array([[1.0, 0.0, 0.0, 0.0]])
+action = brain.step(reading)
+assert action.shape == (1,)
+```
+
+All live neural coordinates must meet the declared full-equation tolerance
+before an action is issued. Stored traces and associative records supply
+explicit boundary information; they are not silently frozen unresolved live
+coordinates. Finite free/nudged learning phases retain their own contracts.
+Qualified free solves may use numerical damping inside one budget and then
+check the original model. See [contracts](contracts.md).
+
+`step` learns from the preceding actual action/outcome and acts on the current
+observation. `imagine` privately settles supplied observations with a copied
+trace. It does not learn from predictions or model environmental consequences
+by itself. Saved continuation includes pending feedback and memories; the body
+is saved separately.
+
+## Choose the operation the task needs
+
+| Operation | Interface | Meaning |
+| --- | --- | --- |
+| Continuing perception, action and reward learning | `Brain.step` | One recurrent graph with explicit action/outcome timing |
+| Earlier activity affecting later answers | `Trace`, `Afterglow` | Retained temporal input with declared decay and optional movement weighting |
+| Fast and persistent associations | `SynapticMemory` | Observed key/value updates with finite capacity and possible interference |
+| Individual event records and consolidation | `RecordPatchNet` | Context, learned parameters, writable records and `sleep` |
+| Learned environmental dynamics | `TemporalPatchNet` | Relations over finite observed paths |
+| Private action planning | `TemporalPatchNet.plan` | Continuous input proposals under a learned model and supplied goals |
+| Protection of selected responses | `TemporalMemory` | Finite selected response subspaces constrain later learning |
+
+These operations share the aim of local readback and repair, but have distinct
+mathematical contracts. Graph and temporal learners use equilibrium contrasts;
+record and belief models also use explicit adjoints and record writes.
+Sequential record lookup or steering is not a joint neural-equilibrium
+certificate. The advanced [population solver](equilibrium/index.md) has exact
+state-and-error readback under a separate model.
+
+## A temporal learning and planning model
+
+Use the temporal API when the task requires learned consequences of actions.
+Its private planner holds learned parameters and actual observations fixed,
+repairs proposed continuous inputs and checks target-free predictions before
+acceptance. Executing the proposed action and measuring its outcome are separate
+body operations.
+
+```python
 from cadence import TemporalPatchNet, TemporalMemory
 
 net = TemporalPatchNet(2, 8, 1, seed=151)
 memory = TemporalMemory()
 heard = np.array([[[1.0, 0.0]]])
 net.reset()
-learned = net.observe(heard, np.array([[[0.2]]]))
-assert learned.updated
+assert net.observe(heard, np.array([[[0.2]]])).updated
 
-# Supplied importance choice: preserve this current response from cold context.
-cold = np.zeros((1, 8))
-memory.protect(net, heard, state=cold)
+# Explicitly protect this response from cold context.
+memory.protect(net, heard, state=np.zeros((1, 8)))
 net.reset()
-changed = memory.observe(net, np.array([[[0.0, 1.0]]]), np.array([[[0.3]]]))
-assert changed.updated
+assert memory.observe(net, np.array([[[0.0, 1.0]]]), np.array([[[0.3]]])).updated
 net.reset()
 assert net.advance(heard).converged
-private = net.imagine(np.zeros((1, 4, 2)))
-assert private.converged
+assert net.imagine(np.zeros((1, 4, 2))).converged
 ```
 
-Only free activity becomes live after learning; target-detuned states stay
-private. Protection is explicit and protects the current response, not an
-unobserved truth. Long delay, competing learning, cue changes and novelty need
-separate behavioral checks. There is no inferred importance, automatic fading,
-learned specialization or unlimited long-term memory guarantee.
+Only free activity becomes live after learning; target-detuned states remain
+private. Protection preserves selected current responses, not an unobserved
+truth. Supplied goals and importance, finite capacity, changing cues and
+interference remain part of the task contract. The
+[memory/planning example](../examples/memory_imagination.py) checks a bounded
+case against actual toy-body outcomes.
 
-## Choosing evidence over architectural labels
+## Evaluate the behavior
 
-A causal record order helps distinguish actual observations from imagined
-branches and binds compressed state to its model. It does not itself decide
-which experiences matter. A normal form means the declared equations or
-constraints agree; it can still describe a poor predictor. Equilibrium and
-memory are therefore tested by what the continuing system can recall, learn,
-predict and do after disturbances and competing experience.
+Adapters define sensory meanings, executable actions and teaching access.
+A lossy sensory summary may omit distinctions needed to act. Test acquisition,
+free recall, changes in goals, competing learning, private-state isolation and
+saved continuation. A settled state can still describe a poor predictor; useful
+recursive correction and human-like flexibility require behavioral evidence.
 
-Detailed guides: [temporal learning](temporal.md),
-[private continuous-control planning](planning.md), [general creativity and self-reflection](creativity.md),
-[explicit response protection](temporal-memory.md), [the graph PatchNet](patchnet.md) and
-[conditional Lean proofs](https://github.com/FloatingPragma/oph-meta/blob/main/cadence-flagship/lean/README.md).
+[Build a brain](brain.md) · [Continuous interaction](continuous.md) ·
+[Temporal learning](temporal.md) · [Planning](planning.md) ·
+[Response protection](temporal-memory.md) · [Conditional proofs](https://github.com/FloatingPragma/oph-meta/blob/main/cadence-flagship/lean/README.md)

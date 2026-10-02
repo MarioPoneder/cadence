@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from cadence import Brain, BrainState, GenericBrain
+from cadence import Brain, BrainState, NeuralGraph
 
 
 def reversal_boundary(backend="cpu"):
@@ -22,7 +22,7 @@ def reversal_boundary(backend="cpu"):
         torch = pytest.importorskip("torch")
         if backend == "mps" and not torch.backends.mps.is_available():
             pytest.skip("MPS hardware unavailable")
-    agent = GenericBrain.build(
+    agent = Brain.build(
         4,
         4,
         hidden=16,
@@ -52,7 +52,7 @@ def test_default_repairs_frozen_learned_boundary_that_cycles_without_damping(bac
     original_model = brain.neuron_model
     original_parameters = [x.copy() for x in (brain.efficacy, brain.bias, brain.log_gain)]
     original_state = state.v.copy(), state.adaptation.copy()
-    undamped = Brain(
+    undamped = NeuralGraph(
         brain.connectome,
         brain.neuron_model.replace(dt=1.0),
         efficacy=brain.efficacy,
@@ -67,7 +67,7 @@ def test_default_repairs_frozen_learned_boundary_that_cycles_without_damping(bac
     np.testing.assert_allclose(second.v, failed.state.v, rtol=0, atol=1e-12)
     assert np.abs(first.v - failed.state.v).max() > 1.0
 
-    # Use the actual GenericBrain admission path, preserving its original tolerance.
+    # Use the actual Brain admission path, preserving its original tolerance.
     repaired = agent._qualified(drive, state)
     assert brain.residual(drive, repaired).max() <= agent.learner.config.tolerance
     # Damping changes the numerical path, not the unmasked fixed-point equation.
@@ -92,14 +92,14 @@ def test_default_repairs_frozen_learned_boundary_that_cycles_without_damping(bac
 def test_fallback_respects_zero_and_odd_total_budgets(monkeypatch, budget):
     agent, state, drive = reversal_boundary()
     calls = []
-    equilibrate = Brain.equilibrate
+    equilibrate = NeuralGraph.equilibrate
 
     def counted(brain, *args, **kwargs):
         phase = equilibrate(brain, *args, **kwargs)
         calls.append((brain.neuron_model.dt, kwargs["budget"], phase.steps))
         return phase
 
-    monkeypatch.setattr(Brain, "equilibrate", counted)
+    monkeypatch.setattr(NeuralGraph, "equilibrate", counted)
     phase = agent._equilibrate(drive, state, budget=budget, tolerance=1e-14)
     assert not phase.qualified.any()
     assert phase.steps == sum(taken for _, _, taken in calls) == budget

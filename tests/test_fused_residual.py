@@ -11,7 +11,7 @@ from cadence import brain as brain_module
 pytest.importorskip("numba")
 
 
-def three_ranges(seed: int, adaptation: cd.Adaptation | None = None) -> cd.Brain:
+def three_ranges(seed: int, adaptation: cd.Adaptation | None = None) -> cd.NeuralGraph:
     """Input, hidden and output populations: three blocks, reciprocal hidden/output synapses."""
     rng = np.random.default_rng(seed)
     inputs, hidden, outputs = 6, 8, 4
@@ -38,10 +38,10 @@ def three_ranges(seed: int, adaptation: cd.Adaptation | None = None) -> cd.Brain
         },
     )
     model = cd.learning_neuron_model(dt=1.0).replace(adaptation=adaptation)
-    return cd.Brain(connectome, model, bias=rng.normal(0.0, 0.3, n))
+    return cd.NeuralGraph(connectome, model, bias=rng.normal(0.0, 0.3, n))
 
 
-def reference(brain: cd.Brain, drive, state, **kw) -> np.ndarray:
+def reference(brain: cd.NeuralGraph, drive, state, **kw) -> np.ndarray:
     original = brain_module._FUSED
     brain_module._FUSED = False
     try:

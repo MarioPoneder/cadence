@@ -38,17 +38,17 @@ def _problem() -> tuple[cd.Connectome, np.ndarray, Nudge, np.ndarray]:
     return c, d, nudge, keep
 
 
-def _brains(c: cd.Connectome, model: cd.NeuronModel) -> dict[str, cd.Brain]:
+def _brains(c: cd.Connectome, model: cd.NeuronModel) -> dict[str, cd.NeuralGraph]:
     brains = {
-        "cpu": cd.Brain(c, model),
-        "cpu-unblocked": cd.Brain(c, model, dense_limit=1),
-        "torch-cpu": cd.Brain(c, model, backend="torch", device="cpu"),
-        "torch-cpu-scatter": cd.Brain(c, model, backend="torch", device="cpu", dense_limit=1),
+        "cpu": cd.NeuralGraph(c, model),
+        "cpu-unblocked": cd.NeuralGraph(c, model, dense_limit=1),
+        "torch-cpu": cd.NeuralGraph(c, model, backend="torch", device="cpu"),
+        "torch-cpu-scatter": cd.NeuralGraph(c, model, backend="torch", device="cpu", dense_limit=1),
     }
     if _mps():
-        brains["torch-mps"] = cd.Brain(c, model, backend="torch", device="mps")
+        brains["torch-mps"] = cd.NeuralGraph(c, model, backend="torch", device="mps")
     if "mlx" in cd.available_backends():
-        brains["mlx"] = cd.Brain(c, model, backend="mlx")
+        brains["mlx"] = cd.NeuralGraph(c, model, backend="mlx")
     return brains
 
 
@@ -58,7 +58,7 @@ def test_residual_on_device_matches_host_residual_of_the_same_state(
 ) -> None:
     c, d, nudge, keep = _problem()
     model = cd.learning_neuron_model(dt=0.5).replace(adaptation=adaptation)
-    host = cd.Brain(c, model)
+    host = cd.NeuralGraph(c, model)
     for name, brain in _brains(c, model).items():
         for nu, mk in ((None, None), (nudge, keep)):
             state = brain.settle_batch(d, steps=120, nudge=nu, mask=mk, tolerance=1e-6)
@@ -89,8 +89,8 @@ def test_equilibrate_residual_is_brain_residual_on_every_backend() -> None:
 def test_stop_step_agrees_between_fused_numpy_and_torch_kernels() -> None:
     c, d, nudge, keep = _problem()
     model = cd.learning_neuron_model(dt=1.0)
-    cpu = cd.Brain(c, model)
-    dev = cd.Brain(c, model, backend="torch", device="cpu")
+    cpu = cd.NeuralGraph(c, model)
+    dev = cd.NeuralGraph(c, model, backend="torch", device="cpu")
     for tolerance in (1e-3, 1e-5, 1e-7):
         fused = cpu.settle_batch(d, steps=500, tolerance=tolerance)
         loop = cpu.settle_batch(d, steps=500, tolerance=tolerance, trajectory=True)
@@ -105,14 +105,14 @@ def test_float32_precision_on_mps_is_named_and_float64_is_refused() -> None:
     if not _mps():
         pytest.skip("no MPS device")
     with pytest.raises(ValueError, match="float64"):
-        cd.Brain(c, cd.learning_neuron_model(), backend="torch", device="mps", precision="float64")
-    brain = cd.Brain(c, cd.learning_neuron_model(), backend="torch", device="mps")
+        cd.NeuralGraph(c, cd.learning_neuron_model(), backend="torch", device="mps", precision="float64")
+    brain = cd.NeuralGraph(c, cd.learning_neuron_model(), backend="torch", device="mps")
     assert brain._torch is not None and brain._torch.dtype == torch.float32
 
 
 def test_float32_equilibrate_does_not_pretend_to_reach_float64_tolerance() -> None:
     c, d, _, _ = _problem()
-    brain = cd.Brain(c, cd.learning_neuron_model(), backend="torch", device="cpu", precision="float32")
+    brain = cd.NeuralGraph(c, cd.learning_neuron_model(), backend="torch", device="cpu", precision="float32")
     eq = brain.equilibrate(d, budget=256, chunk=32, tolerance=1e-10)
     assert not eq.converged.any() and eq.steps == 256  # the budget is spent, the flag says so
 
@@ -121,7 +121,7 @@ def test_empty_connectome_settles_on_every_backend() -> None:
     e = cd.Connectome.from_synapses(5, pre=[], post=[], populations={"a": range(2), "b": range(2, 5)})
     model = cd.learning_neuron_model()
     for kw in ({}, {"backend": "torch", "device": "cpu"}):
-        brain = cd.Brain(e, model, **kw)
+        brain = cd.NeuralGraph(e, model, **kw)
         state = brain.settle_batch(np.ones((2, 5)), steps=50, tolerance=1e-9)
         assert np.allclose(np.asarray(state.activation), model.activation(np.ones((2, 5))))
         assert brain.residual(np.ones((2, 5)), state).max() < 1e-8
@@ -132,7 +132,7 @@ def test_empty_connectome_settles_on_every_backend() -> None:
 
 def test_batched_and_actor_batch_checks_read_the_device_shape_without_a_fetch() -> None:
     c, d, _, _ = _problem()
-    brain = cd.Brain(c, cd.learning_neuron_model(), backend="torch", device="cpu")
+    brain = cd.NeuralGraph(c, cd.learning_neuron_model(), backend="torch", device="cpu")
     state = brain.settle_batch(d, steps=5)
     assert state.batched
     assert state.__dict__.get("v") is None  # the shape came from the device tensor
@@ -150,9 +150,9 @@ def test_done_rows_reset_on_the_device_and_match_the_host() -> None:
     model = cd.learning_neuron_model(dt=1.0)
     config = cd.LearnerConfig(tolerance=1e-6, free_steps=200, nudged_steps=100)
     reward = cd.ActorCriticConfig(gamma=0.9, lam=0.8, eta=0.3)
-    host = cd.ActorCritic(cd.Learner(cd.Brain(c, model), c.populations["output"], config), c.populations["hidden"], reward)
+    host = cd.ActorCritic(cd.Learner(cd.NeuralGraph(c, model), c.populations["output"], config), c.populations["hidden"], reward)
     dev = cd.ActorCritic(
-        cd.Learner(cd.Brain(c, model, backend="torch", device="cpu"), c.populations["output"], config),
+        cd.Learner(cd.NeuralGraph(c, model, backend="torch", device="cpu"), c.populations["output"], config),
         c.populations["hidden"],
         reward,
     )
