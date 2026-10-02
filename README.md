@@ -20,7 +20,7 @@ relations from experience. Recursive observers read other patches' live states
 and exact errors, feeding back into that same settlement. This is the
 observer-like, self-reading structure behind Cadence.
 
-**This README describes `0.60.0.dev1` on `main`.** Flat and ordinary deep networks
+**This README describes `0.60.0` on `main`.** Flat and ordinary deep networks
 are the recommended starting points. Choose the smallest ordinary network that
 learns the task, and measure prediction quality and latency before scaling it.
 Depth can support a capable routine; arbitrary depth is not a speed guarantee.
@@ -61,12 +61,12 @@ not attach an evaluator to every population. Start with the
 [flat and ordinary deep quickstarts](docs/VARIANTS.md). Explicit observer wiring
 remains available in the [experimental recipes](docs/VARIANTS.md#experimental-recursive-observer-settlement).
 
-## Install the development version
+## Install
 
 Python 3.11 or later. The default engine needs only the standard library:
 
 ```sh
-python -m pip install "cadence-net==0.60.0.dev1"
+python -m pip install "cadence-net==0.60.0"
 python -c "import cadence; print(cadence.__version__)"
 ```
 
@@ -78,7 +78,7 @@ check. Install the `gpu` extra, then choose
 `Cortex(device="cpu")`, `Cortex(device="mps")` or `Cortex(device="cuda")`:
 
 ```sh
-python -m pip install "cadence-net[gpu]==0.60.0.dev1"
+python -m pip install "cadence-net[gpu]==0.60.0"
 ```
 
 Small brains can be faster on the default engine. Measure the complete workload;
@@ -152,7 +152,7 @@ predictions without targets.
 
 ## Run the current examples
 
-From a checkout of this development version:
+From a checkout of this release:
 
 ```sh
 python -m pip install -e .

@@ -1,6 +1,6 @@
 # Experimental features and the System 2 boundary
 
-**`0.60.0.dev1` recommends ordinary flat or deep settling networks for
+**`0.60.0` recommends ordinary flat or deep settling networks for
 applications.** Build them with `Cortex.column`, teach through `bootstrap` or
 `observe`, and use `step` to retain qualified live activity. Add ordinary depth
 when it improves the task. No extra mode, critic or attention scheduler is
@@ -35,8 +35,9 @@ goal → useful correction → retained, inexpensive routine. Predictable failur
 must still matter. The private timing and learning experiments linked from
 [issue 72](https://github.com/muellerberndt/cadence/issues/72) do not yet
 demonstrate that complete cycle or a measured recursive advantage. They are
-not part of this release's public runtime. Stable 0.60.0 remains subject to
-those capability gates; this is a development prerelease.
+not part of this release's public runtime. The stable 0.60.0 package recommends
+ordinary networks; the complete System 2 capability requirements remain open.
+The package version does not certify those experimental capabilities.
 
 ## Longer credit and saved state
 
@@ -54,7 +55,7 @@ There is no automatic checkpoint conversion or additional compatibility API.
 ## What the website demos establish
 
 The existing demos remain versioned application evidence, not completed
-reproductions on this development release:
+reproductions on this release:
 
 | Demo | Existing implementation | Evidence required for a new-version claim |
 | --- | --- | --- |

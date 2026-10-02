@@ -46,7 +46,7 @@ relation. It is not a stored historical forecast miss.
 
 These names describe the intended roles of one brain. They are not constructor
 names, biological claims, or bootstrapping/live phase switches. Current
-`0.60.0.dev1` supports the layouts below; it does not yet implement automatic
+`0.60.0` supports the layouts below; it does not yet implement automatic
 attention, independently progressing populations or the complete integrated
 routine/correction cycle. Keep that boundary visible when writing examples.
 
@@ -157,7 +157,8 @@ per-population evaluator.
 Keep implemented behavior separate from that target and from experimental
 results. Query caching is arithmetic reuse, not learned attention; low
 stationarity is not worldly success; a valid snapshot is not task competence.
-Do not label the development version a completed stable 0.60 release.
+The stable 0.60.0 package recommends ordinary networks. Its release status does
+not establish the complete System 2 cycle; keep recursive observation experimental.
 
 After documentation changes, run the focused checks from the repository root:
 

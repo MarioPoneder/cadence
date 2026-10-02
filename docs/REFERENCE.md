@@ -24,7 +24,7 @@ existing brain methods; it adds no solver or phase state. `memory.py` holds
 explicit history and error-progress bookkeeping; `reinforcement.py` supplies
 discrete-action Q-learning orchestration; `runtime.py` supplies serial live
 scheduling and actuator rate limits. These helpers preserve the patch equation.
-This reference describes `0.60.0.dev1`. Start with the
+This reference describes `0.60.0`. Start with the
 [quickstart](QUICKSTART.md), then the [ordinary layout examples](VARIANTS.md).
 Flat and ordinary deep columns are the recommended application path; ordinary
 depth can support a System 1 routine. The [architecture guide](DRSN.md) explains
@@ -551,7 +551,7 @@ Reinforcement(
 ```
 
 The helper originated in 0.50.0; `credit_horizon` and explicit executed-outcome
-acknowledgments below are available in `0.60.0.dev1`. With the default
+acknowledgments below are available in `0.60.0`. With the default
 action-conditioned form, the compiled
 `brain` needs an `action_input` sensor with exactly `actions` coordinates and a `value_output`
 selecting one scalar patch state. With `action_input=None`, `value_output`

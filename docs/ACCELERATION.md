@@ -27,10 +27,10 @@ The default `Cortex()` uses Python float64 and has no runtime dependencies.
 Install the optional tensor backend for the same release when needed:
 
 ```sh
-python -m pip install "cadence-net[gpu]==0.60.0.dev1"
+python -m pip install "cadence-net[gpu]==0.60.0"
 ```
 
-Use the [quickstart](QUICKSTART.md) for the current `0.60.0.dev1` installation.
+Use the [quickstart](QUICKSTART.md) for the current `0.60.0` installation.
 The device measurements below retain their recorded source versions; they are
 not current-version or all-workload performance guarantees.
 

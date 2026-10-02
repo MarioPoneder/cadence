@@ -1,6 +1,6 @@
 # Use a learned brain with an actual body
 
-Install **0.60.0.dev1** as shown in the [quickstart](QUICKSTART.md). This guide
+Install **0.60.0** as shown in the [quickstart](QUICKSTART.md). This guide
 covers live observations, actions, outcomes and continued learning using the
 existing public API. Begin with a skill that passes free assessment;
 [bootstrapping](BOOTSTRAP.md) explains how to acquire and check one.
@@ -502,7 +502,7 @@ not one integrated autonomous life or evidence of an observer advantage.
 The [stored receipt](../examples/receipts/temporal_credit.json) is **historical
 0.50.0 qualification evidence**, produced at commit `d9b592c` before that version
 bump. Within that release transition, only the package version string changed
-among its hashed implementation files. It is not a rerun on the current development release.
+among its hashed implementation files. It is not a rerun on the current release.
 Its 66 cases include 18 passing memory cases and 16 passing TD cases; the other cases
 are controls. Current reruns must retain their own source hashes, results and
 timings rather than inheriting those numerical conclusions.

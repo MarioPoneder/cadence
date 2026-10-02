@@ -8,7 +8,7 @@ observation is [experimental opt-in](EXPERIMENTAL.md); an advantage over capable
 ordinary layers has not been established.
 
 **Flat, ordinary deep and recursively observing layouts all perform
-settlement in 0.60.0.dev1.** Recursive observation is optional wiring,
+settlement in 0.60.0.** Recursive observation is optional wiring,
 not a requirement for the patch/repair mechanism. Each layout uses the same
 public `settle`/`step` operations and final stationarity check. Observers join
 every solve; the public runtime does not automatically put them to sleep
@@ -260,7 +260,7 @@ attention or evidence of improved behavior.
 
 The intended fast/slow design keeps one brain and one body interface: familiar
 behavior stays inexpensive, and internal correction receives more work when
-needed. This development release does not implement that automatic allocation.
+needed. This release does not implement that automatic allocation.
 Every query must still qualify the complete connected brain; an application
 scheduler cannot certify a partially solved branch. `LiveController` keeps
 rendering responsive while a serial worker owns the brain; it does not make an

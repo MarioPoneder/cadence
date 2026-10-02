@@ -12,7 +12,7 @@ public on-demand attention or independent population clock. All layouts use the
 same patch law, repair engine, learning operations and qualification check;
 observers are an explicit wiring option.
 
-These examples target **`0.60.0.dev1`**; follow the [quickstart installation
+These examples target **`0.60.0`**; follow the [quickstart installation
 instructions](QUICKSTART.md) before running them. “Fast” describes the
 intended cost of a learned routine, and “slow” the extra work a correction may
 need. They are not selectable execution modes. All populations currently take

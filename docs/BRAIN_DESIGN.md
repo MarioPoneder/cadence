@@ -1,6 +1,6 @@
 # Choose, train and run a brain
 
-In Cadence `0.60.0.dev1`, start with a flat network or ordinary deep layers.
+In Cadence `0.60.0`, start with a flat network or ordinary deep layers.
 Choose the smallest ordinary network that learns the task, then measure free
 behavior and latency before scaling. Ordinary depth can support capable routine
 behavior; it does not guarantee speed at arbitrary size. All layouts use the
