@@ -2,7 +2,7 @@
 
 This document specifies the population DRSN engine. The equations are in
 [the processing-patch description](ELEMENT.md); all arguments and result fields
-are in [the API reference](REFERENCE.md). Every `0.61.0` brain is one connected
+are in [the API reference](REFERENCE.md). Every `0.62.0` brain is one connected
 settlement: the builder refuses a population that settles with no other
 population and a group of populations that settles apart from the rest.
 Explicit observer wiring is experimental;
@@ -16,12 +16,15 @@ clocks are part of this specification. See [experimental scope](EXPERIMENTAL.md)
   populations joined into one connected system: every population reads another
   population's states or errors or is read by one, and no group settles apart
   from the rest. Only then does it resolve deterministic wiring and freeze
-  declarations. The settling invariant: with at least one state or error contact
-  into or out of every population, no patch's energy term is independent of all
-  other patches, so the equilibrium is one joint settlement of the whole brain.
-  Shared fixed inputs do not join populations. Every
-  declared source coordinate is connected by default. Positive `fan_in` requests
-  sparse wiring; connection-budget overflow raises instead of dropping inputs.
+  declarations. After resolving wiring, all processing patches must also belong
+  to one connected component under state/error contacts. Population connectivity
+  alone is insufficient: sparse contacts can split populations into independent
+  patch groups. Shared fixed inputs do not connect them. Disconnected compiled
+  graphs raise rather than silently gaining extra edges. Every declared source
+  coordinate is read by default. Positive `fan_in` requests sparse wiring;
+  connection-budget overflow raises instead of dropping inputs. Connectivity is
+  structural potential influence: zero coefficients, clamps or saturation can
+  suppress the influence of a particular contact.
 - `Input`, `Population` and `Output` are immutable identity handles owned by a
   layout. Their counts and shapes are validated before compilation.
 - `inputs` connects samples or live population states. `observes` connects live
@@ -91,9 +94,10 @@ Within a single-row reference query, predictions whose incoming contacts are
 all fixed sensory inputs (including bias-only predictions) may be reused across
 repair proposals. Their state-dependent errors, recursive consumers and all
 returning derivatives are recomputed on every proposal. Cache setup occurs only
-when a nonstationary state needs repair. The initial evaluation and final
-whole-graph qualification always recompute every prediction from the original
-inputs and parameters. The cache is private to the solve and is neither retained
+when a nonstationary state needs repair. The initial evaluation recomputes every prediction from the current inputs
+and parameters. If no proposal was attempted, this fresh complete evaluation
+also supplies final qualification. Otherwise final whole-graph qualification
+recomputes every prediction without the cache. The cache is private to the solve and is neither retained
 nor serialized. Learning and batch solves do not use it. Tensor proposal
 arithmetic is unchanged; single-row Python reference refinement after a tensor
 proposal can use the same optimization.
@@ -112,7 +116,9 @@ full projected residual meets the requested `tolerance` and
 `abs(E_new - E_old) <= 8 * ulp(E_old)`. This narrow finishing allowance avoids
 rejecting a stationary proposal because rounded energy appears a few ulps
 higher. It never admits an unqualified proposal or a larger energy increase.
-The final stationarity check is freshly recomputed in either case.
+After any attempted proposal the final stationarity check is freshly
+recomputed in either case. A stationary call with no proposal uses its fresh
+initial full evaluation; it never reuses a previous call's certificate.
 Step adaptation resets on each solve; it is not additional learned memory.
 The estimate is the first Barzilai–Borwein step from
 [Two-Point Step Size Gradient Methods (1988)](https://doi.org/10.1093/imanum/8.1.141),

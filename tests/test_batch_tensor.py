@@ -294,8 +294,10 @@ def test_averaged_state_gradient_cannot_hide_unsettled_row(device, dtype):
     )
     assert not result["qualified"] and result["reason"] == "budget"
     assert result["stationarity"] == pytest.approx(4.04e-6)
-    assert result["work"]["evaluations"] == 3
-    assert result["work"]["patch_visits"] == 2 * batch * 3
+    # Tensor entry checks the reference start, then budget-zero settlement
+    # needs just one fresh same-call reference evaluation for qualification.
+    assert result["work"]["evaluations"] == 2
+    assert result["work"]["patch_visits"] == 2 * batch * 2
 
 
 @pytest.mark.parametrize(("device", "dtype"), DEVICES)

@@ -1,26 +1,15 @@
 # Choose, train and run a brain
 
-In Cadence `0.61.0`, a brain is one equilibrium of patches settling against
-each other. Start with two coupled populations, one reading the sensors and one
-reading the first, and add layers when the task needs them. Choose the smallest
-coupled network that learns the task, then measure free behavior and latency
-before scaling. Depth can support capable routine behavior; it does not
-guarantee speed at arbitrary size. All layouts use the same bounded patch
-primitive, and the builder refuses a population that settles with no other.
+A brain is one connected graph whose patches repair disagreement together.
+Start with a sensing population read by an output population, then choose sizes
+and connections from the information the task needs. More patches add capacity;
+an intermediate population changes the paths and constraints in the graph.
+Measure free behavior and complete learning/query cost before scaling.
 
-**System 1** names an acquired routine that works with little repair. It can
-need several ordinary layers and temporal context. **System 2** names useful
-additional observation and correction when that routine misses a prediction or
-cannot meet a goal. These are behavioral roles, not constructors, layer counts
-or switches between bootstrapping and live operation.
-
-**Recursive observers are experimental.** They participate in every synchronous
-solve and may slow every call, including familiar routine work. A benefit over
-capable ordinary networks remains unproven. The public API does not supply
-automatic on-demand attention or independent population clocks. The integrated
-routine → disturbance → useful correction → retained cheap routine cycle remains
-a development goal. See [experimental capabilities](EXPERIMENTAL.md); private
-prototypes are not public runtime features.
+Every population uses the same patch rule. `inputs=` supplies sensors or live
+states, and optional `observes=` adds exact current error readback in the same
+solve. The [experimental boundary](EXPERIMENTAL.md) explains the intended
+routine/correction roles and which capabilities remain unproved.
 
 For a first program, use [the quickstart](QUICKSTART.md). For exact signatures,
 use [the reference](REFERENCE.md); for saved continuation, see
@@ -55,33 +44,31 @@ extracting overlapping windows. Reserve development data for choosing settings
 and fresh assessment data for the final measurement. Future observations may
 supply teaching targets; they must not enter the inputs used to forecast them.
 
-## Coupled, deeper and recursive layouts
+<a id="coupled-deeper-and-recursive-layouts"></a>
 
-| Pattern | A sensible first use | What to check |
-| --- | --- | --- |
-| Two coupled populations | A direct sensor-to-output relation | A sensing population read by the output population. Both settle together; a sensing population read by nobody does not build. |
-| Deeper composition | Learned intermediate features for a more complex relation | Connect `column(..., inputs=earlier_population)`. Earlier and later states settle together. |
-| Experimental recursive observation | Test a relation that uses another population's current mismatch | Connect `observer(..., observes=earlier_population)`. It reads states and exact errors during every solve; it is not automatically recruited. |
-| Parallel branches with fusion | Sensors with different local structure or update meaning | Every output must have a useful path to its observations. These are branches of one jointly solved graph, not independently clocked workers. |
+## Choose sizes and connections
 
-Every patch predicts `p = tanh(bias + weighted incoming signals)` and has
-current error `state - p`. The difference between these layouts is what their
-contacts read. Ordinary contacts read sensor values or patch states; observation
-adds error contacts. There is no separate output network after settlement:
-an output exposes selected patch states.
+Every patch predicts `p = tanh(bias + weighted incoming signals)` and has current
+error `state - p`. `column(..., inputs=earlier_population)` reads live states;
+`observer(..., observes=earlier_population)` reads both states and exact errors.
+An output exposes selected patch states. There is no separate output network.
 
-Ordinary deep composition already has returning influence. A later relation's
-error contributes to repair of the earlier states it reads. It is therefore
-not a chain of completed feed-forward answers. Observers add another derivative
-path through the current error; they do not introduce feedback into an
-otherwise feedback-free solver. A fast routine can use a small or a deep
-coupled layout. Measure its actual work instead of inferring speed from the
-name.
+A two-population graph is a useful starting point. Increase a population's width
+when it needs more represented coordinates; add an intermediate population when
+you want a learned composition; use branches and a shared reader when sensors
+need separate representations. These choices change actual connectivity, not
+just a category called "flat" or "deep". Every population must belong to the
+same connected graph.
+
+State contacts return influence during repair: a reader's error contributes to
+repair of the states it reads. Error readback adds derivative paths through the
+current errors. All states remain eligible together, with one final qualification.
+Choose connections by measured task benefit and cost.
 
 ### Experimental observer wiring
 
-Only add an observer for a declared comparison with a capable ordinary control.
-Choose what it reads deliberately. During teaching, a clamped motor
+Choose an observer's inputs deliberately and compare it with a capable
+state-coupled control. During teaching, a clamped motor
 state records the action that actually happened. A later relation reading only
 that fixed state cannot send its error into the motor's own parameters through
 that connection. Reading the motor's error adds a parameter-learning path,
@@ -122,7 +109,8 @@ input-to-population connections cost roughly input width times population
 width; dense population-to-population connections cost the product of both
 widths. Observation adds error contacts as well as state contacts. Check the
 compiled graph against `max_connections` before increasing image resolution,
-history length or population size. See [layout variants](VARIANTS.md).
+history length or population size. All compiled patches must remain connected;
+sparse wiring that produces disconnected components is rejected. See [layout variants](VARIANTS.md).
 
 ## Make temporal information explicit
 

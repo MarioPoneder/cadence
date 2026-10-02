@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.62.0 — 2026-10-02
+
+- Enforce one connected equilibrium at the individual patch level after sparse
+  wiring is resolved. Connected population declarations can otherwise conceal
+  independent patch groups. Refuse these layouts with an actionable error;
+  do not insert hidden contacts or count shared sensors as coupling.
+- Avoid a duplicate full evaluation when no repair proposal was attempted.
+  The same call's fresh, complete initial evaluation certifies the unchanged
+  state. Every attempted proposal still receives a fresh final check. There
+  is no cross-call certificate cache, changed tolerance or new runtime mode.
+- Simplify the guides around one patch graph with explicit size and wiring.
+  Correct the distinction between stationarity, remaining prediction error
+  and agreement with reality, and document returning analytic derivatives.
+  Current state and learned relations persist through their documented calls;
+  automatic temporal memory and protected consolidation are not claimed.
+- Keep recursive error readback optional through the existing `observer` API,
+  with its patches participating in the same equilibrium. Document the proposed
+  surprise/goal-driven correction cycle without adding an untested scheduler.
+- Repair the installed-package outcome-ownership CI example to build a coupled
+  brain. Strengthen sparse-connectivity, unchanged-state, clamp and continuation
+  checks, including reference and optional tensor execution.
+- Identify the package as alpha. Historical Amen, Connect Four and Atari
+  demonstrations remain their original applications pending reproduction on
+  this engine. Checkpoints require this release's exact implementation sources;
+  preserve older source artifacts with their models.
+
 ## 0.61.0 — 2026-10-02
 
 - Restore the principle as an enforced default: patches repair local

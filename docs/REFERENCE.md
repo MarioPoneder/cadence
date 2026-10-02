@@ -24,7 +24,7 @@ existing brain methods; it adds no solver or phase state. `memory.py` holds
 explicit history and error-progress bookkeeping; `reinforcement.py` supplies
 discrete-action Q-learning orchestration; `runtime.py` supplies serial live
 scheduling and actuator rate limits. These helpers preserve the patch equation.
-This reference describes `0.61.0`. Start with the
+This reference describes `0.62.0`. Start with the
 [quickstart](QUICKSTART.md), then the [ordinary layout examples](VARIANTS.md).
 Coupled populations are the application path; depth can support a System 1
 routine. `build()` refuses a population that settles with no other population
@@ -97,7 +97,7 @@ trajectories and cost, not the declared patch law. See [acceleration](ACCELERATI
 | `column(name=None, *, patches, inputs=())` | A `Population` containing exactly `patches` processing patches, a positive integer. `inputs` accepts existing sensor or population references. |
 | `observer(name=None, *, patches, inputs=(), observes)` | Explicit experimental readback using the same patch primitive, with at least one observed population. Reads its live states and exactly recomputed prediction errors in every joint solve; may also receive ordinary `inputs`. |
 | `output(name, *, shape, reads, indices=None)` | An `Output` exposing selected coordinates of one population, with no separate output network. |
-| `build()` | A `Brain` with resolved sparse wiring. Requires at least one output and populations joined into one connected system through state or error contacts: every population must read another population's states or errors or be read by one, and no group of populations may settle apart from the rest. A single population, an unread sensors-only population or a disconnected group raises `ValueError` naming the defect. A successful build freezes the layout; further construction or another build raises `ValueError`. |
+| `build()` | A `Brain` with resolved sparse wiring. Requires at least one output and populations joined into one connected system through state or error contacts: every population must read another population's states or errors or be read by one, and no group of populations may settle apart from the rest. All resolved patches must also form one connected component, including with sparse wiring. A single population, an unread sensors-only population or disconnected patch groups raise `ValueError` naming the defect. A successful build freezes the layout; further construction or another build raises `ValueError`. |
 
 Names are unique across node types, valid UTF-8 strings of 1–256 characters.
 `None` generates a name using the node type and an unused positive integer.
@@ -128,11 +128,12 @@ Use explicit `indices=(0,)` and `indices=(1,)` for independent named controls,
 or one vector output with `shape=2`.
 
 With default full connectivity, each destination patch reads every coordinate
-of every source it declares. Explicit sparse wiring guarantees only aggregate
-coverage across the population. A selected output can miss information read by
-other, unconnected patches. A sensor with no connections remains unobserved.
-`inspect()` reports actual edges, aggregate coverage and structural sensor
-coverage for each output coordinate.
+of every source it declares. Sparse wiring covers each declared source across
+its destination population and must still connect the complete patch graph;
+otherwise construction refuses. A sensor with no connections remains unobserved.
+`inspect()` reports actual edges and structural coverage, including returning
+influence through the shared energy. Structural reachability does not guarantee
+nonzero learned influence.
 Normalization, features and motor interpretation are supplied by the application.
 
 ### Immutable layout handles
@@ -319,7 +320,9 @@ Returned batch arrays belong to the result, not the retained continuation.
 
 `work` contains `evaluations`, `patch_visits`, `edge_visits`, `proposals` and
 `backtracks`. Evaluations count attempted energy/gradient computations,
-including the final check. Visits count prediction/error and derivative
+including the final check. If no proposal was attempted, the same call's
+fresh initial full evaluation is also its final check and is counted once.
+Visits count prediction/error and derivative
 traversals, including partial work before numeric failure. Proposals count
 line-search attempts; backtracks count rejected proposals, including the last
 rejection when line search fails. These are not CPU instruction counts or
@@ -552,7 +555,7 @@ Reinforcement(
 ```
 
 The helper originated in 0.50.0; `credit_horizon` and explicit executed-outcome
-acknowledgments below are available in `0.61.0`. With the default
+acknowledgments below are available in `0.62.0`. With the default
 action-conditioned form, the compiled
 `brain` needs an `action_input` sensor with exactly `actions` coordinates and a `value_output`
 selecting one scalar patch state. With `action_input=None`, `value_output`

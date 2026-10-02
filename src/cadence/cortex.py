@@ -238,6 +238,9 @@ class Cortex:
         is one equilibrium of patches settling against each other; a population
         that only reads sensors and is read by nobody would be a set of
         independent regressions outside that equilibrium, and build refuses it.
+        After sparse wiring is resolved, all individual patches must also be
+        connected through state or error contacts. Shared sensors do not join
+        otherwise separate settlements.
         """
         return self._compile(self.config["max_connections"])
 
@@ -282,6 +285,39 @@ class Cortex:
                 "separate equilibrium. A Cadence brain is one connected "
                 "equilibrium; connect every cluster to the rest through "
                 "inputs=... or observes=..."
+            )
+
+    def _require_settlement_between_patches(self, n_patches, edges):
+        """Sparse population contacts must join the actual processing patches."""
+        parents = list(range(n_patches))
+        sizes = [1] * n_patches
+
+        def root(index):
+            while parents[index] != index:
+                parents[index] = parents[parents[index]]
+                index = parents[index]
+            return index
+
+        components = n_patches
+        for kind, source, target in edges:
+            if kind == "input":
+                continue
+            source, target = root(source), root(target)
+            if source == target:
+                continue
+            if sizes[source] < sizes[target]:
+                source, target = target, source
+            parents[target] = source
+            sizes[source] += sizes[target]
+            components -= 1
+        if components != 1:
+            raise ValueError(
+                f"Compiled patches form {components} disconnected settlement "
+                "components despite connected populations. Shared sensors do "
+                "not couple patches. Add a population reading across the "
+                "separate components through inputs=... or observes=..., "
+                "or increase fan_in. Sparse connected wiring is supported; "
+                "all-to-all wiring is not required."
             )
 
     def _compile(self, edge_limit):
@@ -338,6 +374,7 @@ class Cortex:
                             (local_target * fan_in + slot) % len(indices)
                         ]
                         edges.append((kind, source_index, target))
+        self._require_settlement_between_patches(n_patches, edges)
         graph = _repair.Graph(n_inputs, n_patches, tuple(edges))
         scale = self.config["initial_scale"]
         weights = tuple(

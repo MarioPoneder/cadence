@@ -6,11 +6,9 @@ patches; an observer is a population connected to other populations' current
 states and prediction errors. These are software abstractions inspired by
 cortical organization, not simulations of biological cortical columns.
 
-Use coupled populations for application routines; a population that settles
-with no other population does not build. Coupling already allows returning
-influence through the joint energy. Observer wiring
-is [experimental opt-in](EXPERIMENTAL.md): its exact error contacts participate
-in every solve, with no automatic sleeping or demonstrated task advantage.
+All populations must form one connected graph. State contacts return influence
+through the joint energy; optional error contacts add exact current mismatch
+readback. See the [experimental boundary](EXPERIMENTAL.md) for behavioral claims.
 
 ## Prediction and disagreement
 
@@ -83,8 +81,8 @@ as diagnostics. Serial `observe` calls instead retain each solved state and
 reanchor after each admission, so batching changes the learning trajectory.
 
 The anchor stays fixed for the whole admission. Retained parameters are the
-memory used by later queries; warm live state is distinct from this durable
-learning. These parameters remain plastic; the prior is not protected
+memory used by later queries. Retained live activity supplies a warm start,
+which is not a guarantee of useful temporal memory. These parameters remain plastic; the prior is not protected
 consolidation. `source="witness"` labels measured targets and
 `source="estimate"` labels derived targets without changing this equation.
 The `Reinforcement` helper computes one-step Q estimates from actual transition

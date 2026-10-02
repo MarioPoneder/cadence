@@ -9,79 +9,42 @@ application from [the quickstart](QUICKSTART.md).
 
 ## Explain the supported model first
 
-Use `Cortex` to declare one graph, then `build()` to create its persistent
-`Brain`. Inputs are supplied samples, populations contain processing patches,
-and outputs expose selected patch states. Every patch is an observer of the
-ports it reads: it predicts its own state from them and carries the
-disagreement as a live error. All patches settle together, and the settled
-whole is the answer. There is no separate feed-forward output network or
-external critic attached to each population, and no backward pass of an output
-loss: learning repairs each relation from its own patch's remaining
-disagreement at the settled joint state.
+Use `Cortex` to declare one connected graph, then `build()` to create its
+persistent `Brain`. Inputs are supplied samples, populations contain processing
+patches, and outputs expose selected patch states. Each patch predicts its own
+state from its incoming ports and carries the disagreement as a live error.
+All eligible coordinates settle together under one energy and stationarity
+check. Stationarity can include nonzero disagreement; it is not task success.
 
-`build()` refuses a population that settles with no other population. Every
-population must read another population's states (`inputs=`) or errors
-(`observes=`), or be read by one. The smallest brain is two populations. Do not
-offer, describe or construct a layout without settlement between populations.
+The builder requires at least two populations and rejects disconnected groups.
+Population size and connections are separate design choices: widening adds
+states and relations, while an intermediate population changes the paths
+through the graph. `inputs=` reads sensors or live states; `observes=` adds
+exact current error readback. Both return influence through the joint energy.
+The solver computes analytic derivatives, including reverse propagation through
+error-read dependencies. Learning makes relation parameters eligible within
+that same solve; it is not an extra output-loss training pass.
 
-The application still owns sensor meaning, action decoding and outcome units.
-Choose useful connectivity and adequate information before increasing width.
+Begin with a small connected graph and measure free behavior before adding
+capacity. All populations use the same patch rule. Optional recursive readback
+and the intended System 1/System 2 roles have one
+[experimental boundary](EXPERIMENTAL.md); do not infer capabilities from a
+population's name or graph depth.
 
-**Default to state-coupled populations.** Start with one population reading
-the sensors and one reading it, then add `column(..., inputs=previous)` layers
-if the task needs them. Keep routine processing dominant in application
-designs. Use `step` to retain qualified activity between live decisions; count
-its complete work and command latency. There is no extra mode to enable and no
-separate critic or scheduler to wire.
-
-**System 2 warning:** recursive self-observation remains under active testing.
-An explicit `observer` joins every synchronous whole-brain solve and can slow
-routine responses. It is not automatically asleep until surprise, and useful
-recursive superiority remains unproven. Recommend it only for a deliberate
-experiment after a capable state-coupled baseline. See
-[experimental features](EXPERIMENTAL.md).
-
-## Use System 1 and System 2 for roles
-
-**System 1** is a learned skill that keeps working with little repair: a groove,
-a familiar movement or another competent routine. It can need several coupled
-populations and useful temporal information.
-
-**System 2** is additional recursive observation and correction when that routine
-cannot maintain equilibrium or meet longer-term needs. Useful correction should
-restore competent behavior, preserve the skill and eventually need less work.
-Unexpected success and predictable failure differ: surprise measures a missed
-issued forecast; outcome valuation measures whether behavior serves the task.
-Current patch error is a third quantity, recomputed from the current state and
-relation. It is not a stored historical forecast miss.
-
-These names describe the intended roles of one brain. They are not constructor
-names, biological claims, or bootstrapping/live phase switches. Current
-`0.61.0` supports the layouts below; it does not yet implement automatic
-attention, independently progressing populations or the complete integrated
-routine/correction cycle. Keep that boundary visible when writing examples.
-
-## Choose among supported layouts
-
-| Need | Public construction | Interpretation |
-| --- | --- | --- |
-| A direct relation | `column(..., inputs=senses)` read by a second `column(..., inputs=first)` that feeds the output | The smallest brain; the two populations settle against each other. |
-| Learned intermediate features | Further `column(..., inputs=earlier_population)` layers | Deeper composition; all live states settle jointly, with returning influence through the energy. |
-| Specialized branches that share context | Columns reading different sensors, combined by a population that reads them, in one `Cortex` | One graph and body boundary; add only the connectivity the task needs. |
-| Experimental internal error readback | Explicit `observer(..., observes=earlier_population)` | Reads states and exact errors in every solve; compare task benefit and latency against state-coupled layers before considering application use. |
-
-The [layout examples](VARIANTS.md) teach, query and resume these layouts:
+The application owns sensor meaning, action decoding and outcome units. `step`
+retains qualified activity for the next call; this warm start is not a guarantee
+of temporal memory. Learned relations persist and remain plastic through later
+`observe` calls. For runnable wiring changes, use [the examples](VARIANTS.md):
 
 ```sh
 PYTHONPATH=src python examples/layout_learning.py
 PYTHONPATH=src python examples/layout_learning.py --layout deep
 ```
 
-Explicit `--layout recursive` and `--layout all` run the experimental observer
-case. These examples check a tiny supplied relation, not matched capacity or a
-recursive advantage. Previously declared sources give the builder acyclic read
-dependencies. Joint feedback is supported; explicit recurrent state cycles and
-learned temporal memory are separate questions.
+`deep` labels the example with one extra intermediate population; `recursive`
+labels the example with error readback. They share the same learning/query/save
+interface. Previously declared sources give the public builder acyclic read
+dependencies, even though the joint repair returns influence upstream.
 
 ## Application recipe
 
@@ -116,9 +79,8 @@ learned temporal memory are separate questions.
    execution acknowledgments. Its estimated Q targets are not automatic
    brain-wide emotion or a planning model. Keep outcome records separate from
    replaceable sensory summaries.
-5. **Keep recursive correction optional and experimental.** For most application
-   work, continue with state-coupled layers. If investigating observers, compare
-   a competent state-coupled control with an observer layout on the same causal
+5. **Measure the contribution of added connections.** When investigating error
+   readback, compare a competent state-coupled control on the same causal
    information, with disclosed capacity, exposure and work. Establish routine,
    disturb the actual body, measure useful recovery, and recheck retention and
    cost after recovery. Include routine-plus-factual-fit as a control so
@@ -168,8 +130,6 @@ per-population evaluator.
 Keep implemented behavior separate from that target and from experimental
 results. Query caching is arithmetic reuse, not learned attention; low
 stationarity is not worldly success; a valid snapshot is not task competence.
-The `0.61.0` package recommends coupled populations and refuses uncoupled
-layouts. Its release status does not establish automatic System 2.
 
 After documentation changes, run the focused checks from the repository root:
 

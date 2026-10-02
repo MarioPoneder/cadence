@@ -23,7 +23,7 @@ def ordinary(depth, *, fan_in=None):
 
 
 @pytest.mark.parametrize("depth", (2, 3))
-@pytest.mark.parametrize("fan_in", (None, 1))
+@pytest.mark.parametrize("fan_in", (None, 2))
 def test_ordinary_depth_never_adds_observed_error_contacts(depth, fan_in):
     brain = ordinary(depth, fan_in=fan_in)
     assert brain.graph.n_patches == 3 * depth
@@ -35,6 +35,12 @@ def test_ordinary_depth_never_adds_observed_error_contacts(depth, fan_in):
             assert source // 3 == target // 3 - 1
     if fan_in is None:
         assert len(brain.graph.edges) == 6 + 9 * (depth - 1)
+
+
+@pytest.mark.parametrize("depth", (2, 3))
+def test_ordinary_sparse_matching_cannot_create_separate_settlement_components(depth):
+    with pytest.raises(ValueError, match="disconnected settlement components"):
+        ordinary(depth, fan_in=1)
 
 
 @pytest.mark.parametrize("depth", (2, 3))
@@ -61,9 +67,9 @@ def test_unchanged_retained_input_skips_proposals_but_not_full_checks(
     assert repeated["accepted"] and repeated["qualified"]
     assert repeated["sweeps"] == repeated["work"]["proposals"] == 0
     assert repeated["work"]["backtracks"] == 0
-    assert repeated["work"]["evaluations"] == len(evaluations) == 2
-    assert repeated["work"]["patch_visits"] == 4 * brain.graph.n_patches
-    assert repeated["work"]["edge_visits"] == 4 * len(brain.graph.edges)
+    assert repeated["work"]["evaluations"] == len(evaluations) == 1
+    assert repeated["work"]["patch_visits"] == 2 * brain.graph.n_patches
+    assert repeated["work"]["edge_visits"] == 2 * len(brain.graph.edges)
     assert brain.snapshot() == before
     # Independently project every free state derivative from the fresh check.
     bound = brain.config["state_bound"]

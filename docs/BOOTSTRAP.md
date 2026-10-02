@@ -7,12 +7,9 @@ with a competent brain.
 
 **Bootstrapping** is initial guided practice. **Live operation** uses the same
 brain in its environment and may include more learning. These lifecycle phases
-are separate from System 1 and System 2. A capable routine uses coupled
-populations, two at least, and more when the task needs them; that is the
-application path. Recursive observers are an explicit experiment, not the next
-required stage of learning.
-All layouts use the same public learning operations and processing-patch rule.
-See [brain design](BRAIN_DESIGN.md) and the
+use the same public learning operations and processing-patch rule. Choose one
+connected graph whose sizes and connections support the task; error readback
+is optional. See [brain design](BRAIN_DESIGN.md) and the
 [experimental capability boundary](EXPERIMENTAL.md).
 
 ## A small complete acquisition check
@@ -105,10 +102,9 @@ connected to it. Widening a population from one to ten patches while reading
 only its first state does not create a ten-patch hidden representation; patches
 within a population do not read each other, and a population that reads only
 sensors and is read by nobody does not build.
-Coupled populations already return influence through the shared energy;
-observers additionally read exact current prediction errors. They participate
-in every whole-brain solve; they do not automatically sleep or wake on demand.
-An advantage over ordinary layers must be measured, including the extra work.
+State contacts return influence through the shared energy; observers
+additionally read exact current prediction errors. Measure the contribution
+of those extra contacts, including their work.
 
 Inspect wiring before training:
 
@@ -128,8 +124,7 @@ The [layout examples](VARIANTS.md) teach and resume ordinary brains, with a
 separate opt-in recursive experiment. Start with two coupled populations and
 add depth when a controlled comparison improves free task performance enough to
 justify the work.
-Equal patch counts need not imply equal parameters, connections or cost. A useful
-System 1 routine may be deep; an observer alone does not demonstrate System 2.
+Equal patch counts need not imply equal parameters, connections or cost.
 
 ## Keep units and sampling consistent
 

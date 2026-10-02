@@ -1,44 +1,30 @@
 # Cadence examples
 
-These examples run on the `0.61.0` checkout with Python 3.11 or later. First
+These examples run on the `0.62.0` checkout with Python 3.11 or later. First
 acquire a small relation with two coupled populations, then use a learned body
 model to choose actions. Neither needs an optional dependency. The
 [quickstart](../docs/QUICKSTART.md) covers installation;
 [brain design](../docs/BRAIN_DESIGN.md) explains how to choose a larger layout.
 
-## One settlement rule, three kinds of wiring
+## One graph and one learning interface
 
-| Pattern | Connections | Useful starting point |
-| --- | --- | --- |
-| Two coupled populations | One population reads the sensors; the next reads its live states. | Every direct input-to-output relation; the smallest brain that builds. |
-| Deeper composition | Several populations read earlier populations' live states, with or without direct sensory inputs. | Learned intermediate representations and a control for the value of error readback. |
-| Experimental recursive observer | Observers read other populations' live states and exact prediction errors; an observer can itself be observed. | Testing whether internal state-and-error readback improves the task enough to justify its cost. |
+Population sizes and wiring determine which states and errors each patch reads.
+All populations form one connected graph and repair together. Adding an
+intermediate population changes the paths in that graph; it does not select a
+new kind of brain. Optional error readback uses the same patch law and solve.
+See the [experimental boundary](../docs/EXPERIMENTAL.md) for behavioral claims.
 
-**Every pattern settles.** They use the same bounded patches, energy, repair
-rule and numerical qualification. All layouts solve their interacting states
-together; they do not chain completed layer predictions. The builder refuses a
-population that settles with no other population, so no example builds a
-single input-only population.
+`settle` and `predict` are pure queries, `step` retains qualified activity, and
+`observe` learns from supplied output targets. Check `qualified` or `accepted`;
+`predict` raises on refusal. Learned relations persist and remain plastic; a
+warm activity state is not a guarantee of temporal memory.
 
-For every layout, `settle` and `predict` are pure queries, `step` retains
-qualified activity, and `observe` learns from supplied output witnesses.
-Check `qualified` or `accepted`; `predict` raises on refusal. Numerical
-qualification and useful learned behavior are separate checks.
-
-Use coupled populations for application routines (System 1). Depth alone
-implies neither System 2 nor low latency. An observer is an explicit
-[experimental choice](../docs/EXPERIMENTAL.md): it joins every solve and may slow
-routine responses. It is not automatically asleep until surprise, and a useful
-advantage over capable state-coupled layers remains unestablished. These
-examples do not implement automatic attention or independently progressing
-populations.
-
-## Start with the same learning loop in three layouts
+## Change wiring through the same learning loop
 
 [layout_learning.py](layout_learning.py) is the smallest complete example:
 teach a scalar relation with the default `small` layout (four `features`
 patches read the sensor, one `response` patch reads them), check new unclamped
-inputs and verify saved continuation. Select `deep` to try deeper composition.
+inputs and verify saved continuation. Select `deep` to add an intermediate population.
 It uses the default Python engine with no optional dependency:
 
 ```sh
@@ -49,9 +35,8 @@ PYTHONPATH=src python examples/layout_learning.py --layout deep
 Explicit `--layout recursive` runs the observer experiment; `--layout all`
 includes it in a comparison. The small case has five connected patches, the
 deep and recursive cases seven each. Observation adds error contacts. They are
-API examples with declared different capacities and costs, not evidence of a
-depth advantage. "Deep" means populations settled together, not sequential
-finished layer answers. For a larger task, follow
+API examples with different capacities and costs. The CLI labels identify
+these particular examples; all their populations settle together. For a larger task, follow
 [brain design](../docs/BRAIN_DESIGN.md) before scaling this small relation.
 
 ## Use an acquired model to control a body
@@ -90,6 +75,15 @@ Use `layout_learning.py` for the separate save/resume example.
 | [live_control.py](live_control.py) | Populations of four and two patches, both reading position and candidate action. | Learning a one-dimensional body's next position and querying candidate actions through `LiveController`, with actuator limits and actual outcome observations. |
 | [live_learning.py](live_learning.py) | Six-patch coupled layouts for cue/retention gates; a nine-patch coupled layout for reward learning. | Explicit-history cue recall, retention with old-example replay, reward-based acquisition/reversal and saved continuation in separate small fixtures. |
 | [temporal_credit.py](temporal_credit.py) | Memory fixture: four patches in each state-coupled and observer layout, with sensory skips. Reward fixture: two coupled populations. | Layout comparisons with explicit sensory history, erased-history and state-reset controls; separate delayed-reward/replay controls; saved continuation. |
+
+The research scripts [credit_horizon.py](credit_horizon.py),
+[credit_diagnostic.py](credit_diagnostic.py) and
+[credit_exposure.py](credit_exposure.py) use the two-population reward fixture to
+compare credit horizons, target construction and replay order. They preserve
+explicit collection and assessment records; they are bounded research screens,
+not claims of strategic learning or extra public API. `credit_exposure.py`
+requires a diagnostic collection. Read each script's `--help` and declared
+budgets before running a screen.
 
 `layout_cost.py` and `temporal_credit.py` deliberately retain observer arms as
 experimental comparisons. Their stored receipts remain historical; the layouts
@@ -133,7 +127,7 @@ Saved receipts describe their recorded source version; rerunning a command
 on this checkout produces a new result. Historical Amen, Atari, Patchworld
 and other application demonstrations used their own versioned engines,
 models and body adapters. Their published scores or musical quality are not
-current `0.61` reproduction results. See the
+current `0.62` reproduction results. See the
 [demo evidence boundary](../docs/EXPERIMENTAL.md)
 before comparing or replacing one.
 

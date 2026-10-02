@@ -1,20 +1,14 @@
 # Use a learned brain with an actual body
 
-Install **0.61.0** as shown in the [quickstart](QUICKSTART.md). This guide
+Install **0.62.0** as shown in the [quickstart](QUICKSTART.md). This guide
 covers live observations, actions, outcomes and continued learning using the
 existing public API. Begin with a skill that passes free assessment;
 [bootstrapping](BOOTSTRAP.md) explains how to acquire and check one.
 
-Use coupled populations for an application routine. Named observations go in,
-qualified outputs come out, and actual consequences supply experience. Depth can
-support System 1; it does not imply System 2 or a latency guarantee. Every
-population uses the same processing-patch rule and participates in one coupled
-solve.
-
-Recursive observers are [experimental opt-in](EXPERIMENTAL.md). They join every
-solve and can slow routine responses; the public runtime does not automatically
-put them to sleep or recruit them on surprise. Adding them does not establish
-useful retained correction, automatic attention or independent population clocks.
+Named observations enter one connected graph, qualified outputs expose selected
+patch states, and actual consequences supply experience. All populations repair
+together. Choose their sizes and connections from measured behavior; optional
+error readback follows the [experimental boundary](EXPERIMENTAL.md).
 
 ## Predict first, execute, then learn from the outcome
 

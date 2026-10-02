@@ -1,43 +1,38 @@
-# Experimental features and the System 2 boundary
+# Experimental capabilities and demo evidence
 
-**`0.61.0` recommends coupled settling populations for applications.** Build
-them with `Cortex.column`, two populations at least, teach through `bootstrap`
-or `observe`, and use `step` to retain qualified live activity. Add depth when
-it improves the task. No extra mode, critic or attention scheduler is
-required. See the [quickstart](QUICKSTART.md) and [brain design](BRAIN_DESIGN.md).
+**`0.62.0` implements one connected graph with a joint repair and qualification
+contract.** Population sizes and connections determine the graph. `inputs=`
+reads sensors or live states; optional `observes=` also reads exact current
+prediction errors. All populations use the same patch law and participate in
+the same solve. The [quickstart](QUICKSTART.md) starts with two populations.
 
-## System 2 warning
+<a id="system-2-warning"></a>
 
-**Recursive self-observation is experimental and can slow routine responses.**
-Calling `Cortex.observer` explicitly adds state-and-error contacts. These
-participate in every synchronous whole-brain solve. The public runtime does
-not put an observer to sleep during familiar behavior, wake it only on
-surprise, or let it run at an independent speed. An observer's presence does
-not establish useful correction or a benefit over capable ordinary layers.
+## Recursive observation and the intended correction cycle
 
-Keep learned routine (System 1) dominant. For most tasks, use coupled
-populations without error readback. Every layout is a coupled settling network
-and can require additional work; measure held-out
-quality and complete decision latency before adding capacity. A small
-settlement residual establishes numerical qualification, not success at the
-task. Repeated qualified `step` calls may need zero repair sweeps while still
-performing full evaluation and qualification.
+Error readback is implemented; its task advantage remains experimental. An
+observer participates in every synchronous solve. The public runtime does not
+automatically put it to sleep during familiar behavior, recruit it on surprise
+or give it an independent clock. Compare its learned behavior with a capable
+state-coupled control using the same available information, disclosed capacity
+and complete learning/query work. Preserve failures and recheck old skills.
 
-The [experimental layout recipes](VARIANTS.md) keep observers available for
-deliberate comparisons. Compare against a capable ordinary model with the same
-available information, disclosed capacity and complete learning/inference cost.
-Preserve failures and check old skills after any new learning. Do not silently
-skip an explicitly declared observer or weaken whole-brain qualification to
-make a latency result look better.
+**System 1** describes acquired routine competence with inexpensive repair.
+**System 2** describes useful recursive correction when a routine misses a
+forecast or cannot meet a goal. These are intended roles within one brain, not
+architecture classes, depth settings or bootstrapping/live switches. The complete
+routine → disturbance → useful correction → retained inexpensive routine cycle
+has not been demonstrated by this public runtime. Private experiments linked
+from [issue 72](https://github.com/muellerberndt/cadence/issues/72) do not become
+released capabilities merely because the package version changes.
 
-The intended System 2 cycle remains: routine → surprise or unmet longer-term
-goal → useful correction → retained, inexpensive routine. Predictable failure
-must still matter. The private timing and learning experiments linked from
-[issue 72](https://github.com/muellerberndt/cadence/issues/72) do not yet
-demonstrate that complete cycle or a measured recursive advantage. They are
-not part of this release's public runtime. The stable 0.61.0 package recommends
-ordinary networks; the complete System 2 capability requirements remain open.
-The package version does not certify those experimental capabilities.
+Current patch disagreement, a miss of a previously issued forecast, and task
+value are distinct quantities. A stationary state can retain prediction error
+and still make a poor decision. Retaining qualified activity with `step` can
+reduce later repair work, but does not guarantee useful temporal memory.
+Relations learned through `observe` persist and remain plastic; later learning
+can overwrite them. Whole-brain qualification must include every eligible
+coordinate, including declared observers.
 
 ## Longer credit and saved state
 
@@ -59,9 +54,13 @@ reproductions on this release:
 
 | Demo | Existing implementation | Evidence required for a new-version claim |
 | --- | --- | --- |
-| Atari learner | Python server and separately implemented browser engine | Source-pinned numerical parity plus native gameplay and learning under the same information and work accounting. |
+| Atari learner | Python server and separately implemented browser engine | Source-pinned parity for the separate browser port, plus native gameplay and learning under the same information and work accounting. |
+| Connect Four | Historical record evaluator with supplied game-tree search | Matched teaching data and search budget, free play and native query latency on the new implementation. |
 | Amen | Archived 0.11 record-patch brain and its browser engine | Learned free continuations through the same sequencing rules and instruments, with listening assessment. |
 | Patch World | Separate JavaScript patch-law implementation | Declared numerical/refusal semantics and native behavior under matched sensing, seeds and conserved mass. |
+
+The library does not include these browser implementations. Updating its Python
+package does not port their engines or convert their saved models.
 
 The old Amen record patch contains 128 gated context channels and 8,192 record
 cells. One input-only output population does not reproduce that mechanism or

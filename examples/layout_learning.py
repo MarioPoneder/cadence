@@ -2,8 +2,8 @@
 
 Run: PYTHONPATH=src python examples/layout_learning.py
 The default is the smallest brain: four ``features`` patches read the sensor and
-one ``response`` patch reads them. Select --layout deep for deeper composition,
-or explicitly select --layout recursive/all to study observer wiring. This tiny
+one ``response`` patch reads them. The --layout deep example adds an intermediate
+population; --layout recursive/all studies error readback in the same joint solve. This tiny
 relation demonstrates the API, not an architectural advantage.
 """
 
@@ -16,7 +16,7 @@ LAYOUTS = ("small", "deep", "recursive")
 
 
 def make_brain(kind, *, seed=2):
-    """Change wiring only; every brain exposes signal -> answer."""
+    """Vary population sizes and wiring; every brain exposes signal -> answer."""
     if kind not in LAYOUTS:
         raise ValueError(f"layout must be one of {LAYOUTS}")
     layout = Cortex(seed=seed)

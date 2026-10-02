@@ -1,10 +1,10 @@
 # Build a brain, teach it a routine, keep it
 
-This guide targets **`0.61.0`**. It needs Python 3.11 or later and has no
+This guide targets **`0.62.0`**. It needs Python 3.11 or later and has no
 mandatory runtime dependencies. Install the release:
 
 ```sh
-python -m pip install "cadence-net==0.61.0"
+python -m pip install "cadence-net==0.62.0"
 ```
 
 Or install from a checkout of this version:
@@ -115,7 +115,9 @@ The four main operations have different responsibilities:
 A refused call does not admit its proposal. An accepted update can still worsen
 other skills, so recheck free behavior after learning.
 
-## 4. Add depth when the task needs it
+<a id="4-add-depth-when-the-task-needs-it"></a>
+
+## 4. Add an intermediate population
 
 For a more complicated relation, connect more populations. They all settle
 together: the later relation influences earlier states through the common
@@ -140,24 +142,17 @@ assert abs(candidate.predict({"command": [0.5]})["movement"][0] - 0.3) < 0.1
 
 Both layouts learn through the same patch rule. This tiny calibration already
 works with the two-population brain; keep the smaller brain for this task. Add
-depth when it improves measured quality enough to justify its cost. Arbitrary
-depth is not guaranteed to be fast. See [layout variants](VARIANTS.md) and
+an intermediate population when its changed paths improve measured quality
+enough to justify the cost. See [layout variants](VARIANTS.md) and
 [brain design](BRAIN_DESIGN.md) for larger tasks and meaningful controls.
-
-**System 1** means an acquired routine, which can need several coupled
-populations. **System 2** names the intended useful recursive observation and
-correction. These are behavioral roles, not public classes.
 
 ## Experimental error readback
 
 Every patch already repairs its own disagreement. Explicit observer wiring,
 which lets a population read other patches' current errors, is available in the
 [experimental layout recipes](VARIANTS.md#experimental-recursive-observer-settlement).
-Observers participate in every synchronous solve and may slow every call,
-including familiar routine work. Their advantage over state-coupled populations
-is unproven. Automatic on-demand attention, independent population clocks and
-the complete correction-to-retained-routine capability are not public features.
-See [experimental capabilities](EXPERIMENTAL.md) before choosing this path.
+Those contacts participate in the same joint repair. See
+[experimental capabilities](EXPERIMENTAL.md) for their behavioral scope.
 
 ## Continue with a real task
 

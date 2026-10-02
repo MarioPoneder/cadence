@@ -49,26 +49,10 @@ def test_shared_fixed_input_does_not_bridge_independent_patch_components():
     processing = cortex.column("processing", patches=2, inputs=sensor)
     cortex.column("readers", patches=2, inputs=processing)
     cortex.output("answer", shape=1, reads=processing)
-    brain = cortex.build()
-    sources = [
-        {s for kind, s, t in brain.graph.edges if kind == "input" and t == target}
-        for target in range(2)
-    ]
-    # Each patch sees two samples, sharing one with its sibling. Treating
-    # the shared clamped input as a freely settling node would wrongly add
-    # its sibling's third sample to the output's possible dependencies.
-    assert len(sources[0] & sources[1]) == 1
-    assert brain.inspect()["sensor_coverage"] == 3
-    assert output_coverage(brain) == (2,)
-    # The output patch and the one reader patch that settles with it.
-    assert brain.inspect()["output_connected_patches"] == 2
-    missing = (sources[1] - sources[0]).pop()
-    answers = []
-    for value in (-0.8, 0.8):
-        data = [0.0] * 3
-        data[missing] = value
-        answers.append(brain.predict({"sensor": data})["answer"][0])
-    assert answers == [0.0, 0.0]
+    # The population-level read joins two disjoint processing/reader pairs.
+    # Their shared fixed sensory coordinates cannot merge the equilibria.
+    with pytest.raises(ValueError, match="disconnected settlement components"):
+        cortex.build()
 
 
 @pytest.mark.parametrize("join", ["column", "observer"])
@@ -113,32 +97,43 @@ def test_output_aliases_and_selected_indices_report_coverage_and_coupled_patches
 
 
 @pytest.mark.parametrize(
-    "indices,coverage,connected",
-    [((0,), (2,), 4), ((1, 0, 2), (1, 2, 2), 6)],
+    "indices,coverage",
+    [((0,), (3,)), ((1, 0, 2), (3, 3, 3))],
 )
-def test_sparse_error_contacts_extend_coverage_beyond_state_contacts(
-    indices, coverage, connected
-):
-    cortex = Cortex(seed=0, fan_in=1)
+def test_sparse_error_contacts_extend_coverage_beyond_state_contacts(indices, coverage):
+    cortex = Cortex(seed=3, fan_in=1)
     sensor = cortex.input("sensor", shape=3)
     base = cortex.column("base", patches=3, inputs=sensor)
     cortex.observer("observer", patches=3, observes=base)
     cortex.output("answer", shape=len(indices), reads=base, indices=indices)
     brain = cortex.build()
     # State contacts alone form three separate pairs. Error readback joins
-    # base 0 and 2 through observers 3 and 5; the middle pair stays separate.
+    # them into one six-patch component, carrying every sensor to every output.
     assert {e for e in brain.graph.edges if e[0] == "state"} == {
-        ("state", 2, 3),
-        ("state", 1, 4),
-        ("state", 0, 5),
+        ("state", 0, 3),
+        ("state", 2, 4),
+        ("state", 1, 5),
     }
     assert {e for e in brain.graph.edges if e[0] == "residual"} == {
-        ("residual", 0, 3),
-        ("residual", 1, 4),
+        ("residual", 1, 3),
+        ("residual", 0, 4),
         ("residual", 2, 5),
     }
     assert output_coverage(brain) == coverage
-    assert brain.inspect()["output_connected_patches"] == connected
+    assert brain.inspect()["output_connected_patches"] == 6
+
+
+def test_partial_error_readback_cannot_leave_a_separate_patch_component():
+    cortex = Cortex(seed=0, fan_in=1)
+    sensor = cortex.input("sensor", shape=3)
+    base = cortex.column("base", patches=3, inputs=sensor)
+    cortex.observer("observer", patches=3, observes=base)
+    cortex.output("answer", shape=1, reads=base)
+    # In this sampled graph, error contacts join the first and third state
+    # pairs but leave the middle pair separate. An observer label is not proof
+    # of one connected compiled equilibrium.
+    with pytest.raises(ValueError, match="disconnected settlement components"):
+        cortex.build()
 
 
 def test_constant_brain_has_valid_zero_coverage_and_inspection_is_owned():

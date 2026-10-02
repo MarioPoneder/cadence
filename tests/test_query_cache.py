@@ -211,3 +211,123 @@ def test_public_queries_rebuild_cache_after_inputs_parameters_and_state_change(
 
     monkeypatch.setattr(_repair, "_evaluate", uncached)
     assert cached == sequence()
+
+
+@pytest.mark.parametrize("learn,batch_size", [(False, 1), (True, 1), (True, 2)])
+def test_zero_proposals_use_one_full_same_call_evaluation(
+    monkeypatch, learn, batch_size
+):
+    graph = Graph(1, 2, (("input", 0, 0), ("state", 0, 1)))
+    calls = []
+    original = _repair._evaluate
+
+    def record(*args, **kwargs):
+        assert kwargs.get("_query_cache") is None
+        calls.append((args[2], args[3], args[4]))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(_repair, "_evaluate", record)
+    result = _repair.settle(
+        graph,
+        [0.0] * batch_size,
+        [0.0] * (2 * batch_size),
+        [0.3, 0.7],
+        [0.0, 0.0],
+        learn=learn,
+        _batch_size=batch_size,
+        budget=0,
+    )
+    assert result["qualified"] and result["stationarity"] == 0
+    assert result["sweeps"] == result["work"]["proposals"] == 0
+    assert result["work"]["evaluations"] == 1
+    assert len(calls) == batch_size
+    assert result["work"]["patch_visits"] == 2 * graph.n_patches * batch_size
+    assert result["work"]["edge_visits"] == 2 * len(graph.edges) * batch_size
+
+
+@pytest.mark.parametrize("changed", ["inputs", "weights", "biases", "clamps"])
+def test_zero_budget_rechecks_changed_problem_from_actual_post_clamp_state(
+    monkeypatch, changed
+):
+    graph = Graph(1, 2, (("input", 0, 0), ("state", 0, 1)))
+    inputs, weights, biases = [0.4], [0.3, 0.7], [0.1, -0.2]
+    prior = 0.2
+    initial = _repair.settle(
+        graph, inputs, [0.0, 0.0], weights, biases, state_prior=prior
+    )
+    assert initial["qualified"]
+    state = initial["state"]
+    clamps = {}
+    if changed == "inputs":
+        inputs = [0.9]
+    elif changed == "weights":
+        weights = [0.9, 0.7]
+    elif changed == "biases":
+        biases = [-0.5, 0.2]
+    else:
+        clamps = {0: 0.8}
+    calls = []
+    original = _repair._evaluate
+
+    def record(*args, **kwargs):
+        assert kwargs.get("_query_cache") is None
+        calls.append(args[2])
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(_repair, "_evaluate", record)
+    result = _repair.settle(
+        graph,
+        inputs,
+        state,
+        weights,
+        biases,
+        clamps=clamps,
+        state_prior=prior,
+        budget=0,
+    )
+    x0, x1 = (clamps.get(i, x) for i, x in enumerate(state))
+    p0 = math.tanh(weights[0] * inputs[0] + biases[0])
+    p1 = math.tanh(weights[1] * x0 + biases[1])
+    e0, e1 = x0 - p0, x1 - p1
+    gradients = (
+        e0 + prior * x0 - weights[1] * (1 - p1 * p1) * e1,
+        e1 + prior * x1,
+    )
+    residual = max(
+        abs(x - max(-1, min(1, x - gradient)))
+        for i, (x, gradient) in enumerate(zip((x0, x1), gradients, strict=True))
+        if i not in clamps
+    )
+    assert calls == [(x0, x1)]
+    assert result["predictions"] == pytest.approx((p0, p1), abs=1e-15)
+    assert result["errors"] == pytest.approx((e0, e1), abs=1e-15)
+    assert result["stationarity"] == pytest.approx(residual, abs=1e-15)
+    assert not result["qualified"] and result["reason"] == "budget"
+    assert result["work"]["evaluations"] == 1
+
+
+def test_rejected_proposal_with_zero_sweeps_still_gets_fresh_final_check(monkeypatch):
+    graph = Graph(1, 2, (("input", 0, 0), ("state", 0, 1)))
+    caches = []
+    original = _repair._evaluate
+
+    def record(*args, **kwargs):
+        caches.append(kwargs.get("_query_cache"))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(_repair, "_evaluate", record)
+    result = _repair.settle(
+        graph,
+        [0.9],
+        [0.0, 0.0],
+        [0.6, 0.4],
+        [0.1, 0.2],
+        step=1000,
+        backtracks=1,
+    )
+    assert not result["qualified"] and result["reason"] == "line_search"
+    assert result["sweeps"] == 0
+    assert result["work"]["proposals"] == result["work"]["backtracks"] == 1
+    assert result["work"]["evaluations"] == len(caches) == 3
+    assert caches[0] is caches[-1] is None
+    assert caches[1] is not None

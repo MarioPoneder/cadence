@@ -1,44 +1,20 @@
-# Coupled populations, deeper composition, then observer experiments
+# Wire a connected brain
 
-Every Cadence brain is one equilibrium of patches settling against each other.
-The builder refuses a population that settles with no other population, so the
-smallest brain is two populations: one reads the sensors, the next reads its
-live states. Start there, and choose the smallest coupled layout that learns
-the task. Measure its quality and latency before adding capacity. Deeper
-composition can support a capable routine; arbitrary depth is not guaranteed
-to be fast.
+Population sizes and connections define a Cadence brain. Every patch uses the
+same local relation, and all eligible states repair together under one energy.
+`inputs=` reads supplied samples or another population's live states;
+`observes=` additionally reads exact current prediction errors. The builder
+requires at least two populations joined into one connected graph.
 
-**Error readback is experimental.** Every patch repairs its own disagreement.
-`observer(...)` additionally lets a population read other populations' exact
-current prediction errors. Those contacts participate in every synchronous solve
-and may slow every call, even during familiar routine work. Their benefit over
-state-coupled populations is unproven. There is no public on-demand attention or
-independent population clock. All layouts use the same patch law, repair
-engine, learning operations and qualification check; error readback is an
-explicit wiring option.
+These examples target **`0.62.0`**; follow the [quickstart](QUICKSTART.md) first.
+They keep the same `signal`/`answer` boundary while changing capacity and wiring.
+Start with a small graph, then measure whether added states or paths improve the
+task enough to justify their work. Error readback has the same execution
+contract; its behavioral scope is described in [experimental capabilities](EXPERIMENTAL.md).
 
-These examples target **`0.61.0`**; follow the [quickstart installation
-instructions](QUICKSTART.md) before running them. "Fast" describes the intended
-cost of a learned routine, and "slow" the extra work a correction may need.
-They are not selectable execution modes. All populations take part in one
-qualified solve, including observers in a mixed layout.
-
-| Design pattern | What patches read | When to try it |
-| --- | --- | --- |
-| Two coupled populations | Sensors, then the first population's live states | Every direct sensor-to-answer task; start here |
-| Deeper composition | Several populations' live states, parallel branches, fusion | A task that needs learned intermediate representations or sensory fusion |
-| Experimental error readback | Live states **and exact prediction errors**, including those of other observers | A controlled test against a state-coupled control, charging all extra work |
-
-These are layout patterns within one implementation. They can coexist in a
-brain: sensory columns, deeper populations and nested observers can participate
-in one joint settlement. The full query must qualify before it returns.
-
-Start with the two-population construction below and its shared
-learning/query/save loop. The later recipes also expose `signal` and `answer`,
-so the body interface does not change. These are teaching examples with
-different capacities and contact counts, not a controlled comparison of
-architecture quality. The complete runnable version is
-[layout_learning.py](../examples/layout_learning.py):
+The runnable [layout_learning.py](../examples/layout_learning.py) uses `small`
+for two populations, `deep` for an added intermediate population and `recursive`
+for error readback. These are example labels, not separate kinds of brain:
 
 ```sh
 python examples/layout_learning.py
@@ -79,11 +55,13 @@ with pytest.raises(ValueError, match="settles with no other population"):
     alone.build()
 ```
 
-## 2. Deeper composition
+<a id="2-deeper-composition"></a>
 
-Pass a population through `inputs` to read its states. Deeper composition lets
-output patches use a learned intermediate representation. Populations settle
-together; the downstream relation influences upstream states through the joint
+## 2. Add an intermediate population
+
+Pass a population through `inputs` to read its states. Adding an intermediate
+population changes the path between the sensing and output patches. Populations
+settle together; the downstream relation influences upstream states through the joint
 energy's derivatives.
 
 ```python
@@ -154,17 +132,13 @@ observers is not a performance optimization by itself. See the
 
 ## Choose routine competence separately from error readback
 
-A familiar skill can require a deep learned representation. "System 1" does
-not mean one small layout, and "System 2" does not mean any population named
-`reflection`. State-coupled composition already has returning influence during
-joint repair. An observer adds the exact **current** error signal, not an
-independent critic, a recorded past failure or a built-in long-term objective.
-
-The public builder reads previously declared sources only. Its read graph is
-acyclic even though solving the common energy returns influence upstream.
-`step` preserves activity; that alone does not demonstrate learned recurrent
-memory. See [brain design](BRAIN_DESIGN.md#measure-speed-and-retained-correction)
-for the current attention boundary and temporal controls.
+State contacts already return influence during joint repair. Error readback
+adds an exact **current** mismatch signal, not a recorded past failure or a
+built-in long-term objective. The public builder reads previously declared
+sources, so its read graph is acyclic. `step` preserves activity for the next
+solve; that alone does not demonstrate learned temporal memory. See
+[brain design](BRAIN_DESIGN.md#measure-speed-and-retained-correction) for timing
+and temporal controls.
 
 ## Width, branches and readouts
 
@@ -215,10 +189,8 @@ assert brain.inspect()["sensor_coverage"] == 20
 
 ## Experimental: recursive observer settlement
 
-This is an explicit experiment, not the recommended default. The observer stays
-in every whole-brain solve; it does not wake only on surprise or run on a slower
-independent clock. Measure whether any task benefit justifies the added cost.
-See [experimental capabilities](EXPERIMENTAL.md).
+This recipe adds error readback within the same joint solve. Use the
+[experimental boundary](EXPERIMENTAL.md) when assessing its behavior.
 
 ```sh
 python examples/layout_learning.py --layout recursive
@@ -263,9 +235,6 @@ more observer levels alone do not establish better reasoning. The
 
 ## Experimental: combine routine layers and recursive observation
 
-The observer below adds work to every solve, including queries that the coupled
-layers could answer well. It has no automatic sleep or separate clock.
-
 An action need not come from the highest observer. Here coupled layers produce
 the answer while an observer reads their states and errors. Its relations can
 return influence to those same states through joint settlement. No second body
@@ -294,12 +263,9 @@ assert result["qualified"]
 assert abs(result["outputs"]["answer"][0] - 0.3) < 0.1
 ```
 
-This checks that a mixed graph learns the small relation. It does not show that
-the observer helps, sleeps during routine work or runs at its own speed. To test
-whether it helps, train a capable state-coupled control with the same information
-and account for parameters, acquisition work and complete query cost. See
-[System 1 and System 2](BRAIN_DESIGN.md) for the behavioral goal and current
-runtime boundary.
+This checks acquisition of the small relation. To test the observer's
+contribution, compare a capable state-coupled control with the same information
+and account for parameters, acquisition work and complete query cost.
 
 ## Connectivity and cost
 
@@ -307,8 +273,10 @@ The default `fan_in=None` connects each patch to every coordinate of its declare
 sources. Set a positive integer, such as `Cortex(fan_in=8)`, to request sparse
 wiring. That count is capped at source width and raised when needed for aggregate
 coverage across the destination population. Aggregate coverage does not guarantee
-that each selected output can use every sample: unconnected patches cannot relay
-what they read through shared, fixed sensors.
+that each selected output can use every sample. After compilation, all patches
+must form one connected state/error graph. Sparse wiring that leaves separate
+components is rejected; increase `fan_in`, use full wiring or add cross-component
+contacts. Shared fixed sensors do not couple otherwise separate patches.
 
 Observation has both state and error ports. Sharing a state port through `inputs`
 and `observes` does not duplicate that connection. Dense wiring increases cost;

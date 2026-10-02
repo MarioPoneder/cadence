@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cadence-net"
-version = "0.61.0"
-description = "Learning through flat and deep settling patch networks, with experimental recursive observation."
+version = "0.62.0"
+description = "Learning through local disagreement repair in one connected patch network."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Bernhard Mueller" }]
 keywords = ["machine learning", "online learning", "equilibrium networks", "embodied AI", "recursive observation", "local learning"]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
   "Programming Language :: Python :: 3",

@@ -11,53 +11,41 @@ it also defines the documentation rules for System 1 and System 2.
 repair is driven by that state's mismatch with reality.** This is the main
 hypothesis, and everything in this repository serves it.
 
-A Cadence brain is one equilibrium. Every patch is an observer: it reads its
-ports, predicts its own state from what it reads, and carries the disagreement
-between that prediction and its state as a live error. Patches repair their
-disagreements locally, against the patches they read and the patches that read
-them, until the whole brain is stationary. That equilibrium is the brain's
-world model. A disturbance, a new observation or an outcome that contradicts a
-prediction, is what calls for repair, and learning is the same repair with the
-relations made eligible. There is no backward pass of an output loss through
-layers; each relation changes because its own patch's disagreement remains at
-the settled joint state.
+Every patch has local state, ports, a prediction relation and live disagreement.
+Clamped sensory samples stay fixed; connected patches repair their shared state.
+Actual outcome clamps can also make relations eligible for learning. An answer
+is admitted only when every eligible coordinate passes the same whole-brain
+stationarity check. The answer can retain disagreement and can be wrong about
+reality. Compare it with actual outcomes.
 
-This principle is enforced, not recommended:
+Enforce the principle at the resolved patch graph, not merely population names:
+every patch must be connected by state or error contacts. Shared fixed sensors
+do not connect patches. Sparse wiring must pass this check too; never add a
+bypass or silently connect a refused layout. The current builder's smallest
+layout has two populations. Populations group one common patch primitive.
 
-- `Cortex.build()` refuses a layout in which a population settles with no other
-  population, and a layout in which a group of populations settles apart from
-  the rest. Every population must read another population's states or errors,
-  or be read by one, and those reads must join all populations into one
-  connected system. A patch that reads only sensors and is read by nobody is an
-  isolated regression, not part of a brain; two unconnected groups are two
-  brains. The refusal stays. Do not add a flag, a mode, a wrapper or an example
-  that builds a brain without settlement between all of its populations.
-- The smallest brain has two populations. Every quickstart, example, test fixture
-  and recipe uses at least that.
-- Never describe a layout as having no settlement, and never describe routine
-  competence as a layout that bypasses settlement. "Flat" and "deep" are not
-  Cadence vocabulary for brains that skip the equilibrium; the only layout choice
-  is which ports a population reads. State readback through `inputs=` is the
-  baseline coupling; error readback through `observes=` is the experimental
-  addition. Both settle.
-- What the mathematics guarantees must be stated exactly: repair decreases the
-  energy monotonically and the final projected stationarity check certifies the
-  equilibrium that was reached. For a quadratic energy the equilibrium is unique;
-  for the general nonlinear energy several stationary points can exist, and the
-  certificate names the one found. Do not weaken that certificate to make a
-  layout look faster, and do not claim more than it establishes.
+Connectivity does not require all-to-all wiring. Preserve sparse chains,
+branches and modular networks joined by a few contacts. The requirement is
+one repair-connected component, not biological or computational uniformity.
 
-The second premise is simplicity: the building block stays as simple as
-possible, every part of the brain answers with a settled state of that same
-patch rule, and a feed-forward readout or a copied input is a baseline, never
-a result. Complexity is added only when a measured behavior needs it and only
-on top of settlement, never instead of it.
+There are no flat/deep operating modes. Patch count, connectivity and nested
+error readback are distinct properties of one graph. `inputs=` supplies state
+contacts; optional `observes=` adds error readback within the same equilibrium.
+Neither contacts nor population names by themselves prove useful cognition.
 
-The library drifted from this once, between 0.60.0.dev1 and 0.60.0, when
-"start with a small flat network" became the recommended first step and a
-single input-only population was presented as the fast baseline. That layout
-settled nothing between patches, failed the first application it was tried on,
-and was removed in 0.61.0. Treat any proposal to reintroduce it as a defect.
+Fast settlement starts from retained activity and skips repair proposals when
+already qualified. Retain the full numerical check. A smaller surprise need
+not imply a smaller solve in a nonlinear model. Numerical stationarity, local
+prediction error, historical forecast surprise and task success are distinct.
+The reference implementation uses synchronized analytic-gradient repair and
+reverse derivative traversal; do not claim it has no backward arithmetic or
+proves asynchronous confluence. Nonlinear stationary states need not be unique.
+Strict convexity guarantees a unique constrained minimum; quadratic form alone
+does not.
+
+Keep the substrate small. Add complexity only for a demonstrated need, preserve
+checkpoint and refusal semantics, and use one brain/body boundary. A separate
+predictor or lookup can be a comparison, never a substitute for the mechanism.
 
 ## Three mandatory review gates
 
@@ -113,49 +101,27 @@ must use `source="estimate"`. `runtime.py` supplies a serial callback owner and
 actuator rate limits, without hard deadlines or solver cancellation. These
 helpers are not new patch primitives or biological chemistry.
 
-## System 1 and System 2
+## Routine and optional recursive observation
 
-**Recommend System 1 for applications.** Start with the smallest coupled
-layout, a population reading the sensors and a population reading it, then add
-`column(..., inputs=previous)` layers when the task needs intermediate
-representations. Most examples and application recipes must use this
-state-coupled path. Depth is not System 2. Check held-out quality and
-end-to-end latency; depth alone does not guarantee fast settlement.
+Recommend a small connected state-contact network for initial applications.
+`step` retains activity; `observe` retains activity and learned relations.
+Neither automatic memory allocation nor protected skill retention follows from
+those storage mechanisms. Batches retain shared parameters, not a sequence of
+live states. Explicit history and replay must remain visible.
 
-**Recursive self-observation is experimental.** `observer(..., observes=...)`
-is explicit opt-in and participates in every whole-brain solve. It can slow
-routine responses; the public runtime does not automatically put it to sleep
-or recruit it only on surprise. Its advantage over capable state-coupled layers
-is not established. Keep recursive examples clearly labeled experiments and
-link the [experimental boundary](docs/EXPERIMENTAL.md). Never add observers to
-a production-oriented recipe merely because a task is complex or long-term.
+Recursive self-observation is opt-in through `observer(..., observes=...)`.
+Its patches read and constrain the same live equilibrium, using the same patch
+rule. They currently participate in every solve. Keep examples experimental
+until learned benefit is measured against capable connected controls.
 
-**System 1** means acquired routine competence with inexpensive repair.
-**System 2** means additional recursive observation and correction when routine
-behavior cannot maintain equilibrium, including longer-term outcomes. These are
-roles within one brain, not public classes or synonyms for shallow and deep.
-Coupled populations can learn specialized routines. Recursive observers
-add exact current error readback; their presence alone proves no useful correction.
-Bootstrapping and live operation are lifecycle phases, distinct from these roles.
-
-The current API builds state-coupled, deeper and observing layouts, including
-mixed layouts, under one whole-brain solve. It does **not** yet implement
-automatic recruitment of reflection, independently progressing fast and slow
-populations, or integrated shared outcome responsibility. Describe these as
-requirements until the runtime and behavioral evidence support them.
-
-Keep the intended application contract small: one brain/body interface for
-observations, qualified actions and actual outcomes. Specialized learned roles
-must not require per-population evaluators or a user-managed attention scheduler.
-Do not add a System 1/System 2 mode flag, extra brain wrapper or migration layer
-to express this recommendation. Coupled construction is already the default.
-Currently all populations use the same patch rule. Future specialized mechanisms
-need explicit bounded state, readback, learning and repair semantics, a declared
-qualification contract and measured general benefit. Minimalism does not establish
-that the current primitive can replace every useful memory mechanism.
-Any future internal scheduling must preserve the declared whole-brain
-qualification, execution custody and saved continuation. Do not certify a
-sleeping or delayed component by omitting it from the check.
+System 1 and System 2 name cheap routine and additional useful correction,
+not different brain classes or flat/deep layouts. The intended cycle is routine,
+actual surprise or unmet goal, useful correction, then retained cheap routine.
+No automatic semantic attention or independent population clocks are claimed.
+Future scheduling must preserve unresolved needs, factual outcome ownership,
+current whole-brain qualification and saved continuation. Do not certify a
+sleeping branch by leaving it out of the check. See
+[experimental scope](docs/EXPERIMENTAL.md).
 
 ## Changes and verification
 
@@ -168,8 +134,8 @@ python -m ruff format --check src tests
 
 Tests execute Python examples in the README and every documentation page.
 Basic learning tests must also pass: multiple seeds, independently varied inputs,
-unclamped recall after replay, and saved continuation across coupled, deeper and
-observing populations. Keep these gates small enough to run in ordinary CI.
+unclamped recall after replay, and saved continuation across connected state-contact and
+error-reading populations. Keep these gates small enough to run in ordinary CI.
 Numerical qualification alone cannot pass an acquisition test.
 Constructor signatures and package exports must match the reference. Add
 independent mathematical or adversarial tests for changes to derivatives,

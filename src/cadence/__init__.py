@@ -1,4 +1,4 @@
-"""Settling patch networks with ordinary layers and experimental observers."""
+"""One connected patch network, learning and responding through local repair."""
 
 from .bootstrap import bootstrap
 from .brain import Brain, SettlementError
@@ -9,7 +9,7 @@ from .ports import Input, Output
 from .reinforcement import Reinforcement
 from .runtime import LiveController, slew
 
-__version__ = "0.61.0"
+__version__ = "0.62.0"
 
 __all__ = [
     "Brain",

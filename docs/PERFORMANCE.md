@@ -1,31 +1,16 @@
-# Small, deep and recursive brains: capability and cost
+# Connected graphs: capability and cost
 
-**Start with the least expensive layout that learns the required behavior.**
-Every Cadence brain is one coupled settlement: the builder refuses a population
-that settles with no other population, so the smallest brain has two
-populations. Use deeper composition when a direct relation is insufficient.
-Either can support a System 1 routine. Small layouts can be inexpensive, but no
-layout guarantees application latency. Recursive observation is
-[experimental opt-in](EXPERIMENTAL.md); an advantage over capable state-coupled
-layers has not been established.
+Start with the least expensive connected graph that learns the required
+behavior. Population sizes, intermediate populations, branches and error
+readback change capacity and cost. They all use the same patch law, joint
+repair and final stationarity check. More depth does not guarantee better
+reasoning; more repair time does not establish more thought.
 
-**Every `0.61.0` layout performs settlement.** Recursive observation is optional
-wiring, not a requirement for the patch/repair mechanism. Each layout uses the
-same public `settle`/`step` operations and final stationarity check. Observers
-join every solve; the public runtime does not automatically put them to sleep
-during routine responses.
-The [design-pattern guide](VARIANTS.md) introduces the choices with
-runnable examples; this page explains their cost and supporting evidence.
-Recorded benchmarks below retain their original source identities and versions,
+The [wiring examples](VARIANTS.md) introduce these choices. Optional error
+readback and automatic-attention claims have the
+[experimental boundary](EXPERIMENTAL.md). This page explains costs and source-bound
+evidence. Recorded benchmarks retain their original sources and versions,
 including 0.50.0; they are not automatically new-version results.
-
-Depth, speed and competence are separate measurements. A deeper layout does not
-automatically reason better, and a slow solve is not evidence of more thought.
-The converse matters too: a successful fast learner need not use recursive
-observation. All current Cadence layouts use the same observer-like patch
-substrate: bounded local state, incoming ports, records of admitted experience,
-readback, and qualified feedback/repair. Their connections determine how much
-of that structure participates in each answer.
 
 ## What the demo history calls a patch
 
@@ -65,10 +50,10 @@ x_i* = clip(p_i / (1 + state_prior), -state_bound, state_bound)
 ```
 
 This is the exact minimum for such a coordinate. A population of such patches
-has a closed-form answer and no equilibrium to find; that is why the builder
-refuses a brain made only of them, and a group of populations that settles
-apart from the rest, and why the old flat demos' speed says nothing about
-settlement. A sensing population that another population reads
+has a closed-form equilibrium, but no disagreement repair between patches.
+The builder excludes that uncoupled model, as well as disconnected groups of
+populations. Its speed does not measure the cost of connected settlement.
+A sensing population that another population reads
 keeps the same closed-form prediction `p_i`, but its states now also carry the
 reader's constraint, and the joint repair settles them together. The query
 cache described below reuses only the invariant predictions; the states, errors
@@ -100,6 +85,13 @@ query time = validation/setup
            + objective/derivative evaluations and repair proposals
            + final qualification and output construction
 ```
+
+A reference solve that attempts no repair proposal uses its fresh initial
+full evaluation for qualification, counted once. If it attempts a proposal,
+it performs a fresh final evaluation even when that proposal was rejected.
+This reuse stays within the same call; every new call checks the current full
+graph. A retained activity state can save repair work without being learned
+attention or guaranteed temporal memory.
 
 Count `work.evaluations`, `work.proposals`, `work.backtracks`, edge/patch visits,
 sweeps and wall time. Sweep budgets do not bound elapsed seconds. Tensor

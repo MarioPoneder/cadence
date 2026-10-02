@@ -1,64 +1,36 @@
-# Coupled, deeper and recursively observing brains
+# One connected brain, one repair problem
 
-Cadence builds **one jointly settling graph of processing populations**. Each
-patch settles locally against the ports it reads: fixed sensor samples, other
-patches' live states and, in experimental observer wiring, other patches'
-exact prediction errors. The joint stationarity of all patches is the brain's
-equilibrium, and that equilibrium is the brain's current model of the world
-under the clamped samples. A new observation or a clamped actual outcome
-disturbs it, and the brain pays the repair the disturbance requires. Learning
-(`observe`) is that repair with the relation parameters made eligible. Start
-with two coupled populations, then add columns when the task needs learned
-intermediate representations. Recursive observers are an explicit experimental
-option, not a requirement for a capable routine. The builder refuses a
-population that settles with no other population and a group of populations
-that settles apart from the rest. Population size is explicit. Sensory data, ordinary
-representation connections and observation of internal activity have distinct
-roles. Each patch has live state, incoming ports, exact prediction-error
-readback and retained local relation parameters. Feedback repairs one coupled
-state. The same `Cortex` builder and `Brain` learning/query interface serve
-all three layouts. Start with the [quickstart](QUICKSTART.md), then use
-[brain design](BRAIN_DESIGN.md) for input, capacity and learning choices.
+Cadence builds one connected graph of processing populations. Each patch predicts
+its own state from the ports it reads and carries the disagreement as a live
+error. The patches repair their states together; the qualified joint stationary
+state is the brain's equilibrium under the supplied observations and constraints.
+Learning uses that same repair with relation parameters eligible to change.
+An equilibrium can retain disagreement: qualification measures stationarity,
+not zero prediction error or agreement with the outside world.
 
-## Choose observation depth deliberately
+Population sizes and wiring both matter. Increasing `patches` adds states and
+relations; adding an intermediate population changes the paths between states.
+`inputs=` reads sensors or other populations' live states. `observes=` also
+reads their exact current prediction errors. Both use the same patch law and
+joint solve. The builder requires at least two populations connected through
+state or error contacts and rejects disconnected groups. The compiled patches
+must also be connected after sparse wiring is resolved; shared sensors alone
+do not connect separate settlements.
 
-| Layout | Construction | What changes |
-| --- | --- | --- |
-| Two coupled populations | `column(..., inputs=sensors)` read by `column(..., inputs=first)` | The smallest brain: the sensing patches and the output patches settle against each other. A sensing population read by nobody does not build. |
-| Deeper composition | Further `column(..., inputs=earlier_population)` | Learned intermediate representations participate in one coupled solve, with returning influence through the energy. |
-| Experimental recursive observer | `observer(..., observes=earlier_population)` | Adds exact current prediction-error inputs alongside the observed states. Observers can themselves be observed. |
-
-All use the same patch law and qualification check. The
-[layout guide](VARIANTS.md) explains each construction. Start with the ordinary
-learning examples:
+Start with the [quickstart](QUICKSTART.md), then use [brain design](BRAIN_DESIGN.md)
+to choose information, connected capacity and a learning budget. The
+[layout examples](VARIANTS.md) vary that wiring through one public interface:
 
 ```sh
 PYTHONPATH=src python examples/layout_learning.py
 PYTHONPATH=src python examples/layout_learning.py --layout deep
 ```
 
-Use `--layout recursive` only for the explicit observer experiment. Observers
-participate in every whole-brain solve; the public runtime does not put them to
-sleep during familiar behavior or recruit them automatically on surprise. A
-useful advantage over capable ordinary layers remains unestablished. See the
-[experimental boundary](EXPERIMENTAL.md).
-
-Coupling makes every repair a joint one; recursive depth adds state-and-error
-constraints, but does not guarantee
-better reasoning or a particular increase in elapsed time. Start with the
-smallest useful layout and measure task quality, settling work and complete
-command latency. The [performance guide](PERFORMANCE.md) explains the
-closed-form flat case, the older fast browser demos and controlled comparisons.
-
-**System 1** describes an acquired routine that works with little repair; it
-can require ordinary deep representations. **System 2** describes additional
-recursive correction that usefully repairs a failing routine or unmet goal.
-These are behavioral roles, not layout names. Current `0.61.0` supports
-the wiring and whole-brain repair described here, but automatic internal
-attention, independently progressing populations and the integrated
-routine/correction cycle remain unimplemented. Historical demo results belong
-to their recorded models and runtimes; see
-[the demo evidence boundary](EXPERIMENTAL.md).
+Here `deep` is an example label for an added intermediate population, not another
+kind of brain. `--layout recursive` adds explicit error readback. Its measured
+usefulness, automatic attention and the intended routine/correction cycle are
+covered by the [experimental boundary](EXPERIMENTAL.md). The
+[performance guide](PERFORMANCE.md) explains costs and historical demo evidence.
 
 ## Build the layout
 
@@ -95,9 +67,7 @@ patch states. There is no separate policy network after settlement.
 
 Use `inputs` for sensor samples or represented data. Vision and hearing can
 form ordinary parallel branches before fusion. The following recipe also adds
-an **experimental observer** to demonstrate its connections. That observer
-participates in every solve and may increase latency; this recipe establishes
-wiring and qualification, not a task advantage or automatic System 2:
+an observer to demonstrate state-and-error contacts within that same graph:
 
 ```python
 parallel = Cortex(seed=3)

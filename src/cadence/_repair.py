@@ -738,7 +738,10 @@ def settle(
         if not accepted:
             reason = "line_search"
             break
-    final = compute(state, weights, biases, fresh=True)
+    # With no proposal, the initial full evaluation already describes these
+    # exact post-clamp arrays. Reuse it within this call only. Any attempted
+    # proposal, including a rejected or cached one, still requires fresh replay.
+    final = current if proposals == 0 else compute(state, weights, biases, fresh=True)
     residual = _stationarity(
         state,
         weights,
