@@ -1,11 +1,11 @@
 # Learn a routine, then choose its layout
 
-This guide targets **`0.61.0.dev1`**, the development version on `main`.
+This guide targets **`0.60.0.dev1`**, the development version on `main`.
 It needs Python 3.11 or later and has no mandatory runtime dependencies.
 Install the prerelease:
 
 ```sh
-python -m pip install "cadence-net==0.61.0.dev1"
+python -m pip install "cadence-net==0.60.0.dev1"
 ```
 
 Or install from a checkout of this version:

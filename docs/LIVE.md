@@ -1,6 +1,6 @@
 # Use a learned brain with an actual body
 
-Install **0.61.0.dev1** as shown in the [quickstart](QUICKSTART.md). This guide
+Install **0.60.0.dev1** as shown in the [quickstart](QUICKSTART.md). This guide
 covers live observations, actions, outcomes and continued learning using the
 existing public API. Begin with a skill that passes free assessment;
 [bootstrapping](BOOTSTRAP.md) explains how to acquire and check one.

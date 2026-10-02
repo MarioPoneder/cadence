@@ -2,7 +2,7 @@
 
 This document specifies the population DRSN engine. The equations are in
 [the processing-patch description](ELEMENT.md); all arguments and result fields
-are in [the API reference](REFERENCE.md). The `0.61.0.dev1` application default
+are in [the API reference](REFERENCE.md). The `0.60.0.dev1` application default
 is ordinary flat or deep composition. Explicit observer wiring is experimental;
 it obeys the same whole-brain numerical contract and participates in every
 solve. No automatic observer sleep, internal attention or independent population

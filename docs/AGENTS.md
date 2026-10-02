@@ -46,7 +46,7 @@ relation. It is not a stored historical forecast miss.
 
 These names describe the intended roles of one brain. They are not constructor
 names, biological claims, or bootstrapping/live phase switches. Current
-`0.61.0.dev1` supports the layouts below; it does not yet implement automatic
+`0.60.0.dev1` supports the layouts below; it does not yet implement automatic
 attention, independently progressing populations or the complete integrated
 routine/correction cycle. Keep that boundary visible when writing examples.
 
