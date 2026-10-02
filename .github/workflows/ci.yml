@@ -43,7 +43,8 @@ jobs:
               blocks = re.findall(r"(<!-- not-run[^\n]*-->\n)?```python\n(.*?)```", page, re.S)
               code = "\n\n".join(block for marker, block in blocks if not marker)
               if name.endswith("quickstart.md"):
-                  code += "\nassert night['updates'] > 200 and learner.updates == 80\n"
+                  code += "\nassert brain.learner.updates > 0 and len(phases) == 2\n"
+                  code += "assert (continued == replayed).all()\n"
               with tempfile.TemporaryDirectory() as directory:
                   script = Path(directory) / "documentation_example.py"
                   script.write_text(code, encoding="utf-8")
