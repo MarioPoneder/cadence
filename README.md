@@ -23,6 +23,37 @@ state; actual observations and consequences guide learning. A settled answer can
 still be wrong about the world, so capability is measured through free behavior.
 Cadence is alpha research software, not a claim of human-level intelligence.
 
+## Why Cadence
+
+Animal and human brains learn from experience and not by backpropagation with
+gradient descent. Cadence is designed the same way. Each synapse changes from the
+activity of the two neurons it connects, compared between a free settled state
+and one nudged by the outcome. Reward scales that change, and memory writes are
+local too. The brain keeps no backward computation graph and has no separate
+training mode.
+
+For embodied AI this design gives:
+
+- **Learning on the job.** The same brain acts and learns from every measured
+  outcome. There is no difference between training and inference.
+- **Adaptation to changed conditions.** A changed body or world shows up in what
+  the brain measures, and the live brain adjusts without being told what changed.
+- **Local learning.** No backward pass through the network is needed, so learning
+  can run where the brain runs.
+- **Memory.** A working trace carries the recent past, and fast and persistent
+  associative memory keep what mattered.
+- **Settled answers.** Every action is a qualified settled state of the whole
+  brain. A brain that does not settle refuses to act.
+- **Inspection.** Region activity can be read while the brain runs, and private
+  imagination tests a response before the body commits to it.
+
+Under idealized conditions the local contrast follows the gradient that
+backpropagation would compute. [The learning rule](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/learning.md)
+states those conditions, and [the comparison](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/concepts.md#compared-with-backprop-networks)
+is of update mechanisms. These properties are shown in simulation in the
+[demos](https://floatingpragma.io/demos/). An advantage on a physical robot is a
+separate test.
+
 <a id="get-started"></a>
 
 ## Start with System 1

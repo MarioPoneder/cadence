@@ -7,6 +7,13 @@ joins the same neural-graph settlement. The base can already be deep and modular
 The goal is a simulated human-like brain; the current mechanisms have bounded,
 testable contracts.
 
+Animal and human brains learn from experience and not by backpropagation with
+gradient descent. Cadence follows that design: [local free/nudged learning](learning.md),
+[reward plasticity](reward.md) and [memory](memory.md) change the brain while it
+runs, with no separate training mode. [Concepts](concepts.md#compared-with-backprop-networks)
+compares the update mechanisms, and the [README](../README.md#why-cadence) lists
+what this gives an embodied system.
+
 Python 3.11+ and NumPy are required.
 
 ```sh
