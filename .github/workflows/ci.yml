@@ -74,7 +74,8 @@ jobs:
           from cadence import Cortex, Reinforcement
           layout = Cortex(seed=2)
           sensor = layout.input("signal", shape=1)
-          values = layout.column(patches=2, inputs=sensor)
+          situation = layout.column(patches=2, inputs=sensor)
+          values = layout.column(patches=2, inputs=situation)
           for index, name in enumerate(("left", "right")):
               layout.output(name, shape=(), reads=values, indices=(index,))
           learner = Reinforcement(layout.build(), actions=2, action_input=None,
