@@ -61,6 +61,34 @@ not attach an evaluator to every population. Start with the
 [flat and ordinary deep quickstarts](docs/VARIANTS.md). Explicit observer wiring
 remains available in the [experimental recipes](docs/VARIANTS.md#experimental-recursive-observer-settlement).
 
+## How this differs from a feed-forward network trained by backpropagation
+
+A conventional network computes its answer in one pass, layer after layer, and
+learns by propagating the derivative of a global loss backwards through those
+layers. Cadence does neither.
+
+| | Feed-forward network with backpropagation | Cadence brain |
+| --- | --- | --- |
+| What an answer is | The output of one pass through fixed layers | A settled equilibrium: every patch's live state has stopped disagreeing with its own prediction of that state, within tolerance, across the whole connected brain |
+| Influence while answering | Forward only | Each patch settles against the ports it reads; a later population's constraint moves earlier states through the shared energy, so influence returns upstream during the same answer |
+| Where errors live | Only during training, at the output | Every patch carries its own prediction error at all times; the errors are part of the equilibrium, and an observer can read another patch's current error as a signal |
+| What learning changes | All weights, through a backward pass of the global loss | The relations of patches whose disagreements remain once an actual outcome is clamped: `observe` repairs live states and relation coefficients together against the same energy, anchored to the relations held before that experience |
+| Admission | Every gradient step is applied | A repair is admitted only if the whole brain reaches a qualified equilibrium; a refusal keeps the previous states and relations |
+| Training and running | Separate phases | One persistent brain; the same repair serves queries, retained activity (`step`) and learning (`observe`), including during live operation |
+| Cost of an answer | Fixed per input | The repair sweeps the disturbance requires; an unchanged familiar input from retained activity may need no repair sweep, a surprising one many, and every answer is still evaluated and qualified |
+| What it reports | A loss value | Whether the brain qualified, the work it did and its remaining prediction residual, separately from task accuracy |
+
+What stays familiar: a patch's relation is a weighted sum with a bias through
+`tanh`, and repair follows the analytic derivatives of the energy with a line
+search. The energy, however, is the sum of local disagreements plus a state
+prior, not a global output loss, and the coordinates being repaired include
+the states themselves. The claim is the equilibrium: a world model is the
+joint state the patches settle on, and a disturbance, a new observation or an
+outcome that contradicts a prediction, is what calls for repair. The
+[architecture guide](docs/DRSN.md#what-a-processing-patch-computes) gives the
+exact energy and the [specification](docs/SPECIFICATION.md#repair-and-qualification)
+the admission rule.
+
 ## Install
 
 Python 3.11 or later. The default engine needs only the standard library:
