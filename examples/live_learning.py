@@ -25,8 +25,8 @@ def hidden_cue(seed):
     layout = Cortex(seed=seed)
     sensor = layout.input("history", shape=history.shape)
     base = layout.column(patches=4, inputs=sensor)
-    observer = layout.observer(patches=2, observes=base)
-    layout.output("location", shape=1, reads=observer)
+    integration = layout.column("integration", patches=2, inputs=base)
+    layout.output("location", shape=1, reads=integration)
     brain = layout.build()
 
     def case(value):
@@ -64,8 +64,8 @@ def retention(seed):
     layout = Cortex(seed=seed)
     sensor = layout.input("senses", shape=2)
     base = layout.column(patches=4, inputs=sensor)
-    observer = layout.observer(patches=2, observes=base)
-    layout.output("answer", shape=1, reads=observer)
+    integration = layout.column("integration", patches=2, inputs=base)
+    layout.output("answer", shape=1, reads=integration)
     brain = layout.build()
 
     def cases(axis, amplitude):
@@ -103,8 +103,8 @@ def reward_brain(seed):
     senses = layout.input("senses", shape=3)
     action = layout.input("action", shape=2)
     base = layout.column(patches=6, inputs=(senses, action))
-    observer = layout.observer(patches=3, observes=base)
-    layout.output("value", shape=(), reads=observer)
+    integration = layout.column("integration", patches=3, inputs=base)
+    layout.output("value", shape=(), reads=integration)
     return Reinforcement(
         layout.build(),
         actions=2,

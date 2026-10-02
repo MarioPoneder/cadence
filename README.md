@@ -11,7 +11,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/cadence-net)](https://pypi.org/project/cadence-net/)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 
-**Build a learned routine, add depth where it helps, and experiment with recursive feedback.**
+**Start with a small flat network. Add ordinary depth when the task needs it.**
 
 Cadence is an experimental learning library built from bounded patches with
 local state, input and output ports, retained relations and prediction-error
@@ -20,13 +20,16 @@ relations from experience. Recursive observers read other patches' live states
 and exact errors, feeding back into that same settlement. This is the
 observer-like, self-reading structure behind Cadence.
 
-**This README describes `0.60.0.dev0` on `main`.** It supports flat, ordinary deep,
-recursive and mixed layouts through one API. The intended System 1/System 2
-behavior is **routine is cheap; disturbance recruits useful correction; learned
-correction becomes routine**. Automatic internal attention, independently
-progressing fast and slow populations, and a demonstrated recursive advantage
-remain requirements for stable 0.60.0. The development version does not yet
-provide that complete cycle. See [what is available](docs/MIGRATION_060.md).
+**This README describes `0.60.0.dev1` on `main`.** Flat and ordinary deep networks
+are the recommended starting points. Choose the smallest ordinary network that
+learns the task, and measure prediction quality and latency before scaling it.
+Depth can support a capable routine; arbitrary depth is not a speed guarantee.
+
+**Recursive observers are experimental.** They participate in every synchronous
+solve and may slow every call, including familiar routine work. Their benefit
+over capable ordinary networks is unproven. Automatic on-demand attention and
+independent population clocks are not public features. See the
+[experimental capability boundary](docs/EXPERIMENTAL.md).
 
 ## Choose how the brain responds
 
@@ -34,47 +37,48 @@ provide that complete cycle. See [what is available](docs/MIGRATION_060.md).
 | --- | --- | --- |
 | **Flat: a simple routine response** | Each patch reads sensors directly. With parameters fixed, patch states can settle independently. | Small direct mappings, calibration and the first inexpensive baseline. |
 | **Deep: co-settling representations** | Ordinary populations read earlier populations' live states. All layers settle together, with returning influence through their shared constraints. | Routines that need learned intermediate features or combined sensory information. |
-| **Recursive: state-and-error feedback** | Observers read live states and exact current prediction errors. An observer can itself be observed. | Testing whether internal error readback improves correction beyond capable ordinary layers. |
+| **Experimental recursive feedback** | Observers read live states and exact current prediction errors. An observer can itself be observed. | An explicit experiment against capable ordinary controls, with all extra work measured. |
 
 All three use the **same patch rule**, learning methods and whole-brain
 qualification. These are choices of wiring, not three neuron classes or speed
-settings. A flat layout is a useful fast baseline; actual latency depends on
-size, coupling, learning and the task. Recursive depth alone does not make a
-brain more capable, and it has no separate slow clock in the current runtime.
+settings. A small flat layout is a useful fast baseline; actual latency depends
+on size, coupling, learning and the task. Ordinary layers already provide
+feedback through joint settlement; observers are not needed to enable it.
 
 **System 1** means learned routine competence; it can need several ordinary
-layers. **System 2** means extra recursive correction when routine competence
-fails. A coherent changing beat, a familiar game situation or walking a known
+layers. **System 2** names the intended useful recursive correction when routine
+competence fails. The complete cycle—cheap routine, useful correction, then
+retained cheap routine—has not been demonstrated. A coherent changing beat,
+a familiar game situation or walking a known
 path can all be routine. Equilibrium in this behavioral sense means sustained
 competence, not an unchanging output. Numerical settlement alone can still give
 a wrong answer about the world: compare forecasts with later observations and
 measure actual task outcomes.
 
-Combine these layouts inside one `Cortex`. The application supplies observations,
+Build the layout inside one `Cortex`. The application supplies observations,
 executes actions and reports outcomes through one brain/body interface; it does
 not attach an evaluator to every population. Start with the
-[three layout quickstarts](docs/VARIANTS.md), including a
-[mixed brain](docs/VARIANTS.md#combine-routine-layers-and-recursive-observation).
+[flat and ordinary deep quickstarts](docs/VARIANTS.md). Explicit observer wiring
+remains available in the [experimental recipes](docs/VARIANTS.md#experimental-recursive-observer-settlement).
 
 ## Install the development version
 
 Python 3.11 or later. The default engine needs only the standard library:
 
 ```sh
-python -m pip install "cadence-net @ git+https://github.com/muellerberndt/cadence.git@main"
+python -m pip install "cadence-net==0.60.0.dev1"
 python -c "import cadence; print(cadence.__version__)"
 ```
 
-For reproducible work, replace `main` with the reviewed commit hash. The earlier
-published baseline is `cadence-net==0.50.0`; its API differs from this guide.
-See [migration and checkpoint compatibility](docs/MIGRATION_060.md).
+For reproducible work, retain the installed package and its source with saved
+brains; see [checkpoint requirements](docs/REFERENCE.md#checkpoints).
 
 Optional PyTorch execution uses the same learning rule and final reference
-check. Install the development source with its `gpu` extra, then choose
+check. Install the `gpu` extra, then choose
 `Cortex(device="cpu")`, `Cortex(device="mps")` or `Cortex(device="cuda")`:
 
 ```sh
-python -m pip install "cadence-net[gpu] @ git+https://github.com/muellerberndt/cadence.git@main"
+python -m pip install "cadence-net[gpu]==0.60.0.dev1"
 ```
 
 Small brains can be faster on the default engine. Measure the complete workload;
@@ -152,14 +156,15 @@ From a checkout of this development version:
 
 ```sh
 python -m pip install -e .
-python examples/layout_learning.py --layout all
+python examples/layout_learning.py --layout flat
+python examples/layout_learning.py --layout deep
 python examples/live_control.py --decisions 20 --seed 0
 python examples/live_learning.py --seeds 0 2 7
 ```
 
 | Example | What you can verify |
 | --- | --- |
-| [Three layouts, one interface](examples/layout_learning.py) | Acquire a small relation using flat, deep and recursive layouts; check fresh predictions, work counts and exact saved continuation. These have different capacities and are not an advantage comparison. |
+| [Layout learning](examples/layout_learning.py) | Start flat, then try ordinary deep layers; check fresh predictions, work and exact saved continuation. The optional `--layout recursive` experiment has different capacity and does not establish an advantage. |
 | [Learned body control](examples/live_control.py) | Bootstrap a body model, select actions through explicit candidate search, execute them and admit actual outcomes. |
 | [History, retention and rewards](examples/live_learning.py) | Separate small tests of explicit sensory history, old-skill replay, reward learning/reversal and saved continuation. |
 
@@ -173,15 +178,16 @@ Amen, Atari, Patch World and Doom experiments. Their original engines and
 results have different versions and representations. They are **historical
 application evidence**, not completed reproductions on 0.60.0. In particular,
 the original Amen record-cell brain is not equivalent to one current flat
-patch. Use the [demo migration guide](docs/MIGRATION_060.md#reproduce-the-website-demos-before-optimizing-them)
-and [versioned performance evidence](docs/PERFORMANCE.md) before comparing them.
+patch. Consult the [versioned performance evidence](docs/PERFORMANCE.md) and
+[current capability boundary](docs/EXPERIMENTAL.md) before comparing them.
 
 ## Learn more
 
 | Guide | What it helps you do |
 | --- | --- |
 | [Quickstart](docs/QUICKSTART.md) | Build, teach, query and save your first brain |
-| [Layout quickstarts](docs/VARIANTS.md) | Construct flat, deep, recursive and mixed brains with the same interface |
+| [Layout quickstarts](docs/VARIANTS.md) | Construct recommended flat and ordinary deep networks, then optional observer experiments |
+| [Experimental capabilities](docs/EXPERIMENTAL.md) | Understand observer costs, unfinished System 2 behavior and current evidence limits |
 | [Brain design](docs/BRAIN_DESIGN.md) | Choose sufficient observations, connected capacity and useful evaluation checks |
 | [Bootstrapping](docs/BOOTSTRAP.md) | Prepare a skill and measure acquisition, retention and learning cost |
 | [Live operation](docs/LIVE.md) | Connect observations, actual outcomes, history, reward and control callbacks |

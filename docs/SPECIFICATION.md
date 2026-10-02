@@ -2,7 +2,11 @@
 
 This document specifies the population DRSN engine. The equations are in
 [the processing-patch description](ELEMENT.md); all arguments and result fields
-are in [the API reference](REFERENCE.md).
+are in [the API reference](REFERENCE.md). The `0.60.0.dev1` application default
+is ordinary flat or deep composition. Explicit observer wiring is experimental;
+it obeys the same whole-brain numerical contract and participates in every
+solve. No automatic observer sleep, internal attention or independent population
+clocks are part of this specification. See [experimental scope](EXPERIMENTAL.md).
 
 ## Layout and state
 
@@ -260,7 +264,7 @@ without reusing identifiers. The latest receipt is bounded independently of repl
 eviction. These receipts are caller-supplied execution evidence, not authenticated
 measurements; they are distinct from the brain's parameter-admission events.
 
-The unreleased temporal-credit candidate extends the same estimated targets
+The experimental bounded-credit option extends the same estimated targets
 to at most `credit_horizon` adjacent records. It crosses a record boundary only
 when the observed next context equals the next record's context, their episode
 identifiers agree, and the next recorded action attains the current pre-update
@@ -324,12 +328,13 @@ Tests check numerical derivatives independently against finite differences,
 analytic optima on small cases, causal feedback into observed populations,
 energy descent, constrained boundaries, source coverage, witnessed acquisition,
 unclamped recall, refusal rollback, event custody and continuation. Executable
-documentation uses this checkout's public API; candidate-only contracts are
-identified in the [migration guide](MIGRATION_060.md).
+documentation uses this checkout's public API. Unimplemented capabilities and
+the limits of recursive recipes are identified in
+[experimental scope](EXPERIMENTAL.md).
 
 The engine supplies labeled-target learning and persistent joint activity;
 the reinforcement helper adds explicit discrete action-value credit and replay,
-including the bounded candidate return described above.
+including the bounded return described above.
 These do not establish autonomous task discovery, general long-horizon credit,
 learned structural growth or a biological physiology model. Performance and
 advantages from recursive depth remain empirical questions. Biological

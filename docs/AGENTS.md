@@ -17,6 +17,19 @@ network or external critic attached to each population.
 The application still owns sensor meaning, action decoding and outcome units.
 Choose useful connectivity and adequate information before increasing width.
 
+**Default to ordinary layers.** Start flat, then add ordinary
+`column(..., inputs=previous)` layers if the task needs them. Keep routine
+processing dominant in application designs. Use `step` to retain qualified
+activity between live decisions; count its complete work and command latency.
+There is no extra mode to enable and no separate critic or scheduler to wire.
+
+**System 2 warning:** recursive self-observation remains under active testing.
+An explicit `observer` joins every synchronous whole-brain solve and can slow
+routine responses. It is not automatically asleep until surprise, and useful
+recursive superiority remains unproven. Recommend it only for a deliberate
+experiment after a capable ordinary baseline. See
+[experimental features](EXPERIMENTAL.md).
+
 ## Use System 1 and System 2 for roles
 
 **System 1** is a learned skill that keeps working with little repair: a groove,
@@ -33,7 +46,7 @@ relation. It is not a stored historical forecast miss.
 
 These names describe the intended roles of one brain. They are not constructor
 names, biological claims, or bootstrapping/live phase switches. Current
-`0.60.0.dev0` supports the layouts below; it does not yet implement automatic
+`0.60.0.dev1` supports the layouts below; it does not yet implement automatic
 attention, independently progressing populations or the complete integrated
 routine/correction cycle. Keep that boundary visible when writing examples.
 
@@ -43,17 +56,19 @@ routine/correction cycle. Keep that boundary visible when writing examples.
 | --- | --- | --- |
 | A simple direct relation | `column(..., inputs=senses)` feeding an output | Flat when it reads sensors only; unused patches do not supply hidden capacity. |
 | Learned intermediate features | Another `column(..., inputs=earlier_population)` | Ordinary deep composition; all live states settle jointly, with returning influence through the energy. |
-| Current internal mismatch as a learned feature | `observer(..., observes=earlier_population)` | Reads both states and exact prediction errors under the same patch rule. Measure whether this helps. |
-| Specialized branches that share context | Columns and observers combined in one `Cortex`, then `build()` | One graph and body boundary. Branch structure does not give branches separate clocks. |
+| Specialized branches that share context | Ordinary columns combined in one `Cortex`, then `build()` | One graph and body boundary; add only the connectivity the task needs. |
+| Experimental internal error readback | Explicit `observer(..., observes=earlier_population)` | Reads states and exact errors in every solve; compare task benefit and latency against ordinary layers before considering application use. |
 
-The [layout examples](VARIANTS.md) teach, query and resume all three patterns:
+The [layout examples](VARIANTS.md) teach, query and resume ordinary layouts:
 
 ```sh
-PYTHONPATH=src python examples/layout_learning.py --layout all
+PYTHONPATH=src python examples/layout_learning.py
+PYTHONPATH=src python examples/layout_learning.py --layout deep
 ```
 
-This checks a tiny supplied relation, not matched capacity or a recursive
-advantage. Previously declared sources give the public builder acyclic read
+Explicit `--layout recursive` and `--layout all` run the experimental observer
+case. These examples check a tiny supplied relation, not matched capacity or a
+recursive advantage. Previously declared sources give the builder acyclic read
 dependencies. Joint feedback is supported; explicit recurrent state cycles and
 learned temporal memory are separate questions.
 
@@ -89,7 +104,9 @@ learned temporal memory are separate questions.
    execution acknowledgments. Its estimated Q targets are not automatic
    brain-wide emotion or a planning model. Keep outcome records separate from
    replaceable sensory summaries.
-5. **Test correction as an addition.** Compare a competent ordinary control with
+5. **Keep recursive correction optional and experimental.** For most application
+   work, continue with ordinary layers. If investigating observers, compare a
+   competent ordinary control with
    an observer layout on the same causal information, with disclosed capacity,
    exposure and work. Establish routine, disturb the actual body, measure
    useful recovery, and recheck retention and cost after recovery. Include

@@ -1,22 +1,21 @@
 # Learn a routine, then choose its layout
 
-This guide targets **0.60.0.dev0**, the development version on `main`.
+This guide targets **`0.60.0.dev1`**, the development version on `main`.
 It needs Python 3.11 or later and has no mandatory runtime dependencies.
-Install from the repository root:
+Install the prerelease:
+
+```sh
+python -m pip install "cadence-net==0.60.0.dev1"
+```
+
+Or install from a checkout of this version:
 
 ```sh
 python -m pip install -e .
 ```
 
-Or install directly without a checkout:
-
-```sh
-python -m pip install "cadence-net @ git+https://github.com/muellerberndt/cadence.git@main"
-```
-
-Pin a reviewed commit when saving a reproducible experiment. Released `0.50.0`
-does not have every API shown in these development docs; see
-[migration](MIGRATION_060.md).
+Retain the installed package and source when saving a reproducible experiment.
+Saved brains bind their implementation sources; see [checkpoints](REFERENCE.md#checkpoints).
 
 ## 1. Build and teach a small routine
 
@@ -116,47 +115,47 @@ other skills, so recheck free behavior after learning.
 
 ## 4. Add a representation when the task needs one
 
-For a more complicated relation, connect ordinary populations. They jointly
-settle: the later relation can influence earlier states through the common
-energy. An observer additionally reads exact current prediction errors.
-The body still uses the same named inputs and outputs.
+Flat and ordinary deep networks are the recommended defaults. For a more
+complicated relation, connect ordinary populations. They jointly settle: the
+later relation can influence earlier states through the common energy. The body
+still uses the same named inputs and outputs.
 
 ```python
-def make_brain(kind):
-    cortex = Cortex(seed=2)
-    command = cortex.input("command", shape=1)
-    representation = cortex.column("representation", patches=4, inputs=command)
-    if kind == "deep":
-        integration = cortex.column("integration", patches=2, inputs=representation)
-        response = cortex.column("response", patches=1, inputs=integration)
-    elif kind == "recursive":
-        integration = cortex.observer("integration", patches=2, observes=representation)
-        response = cortex.observer("response", patches=1, observes=integration)
-    else:
-        raise ValueError("choose deep or recursive")
-    cortex.output("movement", shape=1, reads=response)
-    return cortex.build()
+cortex = Cortex(seed=2)
+command = cortex.input("command", shape=1)
+representation = cortex.column("representation", patches=4, inputs=command)
+integration = cortex.column("integration", patches=2, inputs=representation)
+response = cortex.column("response", patches=1, inputs=integration)
+cortex.output("movement", shape=1, reads=response)
+candidate = cortex.build()
 
-for kind in ("deep", "recursive"):
-    candidate = make_brain(kind)
-    learned = bootstrap(
-        candidate, examples, checks=checks,
-        epochs=20, batch_size=4, max_error=0.1, seed=2,
-    )
-    assert learned["passed"], learned
-    assert abs(candidate.predict({"command": [0.5]})["movement"][0] - 0.3) < 0.1
+learned = bootstrap(
+    candidate, examples, checks=checks,
+    epochs=20, batch_size=4, max_error=0.1, seed=2,
+)
+assert learned["passed"], learned
+assert abs(candidate.predict({"command": [0.5]})["movement"][0] - 0.3) < 0.1
 ```
 
-Both layouts learn through the same patch rule and one coupled solve. The tiny
-calibration needs no observer; this demonstrates the interface, not a recursive
-advantage or a matched-capacity comparison. See [layout variants](VARIANTS.md)
-and [brain design](BRAIN_DESIGN.md) to choose a task and meaningful controls.
+Both layouts learn through the same patch rule. This tiny calibration already
+works with one flat patch; keep that simpler network for this task. Add depth
+when it improves measured quality enough to justify its cost. Arbitrary depth
+is not guaranteed to be fast. See [layout variants](VARIANTS.md) and
+[brain design](BRAIN_DESIGN.md) for larger tasks and meaningful controls.
 
 **System 1** means an acquired routine, which can need ordinary deep layers.
-**System 2** means useful additional recursive observation and correction.
-These are roles within one brain, not public classes. The current API supports
-these layouts; it does not yet supply automatic internal attention, independent
-population clocks, or the complete correction-to-retained-routine capability.
+**System 2** names the intended useful recursive observation and correction.
+These are behavioral roles, not public classes.
+
+## Experimental observers
+
+Explicit observer wiring is available in the
+[experimental layout recipes](VARIANTS.md#experimental-recursive-observer-settlement).
+Observers participate in every synchronous solve and may slow every call,
+including familiar routine work. Their advantage over capable ordinary networks
+is unproven. Automatic on-demand attention, independent population clocks and
+the complete correction-to-retained-routine capability are not public features.
+See [experimental capabilities](EXPERIMENTAL.md) before choosing this path.
 
 ## Continue with a real task
 
@@ -169,5 +168,6 @@ failure behavior. The repository's complete layout example also runs from a
 shell:
 
 ```sh
-python examples/layout_learning.py --layout all
+python examples/layout_learning.py --layout flat
+python examples/layout_learning.py --layout deep
 ```

@@ -1,31 +1,29 @@
 # Cadence 0.60 documentation
 
-This guide covers **`0.60.0.dev0` on `main`**. Build a learned routine with a
-flat population, add ordinary deep layers for intermediate representations,
-and test recursive observers when state-and-error feedback could help. Every
-layout uses the same bounded patch rule, settlement and learning API.
+This guide covers **`0.60.0.dev1` on `main`**. Start with the smallest adequate
+flat network and add ordinary deep layers when the task needs intermediate
+representations. Measure quality and latency before scaling. Both use the same
+bounded patch rule, settlement and learning API.
 
 | You need | Start with |
 | --- | --- |
 | A small direct response | A flat population reading the sensors |
 | A more expressive routine | Ordinary deep layers whose live states settle together |
-| Internal error readback | Recursive observers in the same jointly settling brain |
-| Both routine layers and observers | A mixed layout with one external observation/action/outcome interface |
+| An explicit internal-error experiment | Experimental recursive observers, compared with capable ordinary controls |
 
-These are layout choices, not latency guarantees. **System 1** means acquired
-routine competence, which can be deep. **System 2** means additional recursive
-correction when routine behavior fails. The intended cycle is routine →
-disturbance → useful correction → cheaper learned routine. Automatic internal
-attention and independently progressing fast/slow populations remain development
-requirements; adding an observer does not enable them. See the
-[0.60 migration and capability boundary](MIGRATION_060.md).
+**System 1** means acquired routine competence, which can use ordinary deep
+layers. Depth is not a latency guarantee. **System 2** names the intended extra
+recursive correction when routine behavior fails; that complete capability is
+unproven. Explicit observers participate in every synchronous solve and may slow
+every call. They do not enable automatic on-demand attention or independent
+population clocks. See the [experimental capability boundary](EXPERIMENTAL.md).
 
 ## A short learning path
 
 1. [Quickstart](QUICKSTART.md): construct a brain, bootstrap a relation, test
    fresh predictions without targets, then save and resume.
-2. [Layout quickstarts](VARIANTS.md): build flat, deep, recursive and mixed
-   layouts without changing the external interface.
+2. [Layout quickstarts](VARIANTS.md): build flat and ordinary deep layouts;
+   observer recipes are a separate experimental option.
 3. [Brain design](BRAIN_DESIGN.md): choose observations, temporal context,
    connected capacity and a cost budget for the task you actually need.
 4. [Bootstrapping](BOOTSTRAP.md), then [live operation](LIVE.md): acquire a
@@ -47,7 +45,7 @@ settlement and useful behavior need separate checks.
 | [Processing patch](ELEMENT.md) | Local state, prediction errors, repair and retained relations |
 | [API reference](REFERENCE.md) | Public classes, parameters, methods and diagnostics |
 | [Specification](SPECIFICATION.md) | Qualification, refusal, witness admission and saved continuation |
-| [Migrating to 0.60](MIGRATION_060.md) | Installation, changed contracts, source-bound checkpoints and demo reproduction |
+| [Experimental capabilities](EXPERIMENTAL.md) | Observer costs, unfinished System 2 behavior and evidence limits |
 
 [Source](https://github.com/muellerberndt/cadence) ·
 [Public demos](https://github.com/muellerberndt/cadence-demos) ·

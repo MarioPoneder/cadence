@@ -45,8 +45,8 @@ jobs:
           layout = Cortex(seed=2)
           signal = layout.input("signal", shape=(1,))
           base = layout.column("base", patches=4, inputs=signal)
-          observer = layout.observer("observer", patches=2, inputs=signal, observes=base)
-          layout.output("answer", shape=(1,), reads=observer)
+          response = layout.column("response", patches=2, inputs=(signal, base))
+          layout.output("answer", shape=(1,), reads=response)
           brain = layout.build()
           examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
           checks = [({"signal": [x]}, {"answer": [x]}) for x in (-0.4, 0.4)]

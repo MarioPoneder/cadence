@@ -1,18 +1,20 @@
 # Use a learned brain with an actual body
 
-Install **0.60.0.dev0** as shown in the [quickstart](QUICKSTART.md). This guide
+Install **0.60.0.dev1** as shown in the [quickstart](QUICKSTART.md). This guide
 covers live observations, actions, outcomes and continued learning using the
 existing public API. Begin with a skill that passes free assessment;
 [bootstrapping](BOOTSTRAP.md) explains how to acquire and check one.
 
-A flat, ordinary deep or recursive layout has the same body interface: named
-observations go in, qualified outputs come out, and actual consequences supply
-experience. Every population currently uses the same processing-patch rule and
-participates in one coupled solve. System 1 and System 2 describe routine and
-additional corrective roles; adding an observer does not automatically allocate
-attention, create independent population clocks, or establish retained correction.
-See [brain design](BRAIN_DESIGN.md#measure-speed-and-retained-correction)
-for that capability boundary.
+Use flat or ordinary deep columns for an application routine. Named observations
+go in, qualified outputs come out, and actual consequences supply experience.
+Ordinary depth can support System 1; it does not imply System 2 or a latency
+guarantee. Every population uses the same processing-patch rule and participates
+in one coupled solve.
+
+Recursive observers are [experimental opt-in](EXPERIMENTAL.md). They join every
+solve and can slow routine responses; the public runtime does not automatically
+put them to sleep or recruit them on surprise. Adding them does not establish
+useful retained correction, automatic attention or independent population clocks.
 
 ## Predict first, execute, then learn from the outcome
 
@@ -500,7 +502,7 @@ not one integrated autonomous life or evidence of an observer advantage.
 The [stored receipt](../examples/receipts/temporal_credit.json) is **historical
 0.50.0 qualification evidence**, produced at commit `d9b592c` before that version
 bump. Within that release transition, only the package version string changed
-among its hashed implementation files. It is not a 0.60.0.dev0 rerun. Its 66
-cases include 18 passing memory cases and 16 passing TD cases; the other cases
+among its hashed implementation files. It is not a rerun on the current development release.
+Its 66 cases include 18 passing memory cases and 16 passing TD cases; the other cases
 are controls. Current reruns must retain their own source hashes, results and
 timings rather than inheriting those numerical conclusions.

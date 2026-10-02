@@ -1,8 +1,8 @@
 # Cadence examples
 
-These examples run on the current `0.60.0.dev0` checkout with Python 3.11 or
-later. Start with the two commands below: first acquire a small relation in
-three layouts, then use a learned body model to choose actions. Neither needs
+These examples run on the current `0.60.0.dev1` checkout with Python 3.11 or
+later. First acquire a small relation with ordinary columns, then use a learned
+body model to choose actions. Neither needs
 an optional dependency. The [quickstart](../docs/QUICKSTART.md) covers installation;
 [brain design](../docs/BRAIN_DESIGN.md) explains how to choose a larger layout.
 
@@ -12,7 +12,7 @@ an optional dependency. The [quickstart](../docs/QUICKSTART.md) covers installat
 | --- | --- | --- |
 | Flat / input-only | Patches read external inputs without reading other patches. | Small direct input-to-output relations and an inexpensive baseline. |
 | State-coupled / ordinary composition | Populations read other populations' live states, without error ports; they may also read external inputs. | Learned intermediate representations and a control for the value of error readback. |
-| Recursive observer | Observers read other populations' live states and exact prediction errors; an observer can itself be observed. | Testing whether internal state-and-error readback improves the task enough to justify its cost. |
+| Experimental recursive observer | Observers read other populations' live states and exact prediction errors; an observer can itself be observed. | Testing whether internal state-and-error readback improves the task enough to justify its cost. |
 
 **All three patterns settle.** They use the same bounded patches, energy,
 repair rule and numerical qualification. State-coupled and recursive layouts
@@ -26,24 +26,28 @@ qualified activity, and `observe` learns from supplied output witnesses.
 Check `qualified` or `accepted`; `predict` raises on refusal. Numerical
 qualification and useful learned behavior are separate checks.
 
-A capable routine (System 1) can need ordinary deep populations. An observer
-adds current internal error readback; useful corrective behavior (System 2)
-needs a task comparison. These examples do not implement automatic attention
-or independently progressing fast and slow populations.
+Use flat or ordinary deep populations for application routines (System 1).
+Depth alone implies neither System 2 nor low latency. An observer is an explicit
+[experimental choice](../docs/EXPERIMENTAL.md): it joins every solve and may slow
+routine responses. It is not automatically asleep until surprise, and a useful
+advantage over capable ordinary layers remains unestablished. These examples
+do not implement automatic attention or independently progressing populations.
 
 ## Start with the same learning loop in three layouts
 
 [layout_learning.py](layout_learning.py) is the smallest complete example:
-select `flat`, `deep` or `recursive`, teach the same scalar relation, check new
-unclamped inputs and verify saved continuation. It uses the default Python
+teach a scalar relation with the default `flat` layout, check new unclamped
+inputs and verify saved continuation. Select `deep` to try ordinary composition. It uses the default Python
 engine with no optional dependency:
 
 ```sh
-PYTHONPATH=src python examples/layout_learning.py --layout all
+PYTHONPATH=src python examples/layout_learning.py
+PYTHONPATH=src python examples/layout_learning.py --layout deep
 ```
 
-The deep and recursive cases each have seven connected patches; the flat case
-has one. Observation adds error contacts. They are API examples with declared
+Explicit `--layout recursive` runs the observer experiment; `--layout all`
+includes it in a comparison. The deep and recursive cases each have seven
+connected patches; the flat case has one. Observation adds error contacts. They are API examples with declared
 different capacities and costs, not evidence of a depth advantage. “Deep” means
 ordinary populations settled together, not sequential finished layer answers.
 For a larger task, follow [brain design](../docs/BRAIN_DESIGN.md) before scaling
@@ -79,12 +83,16 @@ Use `layout_learning.py` for the separate save/resume example.
 | --- | --- | --- |
 | [layout_learning.py](layout_learning.py) | One-patch flat, seven-patch deep ordinary, and seven-patch nested observer layouts. | The same public build/teach/query/save contract, fresh free predictions, exact resumption and separate work counts. |
 | [layout_cost.py](layout_cost.py) | Six patches: input-only flat, state-only composition, composition with a sensory skip, and two observer levels. | Pure query cost at fixed parameters, including an independent exact-optimum check for flat queries. No training or capability score. |
-| [batch_bootstrap.py](batch_bootstrap.py) | 12 processing patches and four observers, with direct sensory inputs to both populations. | Batched supervised preparation on two simple continuous relations, followed by fresh unclamped checks; separates startup, learning and test time across requested devices. |
+| [batch_bootstrap.py](batch_bootstrap.py) | Two ordinary populations of 12 and four patches, with direct sensory inputs to both. | Batched supervised preparation on two simple continuous relations, followed by fresh unclamped checks; separates startup, learning and test time across requested devices. |
 | [cuda_qualification.py](cuda_qualification.py) | Existing single-example and batch tensor test fixtures. | Records CUDA correctness checks from a clean committed checkout, including exact source identity, hardware and per-case outcomes; `--full` includes the complete test suite. |
-| [parallel_bootstrap.py](parallel_bootstrap.py) | Independent six-patch brains: four processing patches and two observers, both reading supplied body inputs. | Learning one-step outcomes of a tiny moving body, with process parallelism across independent brains and ordered admissions within each brain. |
-| [live_control.py](live_control.py) | Four processing patches and two observers, both reading position and candidate action. | Learning a one-dimensional body's next position and querying candidate actions through `LiveController`, with actuator limits and actual outcome observations. |
-| [live_learning.py](live_learning.py) | Six-patch observer layouts for cue/retention gates; a nine-patch observer layout for reward learning. | Explicit-history cue recall, retention with old-example replay, reward-based acquisition/reversal and saved continuation in separate small fixtures. |
+| [parallel_bootstrap.py](parallel_bootstrap.py) | Independent six-patch brains: ordinary populations of four and two patches, both reading supplied body inputs. | Learning one-step outcomes of a tiny moving body, with process parallelism across independent brains and ordered admissions within each brain. |
+| [live_control.py](live_control.py) | Ordinary populations of four and two patches, both reading position and candidate action. | Learning a one-dimensional body's next position and querying candidate actions through `LiveController`, with actuator limits and actual outcome observations. |
+| [live_learning.py](live_learning.py) | Six-patch ordinary layouts for cue/retention gates; a nine-patch ordinary layout for reward learning. | Explicit-history cue recall, retention with old-example replay, reward-based acquisition/reversal and saved continuation in separate small fixtures. |
 | [temporal_credit.py](temporal_credit.py) | Memory fixture: four patches in each flat, ordinary-composed and observer layout, with sensory skips in the latter two. Reward fixture: four input-only patches. | Layout comparisons with explicit sensory history, erased-history and state-reset controls; separate delayed-reward/replay controls; saved continuation. |
+
+`layout_cost.py` and `temporal_credit.py` deliberately retain observer arms as
+experimental comparisons. Their stored receipts remain historical; ordinary
+defaults in other examples do not turn those records into new-version results.
 
 `History` is supplied external memory. `Reinforcement` supplies explicit
 action-value targets and transition replay through the same learning API.
@@ -125,7 +133,7 @@ on this checkout produces a new result. Historical Amen, Atari, Patchworld
 and other application demonstrations used their own versioned engines,
 models and body adapters. Their published scores or musical quality are not
 current `0.60` reproduction results. See the
-[demo reproduction boundary](../docs/MIGRATION_060.md#reproduce-the-website-demos-before-optimizing-them)
+[demo evidence boundary](../docs/EXPERIMENTAL.md)
 before comparing or replacing one.
 
 - [Cadence 0.50.0 query-cost receipt](receipts/layout_cost.json): protocol, per-query

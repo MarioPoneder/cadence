@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.60.0.dev1 — 2026-10-02
+
+- Make flat and ordinary deep settling networks the recommended application
+  path. Ordinary depth can serve System 1; adding layers does not require
+  recursive self-observation or another public abstraction.
+- Remove observers from the default live-control, learning, batch and parallel
+  examples. The layout example defaults to flat; recursive comparisons require
+  explicit selection. Default construction remains free of observation contacts
+  and background reflection, with regression coverage.
+- Mark System 2 self-observation as experimental throughout the user and agent
+  guides. Explicit observers participate in every coupled solve, can add
+  latency, and have no demonstrated general advantage over capable ordinary
+  layers. Automatic on-demand reflection remains research work.
+- Replace the migration guide with a short experimental-capability boundary.
+  Keep one builder and brain interface, unchanged numerical qualification and
+  the existing saved-continuation contract; add no mode flags or dependencies.
+- This development prerelease does not claim completed automatic System 2,
+  retained useful recursive correction, reproduced musical quality or stable
+  0.60.0 readiness.
+
 ## 0.60.0.dev0 — development line
 
 - Identify development installations separately from the published 0.50.0 API.
@@ -9,7 +29,7 @@
   fresh full-graph qualification; no new public cache control.
 - Bind reward feedback to an issued decision and the action actually executed,
   preserving retry and outcome ownership. A bounded multi-transition credit
-  candidate remains experimental. See [migration](docs/MIGRATION_060.md).
+  candidate remains experimental. See [experimental features](docs/EXPERIMENTAL.md).
 - Allow `step` to retain qualified activity under explicit targets and
   interventions without learning or recording an experience. Clamps expire
   after each call.

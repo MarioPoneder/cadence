@@ -1,7 +1,9 @@
 """Teach, query and resume three layouts through the same public interface.
 
-Run: PYTHONPATH=src python examples/layout_learning.py --layout all
-This tiny relation demonstrates the API, not an architectural advantage.
+Run: PYTHONPATH=src python examples/layout_learning.py
+The default is flat. Select --layout deep for ordinary composition, or explicitly
+select --layout recursive/all to study observer wiring. This tiny relation
+demonstrates the API, not an architectural advantage.
 """
 
 import argparse
@@ -92,11 +94,11 @@ def learn(kind, *, seed=2):
     }
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--layout", choices=("all", *LAYOUTS), default="all")
+    parser.add_argument("--layout", choices=("all", *LAYOUTS), default="flat")
     parser.add_argument("--seed", type=int, default=2)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     selected = LAYOUTS if args.layout == "all" else (args.layout,)
     print(json.dumps([learn(kind, seed=args.seed) for kind in selected], indent=2))
 

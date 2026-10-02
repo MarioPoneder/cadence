@@ -24,11 +24,12 @@ existing brain methods; it adds no solver or phase state. `memory.py` holds
 explicit history and error-progress bookkeeping; `reinforcement.py` supplies
 discrete-action Q-learning orchestration; `runtime.py` supplies serial live
 scheduling and actuator rate limits. These helpers preserve the patch equation.
-See the [quickstart](QUICKSTART.md) for a first learned relation, the
-[layout quickstarts](VARIANTS.md) for flat/deep/recursive construction, and the
-[architecture guide](DRSN.md) for equations. This development reference includes
-the `0.60.0.dev0` outcome-ownership interface; consult
-[migration](MIGRATION_060.md) when using an installed release.
+This reference describes `0.60.0.dev1`. Start with the
+[quickstart](QUICKSTART.md), then the [ordinary layout examples](VARIANTS.md).
+Flat and ordinary deep columns are the recommended application path; ordinary
+depth can support a System 1 routine. The [architecture guide](DRSN.md) explains
+the equations, and the [experimental boundary](EXPERIMENTAL.md) distinguishes
+observer wiring from unimplemented automatic System 2 behavior.
 
 ## Cortex: declare a layout
 
@@ -93,7 +94,7 @@ trajectories and cost, not the declared patch law. See [acceleration](ACCELERATI
 | --- | --- |
 | `input(name, *, shape)` | An `Input` boundary whose supplied values remain fixed for the complete solve. |
 | `column(name=None, *, patches, inputs=())` | A `Population` containing exactly `patches` processing patches, a positive integer. `inputs` accepts existing sensor or population references. |
-| `observer(name=None, *, patches, inputs=(), observes)` | The same patch primitive with at least one observed population. Reads its live states and exactly recomputed prediction errors; may also receive ordinary `inputs`. |
+| `observer(name=None, *, patches, inputs=(), observes)` | Explicit experimental readback using the same patch primitive, with at least one observed population. Reads its live states and exactly recomputed prediction errors in every joint solve; may also receive ordinary `inputs`. |
 | `output(name, *, shape, reads, indices=None)` | An `Output` exposing selected coordinates of one population, with no separate output network. |
 | `build()` | A `Brain` with resolved sparse wiring. Requires at least one population and one output. A successful build freezes the layout; further construction or another build raises `ValueError`. |
 
@@ -111,7 +112,9 @@ Both kinds of population contacts follow declaration order. All eligible
 states are solved jointly: ordinary state contacts already return influence
 through the energy derivatives, and observation adds an exact current-error
 channel. Neither construction supplies a separately scheduled critic,
-external attention flag or learned recurrent state cycle.
+external attention flag or learned recurrent state cycle. Observers are not
+automatically asleep during routine operation, and their advantage over capable
+ordinary layers is not established.
 
 `shape` accepts a positive integer or a tuple/list of at most eight positive
 integer dimensions. `shape=()` denotes one scalar. Shape describes data layout,
@@ -548,7 +551,7 @@ Reinforcement(
 ```
 
 The helper originated in 0.50.0; `credit_horizon` and explicit executed-outcome
-acknowledgments below belong to this development candidate. With the default
+acknowledgments below are available in `0.60.0.dev1`. With the default
 action-conditioned form, the compiled
 `brain` needs an `action_input` sensor with exactly `actions` coordinates and a `value_output`
 selecting one scalar patch state. With `action_input=None`, `value_output`
@@ -569,7 +572,7 @@ settled outputs, not a separate policy head. `brain` remains accessible and
 | `value_scale` | Positive finite target scale, strictly below both `state_bound` and `1 / (1 + state_prior)`. This check does not establish that a chosen architecture learns the value function. |
 | `capacity` | Positive integer bound on stored transition records; oldest records are discarded when full. |
 | `batch_size` | Positive integer no greater than capacity. Replay samples up to this many records, always including the latest. |
-| `credit_horizon` | Experimental 0.60 candidate: positive integer no greater than capacity; maximum actual consecutive transitions used per return. One preserves the original one-step target. |
+| `credit_horizon` | Experimental bounded credit: positive integer no greater than capacity; maximum actual consecutive transitions used per return. One preserves the original one-step target. |
 | `seed` | Nonnegative integer for private exploration, tie-breaking and replay sampling. |
 
 For reward `r`, the target is a normalized discounted-return estimate:
@@ -588,7 +591,7 @@ repair, preserving current live activity. Actual rewards and observations are
 records; fitted future-return targets are estimates. Replay is not a guarantee
 of protected retention or convergence of nonlinear Q-learning.
 
-In the unreleased temporal-credit candidate, `credit_horizon > 1` follows the
+The experimental `credit_horizon > 1` option follows the
 next recorded transition only if its observation exactly matches the preceding
 next observation, it belongs to the same episode, and its executed action is
 greedy under the same frozen pre-update values. Exact ties count as greedy.
@@ -614,7 +617,7 @@ collection stops. `reset()` cuts temporal links without clearing past replay.
 | `replay(*, budget=None)` | Attempt one sampled batch update from retained records. Other than the mandatory latest record, sample uniformly without replacement. Next-action query or fit refusal commits no parameters; retry this method rather than resubmitting feedback. |
 | `reset()` | End the current episode/credit segment and discard a pending action without inventing a reward or clearing retained records, RNG, parameters or live activity. |
 | `inspect()` | Copy `config`, current `records`, cumulative `transitions`, successful helper `updates`, boolean `pending`, current `episode`, `issued_decisions`, `pending_decision_id`, `pending_action` and `last_feedback_id`. Absent pending/receipt identities are `None`. |
-| `snapshot()` | Save brain, replay records with episode/decision identifiers, pending proposal, issued-decision counter, latest outcome receipt, RNG and counters in bounded JSON. The unreleased candidate uses `reinforcement/3`; old source-bound checkpoints are not silently migrated. |
+| `snapshot()` | Save brain, replay records with episode/decision identifiers, pending proposal, issued-decision counter, latest outcome receipt, RNG and counters in bounded JSON. This release uses `reinforcement/3`; old source-bound checkpoints are not silently migrated. |
 | `Reinforcement.from_snapshot(text)` | Validate the complete continuation, including the reinforcement source hash and the brain's own source identity. Text limit: 32 MiB. |
 
 Successful `act` returns `accepted=True`, integer `action`, positive integer

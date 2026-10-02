@@ -8,8 +8,10 @@ target through joint state/parameter repair, labeled as a witness or an estimate
 private experience states. `bootstrap` replays witnesses, optionally in batches,
 and checks unclamped predictions.
 
-More width or recursive depth increases capacity and cost. Whether it improves
-a task must be tested; adding layers does not guarantee successful learning.
+Recommend ordinary flat or deep columns before choosing an accelerator. More
+width or depth changes capacity and cost; neither guarantees learning or low
+latency. Recursive observation is [experimental opt-in](EXPERIMENTAL.md), joins
+every whole-brain solve and is not automatically inactive during routine work.
 Acceleration changes execution, not the information supplied, the learning
 objective or the need for a useful teaching stream.
 
@@ -22,14 +24,15 @@ a bounded query comparison and the distinction between answering and learning.
 ## Select execution explicitly
 
 The default `Cortex()` uses Python float64 and has no runtime dependencies.
-Install the optional tensor backend from the same reviewed checkout when needed:
+Install the optional tensor backend for the same release when needed:
 
 ```sh
-python -m pip install -e ".[gpu]"
+python -m pip install "cadence-net[gpu]==0.60.0.dev1"
 ```
 
-For the published baseline instead, install `cadence-net[gpu]==0.50.0`.
-That package does not include the [development candidate's contracts](MIGRATION_060.md).
+Use the [quickstart](QUICKSTART.md) for the current `0.60.0.dev1` installation.
+The device measurements below retain their recorded source versions; they are
+not current-version or all-workload performance guarantees.
 
 | `device` | Proposal arithmetic | Default `dtype` |
 | --- | --- | --- |
@@ -51,8 +54,8 @@ from cadence import Brain, Cortex, bootstrap
 layout = Cortex(seed=2, device="python")
 signal = layout.input("signal", shape=1)
 base = layout.column("perception", patches=4, inputs=signal)
-observer = layout.observer("reflection", patches=2, inputs=signal, observes=base)
-layout.output("answer", shape=1, reads=observer)
+response = layout.column("response", patches=2, inputs=(signal, base))
+layout.output("answer", shape=1, reads=response)
 brain = layout.build()
 
 examples = [({"signal": [x]}, {"answer": [x]}) for x in (-0.8, 0.8)]
@@ -105,8 +108,8 @@ execution with `source="estimate"`; its next-action queries also count as work.
 
 The [batch bootstrap example](../examples/batch_bootstrap.py) measures a small
 supervised relation with 32 teaching rows, eight readiness checks and 16 fresh
-test rows. Its 12 processing patches and four observing patches receive eight
-numeric sensors and expose two outputs. From the repository root:
+test rows. Its two ordinary populations contain 12 and four patches, receive
+eight numeric sensors and expose two outputs. From the repository root:
 
 ```sh
 python -m pip install -e ".[gpu]"

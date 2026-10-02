@@ -60,8 +60,8 @@ def run_life(seed, epochs):
     cortex = Cortex(seed=seed)
     body = cortex.input("body", shape=2)
     base = cortex.column("perception", patches=4, inputs=body)
-    observer = cortex.observer("reflection", patches=2, inputs=body, observes=base)
-    cortex.output("next_position", shape=1, reads=observer)
+    integration = cortex.column("integration", patches=2, inputs=(body, base))
+    cortex.output("next_position", shape=1, reads=integration)
     brain = cortex.build()
     report = bootstrap(
         brain,

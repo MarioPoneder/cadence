@@ -12,9 +12,7 @@ def test_package_version_matches_distribution_metadata():
     assert cadence.__version__ == metadata["project"]["version"]
 
 
-def test_unreleased_candidate_has_development_identity():
+def test_documented_installation_matches_distribution_identity():
     root = Path(__file__).resolve().parents[1]
-    migration = (root / "docs" / "MIGRATION_060.md").read_text()
-    if "**unreleased development candidate**" in migration:
-        assert ".dev" in cadence.__version__
-        assert f"`{cadence.__version__}`" in migration
+    for name in ("README.md", "docs/QUICKSTART.md", "docs/EXPERIMENTAL.md"):
+        assert f"`{cadence.__version__}`" in (root / name).read_text(), name

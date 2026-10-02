@@ -1,15 +1,18 @@
 # Flat, composed and recursive brains: capability and cost
 
 **Start with the least expensive layout that learns the required behavior.**
-A small flat brain can answer much faster than a coupled one and can be enough
-for a useful control task. Recursive observation adds a way to use internal
-states and prediction errors; its extra work earns a place only when it improves
-behavior under the application's resource budget.
+Start with ordinary flat columns; use ordinary deep composition when a direct
+relation is insufficient. Either can support a System 1 routine. Flat queries
+can be inexpensive, but no layout guarantees application latency. Recursive
+observation is [experimental opt-in](EXPERIMENTAL.md); an advantage over capable
+ordinary layers has not been established.
 
 **Flat, ordinary deep and recursively observing layouts all perform
-settlement in 0.60.0.dev0.** Recursive observation is optional wiring,
+settlement in 0.60.0.dev1.** Recursive observation is optional wiring,
 not a requirement for the patch/repair mechanism. Each layout uses the same
-public `settle`/`step` operations and final stationarity check.
+public `settle`/`step` operations and final stationarity check. Observers join
+every solve; the public runtime does not automatically put them to sleep
+during routine responses.
 The [design-pattern guide](VARIANTS.md) introduces the three choices with
 runnable examples; this page explains their cost and supporting evidence.
 Recorded benchmarks below retain their original source identities and versions,
@@ -230,7 +233,7 @@ both prediction quality and complete playing strength.
 
 ## Choosing a layout for a real-time application
 
-The experimental query implementation reuses predictions that depend only on
+The current query implementation reuses predictions that depend only on
 fixed sensory inputs during one repair. This also applies to sensory populations
 inside a recursive graph: their predictions are constant, while their states,
 errors and feedback remain live. Initial and final checks still traverse the
@@ -243,7 +246,8 @@ attention or evidence of improved behavior.
 1. Establish a small flat baseline with the actual available sensors. Measure
    useful behavior after bootstrapping, including refusal and failure cases.
 2. Add ordinary composition if the direct mapping lacks a useful representation.
-   Compare it with error-observing layouts before attributing a gain to recursion.
+   Keep recursive layouts as a separate opt-in experiment, with capable ordinary
+   controls before attributing any gain to error readback.
 3. Keep width, edge/parameter counts, history, target access, starting checkpoint,
    tolerance and backend visible. Match relevant capacity and information; also
    compare within the same elapsed-time budget. Include all training selection.
@@ -256,10 +260,10 @@ attention or evidence of improved behavior.
 
 The intended fast/slow design keeps one brain and one body interface: familiar
 behavior stays inexpensive, and internal correction receives more work when
-needed. The current candidate does not implement that automatic allocation.
+needed. This development release does not implement that automatic allocation.
 Every query must still qualify the complete connected brain; an application
 scheduler cannot certify a partially solved branch. `LiveController` keeps
 rendering responsive while a serial worker owns the brain; it does not make an
 unfinished answer ready sooner. See
-[brain design](BRAIN_DESIGN.md#measure-speed-and-retained-correction) for the
-capability boundary and [live control](LIVE.md) for execution.
+[experimental scope](EXPERIMENTAL.md) for the capability boundary and
+[live control](LIVE.md) for execution.

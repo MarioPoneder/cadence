@@ -59,6 +59,20 @@ helpers are not new patch primitives or biological chemistry.
 
 ## System 1 and System 2
 
+**Recommend System 1 for applications.** Start with the smallest adequate flat
+`column`, then add ordinary `column(..., inputs=previous)` layers when the task
+needs intermediate representations. Most examples and application recipes must
+use this ordinary path. Ordinary depth is not System 2. Check held-out quality
+and end-to-end latency; depth alone does not guarantee fast settlement.
+
+**Recursive self-observation is experimental.** `observer(..., observes=...)`
+is explicit opt-in and participates in every whole-brain solve. It can slow
+routine responses; the public runtime does not automatically put it to sleep
+or recruit it only on surprise. Its advantage over capable ordinary layers
+is not established. Keep recursive examples clearly labeled experiments and
+link the [experimental boundary](docs/EXPERIMENTAL.md). Never add observers to
+a production-oriented recipe merely because a task is complex or long-term.
+
 **System 1** means acquired routine competence with inexpensive repair.
 **System 2** means additional recursive observation and correction when routine
 behavior cannot maintain equilibrium, including longer-term outcomes. These are
@@ -76,6 +90,8 @@ requirements until the runtime and behavioral evidence support them.
 Keep the intended application contract small: one brain/body interface for
 observations, qualified actions and actual outcomes. Specialized learned roles
 must not require per-population evaluators or a user-managed attention scheduler.
+Do not add a System 1/System 2 mode flag, extra brain wrapper or migration layer
+to express this recommendation. Ordinary construction is already the default.
 Currently all populations use the same patch rule. Future specialized mechanisms
 need explicit bounded state, readback, learning and repair semantics, a declared
 qualification contract and measured general benefit. Minimalism does not establish

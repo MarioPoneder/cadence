@@ -3,8 +3,8 @@
     python examples/live_control.py
 
 The supplied body has position, a velocity port and measured transition records.
-Cadence's observer reads patch state and prediction error in the same equilibrium;
-actual body records repair that model through ordinary ``observe``. The action
+Ordinary populations settle together to predict the next position;
+actual body records repair that model through ``observe``. The action
 comparison and distance/effort reward are supplied application rules outside the
 brain. This is model-based control, not reinforcement learning or a full pet.
 Learning progress is recorded from actual prediction error; it does not select
@@ -69,8 +69,8 @@ def prepare(seed=0):
     cortex = Cortex(seed=seed)
     senses = cortex.input("body", shape=2)
     base = cortex.column("perception", patches=4, inputs=senses)
-    observer = cortex.observer("reflection", patches=2, inputs=senses, observes=base)
-    cortex.output("next_position", shape=1, reads=observer)
+    integration = cortex.column("integration", patches=2, inputs=(senses, base))
+    cortex.output("next_position", shape=1, reads=integration)
     brain = cortex.build()
     report = bootstrap(
         brain,

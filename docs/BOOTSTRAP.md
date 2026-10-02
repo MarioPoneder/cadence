@@ -7,11 +7,12 @@ with a competent brain.
 
 **Bootstrapping** is initial guided practice. **Live operation** uses the same
 brain in its environment and may include more learning. These lifecycle phases
-are separate from System 1 and System 2: an ordinary deep skill may become a
-routine, while a recursive observer may help correct it. Flat, ordinary deep
-and observing layouts all use the same public learning operations and processing
-patch rule. See [brain design](BRAIN_DESIGN.md) for the architecture and its
-current limits.
+are separate from System 1 and System 2. A capable routine can use flat or
+ordinary deep columns; these are the recommended application path. Recursive
+observers are an explicit experiment, not the next required stage of learning.
+All layouts use the same public learning operations and processing-patch rule.
+See [brain design](BRAIN_DESIGN.md) and the
+[experimental capability boundary](EXPERIMENTAL.md).
 
 ## A small complete acquisition check
 
@@ -94,14 +95,16 @@ states and acquire no chronological relationship merely by being adjacent.
 | One direct sensor-to-answer relation | One directly sensing output patch |
 | Several direct relations | One selected patch per output coordinate |
 | Learned nonlinear combinations | A small ordinary representation, for example four patches, feeding an output population |
-| Useful internal mismatch readback | An observer over that representation, compared with the ordinary control |
+| Experimental internal mismatch readback | An explicitly selected observer, assessed against a capable ordinary control |
 
 These are starting constructions, not validated recipes for raw vision, music
 or general planning. Width only helps an output if the added patches are
 connected to it. Increasing a flat population from one to ten patches while
 reading only its first state does not create a ten-patch hidden representation.
 Ordinary deep populations already return influence through the coupled energy;
-observers additionally read exact current prediction errors.
+observers additionally read exact current prediction errors. They participate
+in every whole-brain solve; they do not automatically sleep or wake on demand.
+An advantage over ordinary layers must be measured, including the extra work.
 
 Inspect wiring before training:
 
@@ -117,11 +120,11 @@ that each selected output uses all sensors. The inspection fields describe
 structural paths, not measured causal influence: zero weights and saturation
 can still suppress a path.
 
-The [layout examples](VARIANTS.md) teach and resume flat, ordinary deep and
-recursive brains. Try the same interface first; add depth when a controlled
-comparison improves free task performance enough to justify the work. Equal
-patch counts need not imply equal parameters, connections or cost. A useful
-routine may be deep; an observer alone does not demonstrate System 2.
+The [layout examples](VARIANTS.md) teach and resume ordinary brains, with a
+separate opt-in recursive experiment. Start flat and add ordinary depth when a
+controlled comparison improves free task performance enough to justify the work.
+Equal patch counts need not imply equal parameters, connections or cost. A useful
+System 1 routine may be deep; an observer alone does not demonstrate System 2.
 
 ## Keep units and sampling consistent
 

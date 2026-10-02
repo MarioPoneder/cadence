@@ -1,7 +1,9 @@
 # Flat, deep and recursively observing brains
 
-Cadence builds **processing populations and recursive observers in one jointly
-settling graph**. Population size is explicit. Sensory data, ordinary
+Cadence builds **one jointly settling graph of processing populations**. Start
+with a flat layout, then use ordinary deep columns when the task needs learned
+intermediate representations. Recursive observers are an explicit experimental
+option, not a requirement for a capable routine. Population size is explicit. Sensory data, ordinary
 representation connections and observation of internal activity have distinct
 roles. Each patch has live state, incoming ports, exact prediction-error
 readback and retained local relation parameters. Feedback repairs one coupled
@@ -15,16 +17,22 @@ all three layouts. Start with the [quickstart](QUICKSTART.md), then use
 | --- | --- | --- |
 | Flat | `column(..., inputs=sensors)` | Each output patch directly models its sensory inputs; adjacent unused patches add no hidden capacity. |
 | Ordinary deep | `column(..., inputs=earlier_population)` | Learned intermediate representations participate in one coupled solve, with returning influence through the energy. |
-| Recursive observer | `observer(..., observes=earlier_population)` | Adds exact current prediction-error inputs alongside the observed states. Observers can themselves be observed. |
+| Experimental recursive observer | `observer(..., observes=earlier_population)` | Adds exact current prediction-error inputs alongside the observed states. Observers can themselves be observed. |
 
-All use the same patch law and qualification check; recursion is optional
-wiring. The [layout guide](VARIANTS.md) provides a runnable construction of
-each, and [layout_learning.py](../examples/layout_learning.py) teaches and
-tests them through the same interface:
+All use the same patch law and qualification check. The
+[layout guide](VARIANTS.md) explains each construction. Start with the ordinary
+learning examples:
 
 ```sh
-PYTHONPATH=src python examples/layout_learning.py --layout all
+PYTHONPATH=src python examples/layout_learning.py
+PYTHONPATH=src python examples/layout_learning.py --layout deep
 ```
+
+Use `--layout recursive` only for the explicit observer experiment. Observers
+participate in every whole-brain solve; the public runtime does not put them to
+sleep during familiar behavior or recruit them automatically on surprise. A
+useful advantage over capable ordinary layers remains unestablished. See the
+[experimental boundary](EXPERIMENTAL.md).
 
 Input-only fixed-parameter queries have a separable state objective; coupling
 adds dependencies to joint repair. Recursive depth adds state-and-error
@@ -37,12 +45,12 @@ closed-form flat case, the older fast browser demos and controlled comparisons.
 **System 1** describes an acquired routine that works with little repair; it
 can require ordinary deep representations. **System 2** describes additional
 recursive correction that usefully repairs a failing routine or unmet goal.
-These are behavioral roles, not layout names. Current `0.60.0.dev0` supports
+These are behavioral roles, not layout names. Current `0.60.0.dev1` supports
 the wiring and whole-brain repair described here, but automatic internal
 attention, independently progressing populations and the integrated
 routine/correction cycle remain unimplemented. Historical demo results belong
 to their recorded models and runtimes; see
-[versioned reproduction](MIGRATION_060.md#reproduce-the-website-demos-before-optimizing-them).
+[the demo evidence boundary](EXPERIMENTAL.md).
 
 ## Build the layout
 
@@ -56,12 +64,8 @@ body = cortex.input("sensory_nerves", shape=(8,))
 senses = (eyes, ears, body)
 
 c1 = cortex.column("perception", patches=16, inputs=senses)
-c2 = cortex.observer(
-    "integration", patches=8, inputs=senses, observes=(c1,),
-)
-c3 = cortex.observer(
-    "reflection", patches=8, inputs=senses, observes=(c1, c2),
-)
+c2 = cortex.column("integration", patches=8, inputs=(*senses, c1))
+c3 = cortex.column("response", patches=8, inputs=(*senses, c1, c2))
 motors = cortex.output("motor_nerves", shape=(8,), reads=c3)
 brain = cortex.build()
 
@@ -81,8 +85,11 @@ patch states. There is no separate policy network after settlement.
 
 ## Parallel processing and recursive observation
 
-Use `inputs` for sensor samples or represented data. For example, vision and
-hearing can form parallel branches before a fusion population:
+Use `inputs` for sensor samples or represented data. Vision and hearing can
+form ordinary parallel branches before fusion. The following recipe also adds
+an **experimental observer** to demonstrate its connections. That observer
+participates in every solve and may increase latency; this recipe establishes
+wiring and qualification, not a task advantage or automatic System 2:
 
 ```python
 parallel = Cortex(seed=3)
@@ -242,10 +249,8 @@ a settlement residual. See [live learning](LIVE.md) for composing these helpers.
 teacher_layout = Cortex(seed=2)
 signal = teacher_layout.input("signal", shape=(1,))
 base = teacher_layout.column("base", patches=4, inputs=signal)
-reflection = teacher_layout.observer(
-    "reflection", patches=2, inputs=signal, observes=base,
-)
-teacher_layout.output("answer", shape=(1,), reads=reflection)
+response = teacher_layout.column("response", patches=2, inputs=(signal, base))
+teacher_layout.output("answer", shape=(1,), reads=response)
 learner = teacher_layout.build()
 
 for event_id in range(40):
@@ -264,8 +269,9 @@ Outputs fixed to supplied witnesses equal their targets by construction, so
 reporting them as learning accuracy would be invalid. Tests instead check
 subsequent **unclamped predictions**, new inputs and controls without admission
 or sensory access.
-This tiny example demonstrates acquisition of an input-dependent relation;
-it is not evidence that the observer improves it over a simpler model.
+This tiny ordinary layout demonstrates acquisition of an input-dependent
+relation. A simpler flat layout may also suffice; compare free accuracy and
+complete work before adding capacity.
 
 For a body-driven example, run
 `PYTHONPATH=src python examples/live_control.py --decisions 20 --seed 0`.
@@ -276,7 +282,8 @@ for interpreting its behavioral and qualification checks.
 
 ## Recursive depth and future time
 
-An observer reads the current joint state and prediction errors. Nesting another
+Recursive recipes remain [experimental](EXPERIMENTAL.md). An observer reads
+the current joint state and prediction errors. Nesting another
 observer increases observation depth; it does not automatically add another
 future time step. For imagination, first bootstrap relations between a current
 situation, an action and its consequences. Querying those relations with

@@ -1,9 +1,10 @@
 # Choose, train and run a brain
 
-Cadence `0.60.0.dev0` lets you build a flat routine, a deeper ordinary model,
-or a model with recursive observation. All three use the same bounded patch
-primitive and settle as one coupled brain. Choose a layout from the task's
-information and learning needs, then measure its free behavior and cost.
+In Cadence `0.60.0.dev1`, start with a flat network or ordinary deep layers.
+Choose the smallest ordinary network that learns the task, then measure free
+behavior and latency before scaling. Ordinary depth can support capable routine
+behavior; it does not guarantee speed at arbitrary size. All layouts use the
+same bounded patch primitive and settle as one coupled brain.
 
 **System 1** names an acquired routine that works with little repair. It can
 need several ordinary layers and temporal context. **System 2** names useful
@@ -11,16 +12,17 @@ additional observation and correction when that routine misses a prediction or
 cannot meet a goal. These are behavioral roles, not constructors, layer counts
 or switches between bootstrapping and live operation.
 
-The supported API supplies the layouts and learning operations in this guide.
-It does not yet supply automatic internal attention or independently progressing
-fast and slow populations. The integrated routine → disturbance → useful
-correction → retained cheap routine cycle, with a measured advantage from
-recursive observation, remains a development goal. Private experiment results
-do not turn those mechanisms into public runtime features.
+**Recursive observers are experimental.** They participate in every synchronous
+solve and may slow every call, including familiar routine work. A benefit over
+capable ordinary networks remains unproven. The public API does not supply
+automatic on-demand attention or independent population clocks. The integrated
+routine → disturbance → useful correction → retained cheap routine cycle remains
+a development goal. See [experimental capabilities](EXPERIMENTAL.md); private
+prototypes are not public runtime features.
 
 For a first program, use [the quickstart](QUICKSTART.md). For exact signatures,
-use [the reference](REFERENCE.md); for upgrades and checkpoint compatibility,
-use [migration](MIGRATION_060.md). The [agent recipe](AGENTS.md) gives a short
+use [the reference](REFERENCE.md); for saved continuation, see
+[checkpoints](REFERENCE.md#checkpoints). The [agent recipe](AGENTS.md) gives a short
 application workflow.
 
 ## Define the body's information and outcomes
@@ -57,7 +59,7 @@ supply teaching targets; they must not enter the inputs used to forecast them.
 | --- | --- | --- |
 | Input-only flat population | A direct sensor-to-output relation | Each output has its own weighted sensor prediction. Unused neighboring patches supply no hidden representation. |
 | Ordinary deep composition | Learned intermediate features for a more complex relation | Connect `column(..., inputs=earlier_population)`. Earlier and later states settle together. |
-| Recursive observation | A relation that uses another population's current mismatch | Connect `observer(..., observes=earlier_population)`. It reads states and exact errors within that same solve. |
+| Experimental recursive observation | Test a relation that uses another population's current mismatch | Connect `observer(..., observes=earlier_population)`. It reads states and exact errors during every solve; it is not automatically recruited. |
 | Parallel branches with fusion | Sensors with different local structure or update meaning | Every output must have a useful path to its observations. These are branches of one jointly solved graph, not independently clocked workers. |
 
 Every patch predicts `p = tanh(bias + weighted incoming signals)` and has
@@ -74,7 +76,10 @@ otherwise feedback-free solver. A fast routine can use either a flat or a
 capable ordinary deep layout. Measure its actual work instead of inferring
 speed from the name.
 
-Choose what an observer reads deliberately. During teaching, a clamped motor
+### Experimental observer wiring
+
+Only add an observer for a declared comparison with a capable ordinary control.
+Choose what it reads deliberately. During teaching, a clamped motor
 state records the action that actually happened. A later relation reading only
 that fixed state cannot send its error into the motor's own parameters through
 that connection. Reading the motor's error adds a parameter-learning path,
@@ -85,7 +90,10 @@ demonstrate a benefit from error readback. For an input-only observed patch at
 fixed parameters, its error is just its state minus a fixed sensory prediction.
 An equally informed ordinary control may represent that same feature. A useful
 recursive comparison must establish a behavioral contribution, not merely the
-presence of an error edge.
+presence of an error edge. The [experimental recipes](VARIANTS.md#experimental-recursive-observer-settlement)
+show how to wire this explicitly.
+
+### Capacity and connectivity
 
 Width counts processing states. Observation depth means an observer reads
 another observer. Neither a population called `reflection` nor extra settling
@@ -94,7 +102,7 @@ sources only: it supports jointly coupled state/error constraints, but does not
 expose explicit recurrent state cycles. Retaining activity with `step` alone is
 not evidence of useful temporal memory.
 
-The [three layout quickstarts](VARIANTS.md) and
+The [ordinary and experimental layout quickstarts](VARIANTS.md) and
 [shared executable example](../examples/layout_learning.py) teach, query and
 save each pattern with the same `signal`/`answer` body interface. They are
 construction and acquisition examples, not matched-capacity comparisons.
@@ -155,6 +163,8 @@ Begin with defaults and one directly sensing patch per simple output. For a
 small nonlinear relation, a connected representation of 4–16 patches feeding
 1–4 output patches is a starting search range, not a capability guarantee.
 Use [bootstrapping and size](BOOTSTRAP.md) for more detailed recipes.
+Keep the simpler ordinary network when added depth does not improve measured
+quality enough to justify its complete query and learning costs.
 
 `state_prior` changes the activity penalty and therefore the preferred answers;
 it is not simply a speed setting. `parameter_prior` anchors relations to their
@@ -304,6 +314,8 @@ throughout live learning.
 Current calls solve synchronously. Every participating population remains in
 the energy and every eligible coordinate remains in final qualification.
 Naming a branch `fast` or `reflection` does not schedule it independently.
+An explicit observer can therefore add latency to every solve, even when the
+routine is familiar and its predictions are good.
 `LiveController` keeps a caller responsive while a serial callback owns the
 brain; it cannot certify a fresh action while an unresolved part of that
 same state is silently omitted. Parallelize independent lives or collection,
@@ -354,7 +366,7 @@ assert resumed.predict({"signal": [0.5]}) == brain.predict({"signal": [0.5]})
 
 Brain snapshots bind exact implementation sources, layout and configuration.
 An older snapshot is not automatically compatible with a newer release; retain
-the originating installation and follow the [migration notes](MIGRATION_060.md).
+the originating installation and follow the [checkpoint contract](REFERENCE.md#checkpoints).
 Allowed device/dtype overrides validate the original snapshot before changing
 execution settings. They do not bypass source compatibility.
 
