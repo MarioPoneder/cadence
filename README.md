@@ -4,7 +4,7 @@
 
 # Cadence
 
-[Website](https://floatingpragma.io/cadence/) · [Demos](https://floatingpragma.io/demos/) · [Documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/)
+[Website](https://floatingpragma.io/cadence/) · [Documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md) · [Examples](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/)
 
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/v0.70.0/LICENSE)
@@ -51,8 +51,8 @@ Under idealized conditions the local contrast follows the gradient that
 backpropagation would compute. [The learning rule](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/learning.md)
 states those conditions, and [the comparison](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/concepts.md#compared-with-backprop-networks)
 is of update mechanisms. These properties are shown in simulation in the
-[demos](https://floatingpragma.io/demos/). An advantage on a physical robot is a
-separate test.
+[examples](https://github.com/muellerberndt/cadence-demos). An advantage on a
+physical robot is a separate test.
 
 <a id="get-started"></a>
 

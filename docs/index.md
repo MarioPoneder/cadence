@@ -58,8 +58,7 @@ learning and numerical contracts when combining them.
 [certificates](certificate.md), [protocols](protocols.md) and [receipts](receipts.md)
 help separate numerical qualification from useful acquired behavior. Test free
 recall, competing experience, actual outcomes and saved continuation.
-[Examples](https://github.com/muellerberndt/cadence-examples) and
-[demos](https://floatingpragma.io/demos/) show application work.
+[Examples](https://github.com/muellerberndt/cadence-demos) show application work.
 
 [API](api.md) · [Architecture](architecture.md) · [Troubleshooting](troubleshooting.md) ·
 [Contributing](../CONTRIBUTING.md) · [Changelog](../CHANGELOG.md) ·
