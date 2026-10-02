@@ -18,19 +18,60 @@ recursive feedback through observing cortical regions in the same neural graph.
 The base can already be deep and modular.
 
 Bounded, observer-like regions carry local state, communicate through ports,
-read back activity and retain records. They repair disagreement to find a coherent
-state; actual observations and consequences guide learning. A settled answer can
+read back activity and retain records. They repair disagreement until the whole
+brain settles into one coherent state; actual observations and consequences
+guide learning. A Cadence brain can be deep. It learns without backpropagation,
+by repairing local disagreements and settling into new equilibria. A settled
+answer can
 still be wrong about the world, so capability is measured through free behavior.
 Cadence is alpha research software, not a claim of human-level intelligence.
+
+## How a Cadence brain differs from a feed-forward network
+
+A feed-forward deep network computes an answer in one pass. Activity moves from
+the input layer to the output layer, every layer is evaluated once, and nothing
+travels back while the answer forms. Training uses backpropagation: an error
+measured at the output is sent backwards through all layers as a chain of
+derivatives, and every weight moves by its share of that single global error.
+
+A Cadence brain reaches its answer by settling. Its regions are connected in
+both directions, and every neuron keeps moving its own state toward what its
+inputs and its neighbours drive it to. This local repair repeats until every
+neuron agrees with its neighbours within a tolerance. The answer is that
+equilibrium of the whole brain: a consensus among local patches, reached through
+local repair alone. A later region shapes an earlier one while the answer forms,
+and a brain that does not settle refuses to act.
+
+Learning is the same process. The settled brain is nudged at its motor neurons,
+toward a demonstrated answer or along the action it just took. The nudge spreads
+over the same connections, every neuron repairs its own disagreement, and the
+brain shifts to a neighbouring settled state. Each synapse compares what its own
+two neurons did in the two states, and the measured outcome sets the size and
+sign of the change. When the situation returns, the brain settles into a new
+equilibrium. No error is sent backwards through a stack of layers, and the brain
+keeps no backward computation graph.
+
+Cadence brains can be deep. `Brain.compose(inputs=4, actions=2, modules=(64, 32, 16))`
+chains three processing regions, each exchanging activity with the next, and all
+of them settle together. Depth adds regions to the one settlement. The learning
+rule stays local at every depth.
+
+| | Feed-forward deep network | Cadence brain |
+| --- | --- | --- |
+| An answer | The output of one pass through the layers | The settled state of the whole brain, a consensus among its patches |
+| Influence while answering | Input to output only | Both ways: regions exchange activity and settle together |
+| How the answer forms | Each layer is evaluated once | Local repair repeats until the state equations hold within tolerance; a brain that does not get there refuses to act |
+| Learning signal | One global loss, sent backwards through every layer | A nudge at the motor neurons disturbs the equilibrium and the brain settles again |
+| What changes a weight | Its share of the backpropagated error | The activity of its own two neurons, compared between two settled states and scaled by the measured outcome |
+| Depth | More layers in the forward and the backward pass | More regions in the same settlement |
+| Training and use | Separate phases | One running brain that acts and learns |
 
 ## Why Cadence
 
 Animal and human brains learn from experience and not by backpropagation with
-gradient descent. Cadence is designed the same way. Each synapse changes from the
-activity of the two neurons it connects, compared between a free settled state
-and one nudged by the outcome. Reward scales that change, and memory writes are
-local too. The brain keeps no backward computation graph and has no separate
-training mode.
+gradient descent. Cadence is designed the same way. Synapses change from the
+activity of the two neurons they connect, reward scales that change, and memory
+writes are local too. The brain has no separate training mode.
 
 For embodied AI this design gives:
 

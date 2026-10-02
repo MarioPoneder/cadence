@@ -10,9 +10,13 @@ testable contracts.
 Animal and human brains learn from experience and not by backpropagation with
 gradient descent. Cadence follows that design: [local free/nudged learning](learning.md),
 [reward plasticity](reward.md) and [memory](memory.md) change the brain while it
-runs, with no separate training mode. [Concepts](concepts.md#compared-with-backprop-networks)
-compares the update mechanisms, and the [README](../README.md#why-cadence) lists
-what this gives an embodied system.
+runs, with no separate training mode. An answer is the settled state of the whole
+brain, a consensus that its regions reach through local repair, and learning
+moves the brain to a new equilibrium. The [README](../README.md#how-a-cadence-brain-differs-from-a-feed-forward-network)
+sets this beside a feed-forward network trained by backpropagation,
+[concepts](concepts.md#compared-with-backprop-networks) compares the update
+mechanisms, and the [README](../README.md#why-cadence) lists what this gives an
+embodied system.
 
 Python 3.11+ and NumPy are required.
 
