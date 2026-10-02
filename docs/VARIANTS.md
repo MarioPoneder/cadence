@@ -45,14 +45,16 @@ assert {kind for kind, _, _ in small_brain.graph.edges} == {"input", "state"}
 A population that reads only sensors and is read by nobody does not build:
 
 ```python
-import pytest
-
 alone = Cortex(seed=7)
 sensor = alone.input("signal", shape=1)
 patch = alone.column("response", patches=1, inputs=sensor)
 alone.output("answer", shape=1, reads=patch)
-with pytest.raises(ValueError, match="settles with no other population"):
+try:
     alone.build()
+except ValueError as error:
+    assert "settles with no other population" in str(error)
+else:
+    raise AssertionError("An isolated population must be refused")
 ```
 
 <a id="2-deeper-composition"></a>
