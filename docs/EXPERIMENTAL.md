@@ -1,6 +1,6 @@
 # Experimental features and the System 2 boundary
 
-**`0.60.0.dev1` recommends ordinary flat or deep settling networks for
+**`0.61.0.dev1` recommends ordinary flat or deep settling networks for
 applications.** Build them with `Cortex.column`, teach through `bootstrap` or
 `observe`, and use `step` to retain qualified live activity. Add ordinary depth
 when it improves the task. No extra mode, critic or attention scheduler is

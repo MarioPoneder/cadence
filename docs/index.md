@@ -1,6 +1,6 @@
-# Cadence 0.60 documentation
+# Cadence 0.61 documentation
 
-This guide covers **`0.60.0.dev1` on `main`**. Start with the smallest adequate
+This guide covers **`0.61.0.dev1` on `main`**. Start with the smallest adequate
 flat network and add ordinary deep layers when the task needs intermediate
 representations. Measure quality and latency before scaling. Both use the same
 bounded patch rule, settlement and learning API.

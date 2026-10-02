@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cadence-net"
-version = "0.60.0.dev1"
+version = "0.61.0.dev1"
 description = "Learning through flat and deep settling patch networks, with experimental recursive observation."
 readme = "README.md"
 requires-python = ">=3.11"

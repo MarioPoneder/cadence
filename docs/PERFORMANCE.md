@@ -8,7 +8,7 @@ observation is [experimental opt-in](EXPERIMENTAL.md); an advantage over capable
 ordinary layers has not been established.
 
 **Flat, ordinary deep and recursively observing layouts all perform
-settlement in 0.60.0.dev1.** Recursive observation is optional wiring,
+settlement in 0.61.0.dev1.** Recursive observation is optional wiring,
 not a requirement for the patch/repair mechanism. Each layout uses the same
 public `settle`/`step` operations and final stationarity check. Observers join
 every solve; the public runtime does not automatically put them to sleep
