@@ -1,6 +1,8 @@
 # Cadence documentation: build a continuing brain
 
-**Cadence is a continuing equilibrium world-model brain.** Its working hypothesis
+**We are building an animal brain.** Cadence is not a classifier, not any traditional naive
+neural network, not an MLP, and not a transformer with an attention matrix that scales badly
+with context. **Cadence is a continuing equilibrium world-model brain.** Its working hypothesis
 is that a settled interpretation is the world model in operation. Learned
 relationships and retained memories support a family of such interpretations
 across situations. Start with [the world-model guide](world-model.md), then run
