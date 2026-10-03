@@ -55,6 +55,15 @@ The default stays at -0.5. A larger action vocabulary adds more inhibitory
 inputs per motor neuron, so inspect free activity and its full residual on the
 actual task before selecting a different value.
 
+`Brain.compose(..., resting_bias=0.5)` starts every processing region (the
+modules, the association region and any observers) at that bias instead of
+zero; sensory, working-memory and motor populations keep zero. Under a
+sign-symmetric random projection about half of the zero-bias neurons sit at or
+below rest and carry little contrast; the resting bias puts them in their
+responsive range before the first lesson. It is a plastic bias like any other
+and learning moves it from there. The default remains zero, so the choice is a
+selectable gene with the zero-bias brain as its control.
+
 Global gain changes synaptic drive throughout the graph; population bias
 changes selected neurons' operating points. Integration steps and numerical
 damping affect how the equations are solved. A faster qualified solve does not

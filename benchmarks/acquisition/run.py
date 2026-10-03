@@ -177,8 +177,17 @@ def make_brain(recipe, seed, args):
         )
         if getattr(args, "gene", "canonical") == "fixed-lateral-local-rms":
             cfg = replace(cfg, eta=0.005, normalize=0.99)
+        if getattr(args, "gene", "canonical") in ("lateral0-local-rms", "lateral0-resting"):
+            # The candidate that acquired real speech on 0.71: no motor lateral inhibition,
+            # per-synapse RMS steps at the --rate; the nudged budget comes from --nudged-steps.
+            # "lateral0-resting" adds the resting-bias initialization gene (issue 106).
+            cfg = replace(cfg, eta=args.rate, normalize=0.99, normalize_floor=1e-4)
+    gene = getattr(args, "gene", "canonical") if recipe == "qualified" else "canonical"
+    lateral = 0.0 if gene in ("lateral0-local-rms", "lateral0-resting") else -0.5
+    options = {"resting_bias": 0.5} if gene == "lateral0-resting" else {}
     brain = Brain.compose(
-        inputs=650, actions=36, modules=(32, 16), observers=(), seed=seed, learning=cfg
+        inputs=650, actions=36, modules=(32, 16), observers=(), seed=seed, learning=cfg,
+        lateral=lateral, **options,
     )
     if recipe == "qualified" and getattr(args, "gene", "canonical") == "fixed-lateral-local-rms":
         graph = brain.brain
@@ -503,7 +512,9 @@ def main():
     parser.add_argument("--rate", type=float, default=0.5)
     parser.add_argument("--tolerance", type=float, default=0.003)
     parser.add_argument(
-        "--gene", choices=("canonical", "fixed-lateral-local-rms"), default="canonical"
+        "--gene",
+        choices=("canonical", "fixed-lateral-local-rms", "lateral0-local-rms", "lateral0-resting"),
+        default="canonical",
     )
     parser.add_argument("--seconds", type=float, default=60)
     parser.add_argument("--max-output-mib", type=int, default=64)

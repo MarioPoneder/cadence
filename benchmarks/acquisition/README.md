@@ -32,6 +32,17 @@ not change the default library. Use `--tolerance 1e-6 --free-steps 4096
 --nudged-steps 4096` to check it with the original `dt=1` model and bounded
 numerical damping.
 
+Two further candidate genes exist beside it. `--gene lateral0-local-rms` removes the motor
+lateral inhibition (`Brain.compose(lateral=0.0)`), uses local RMS normalization `0.99` with
+floor `1e-4` and takes its synaptic rate from `--rate`; it is the recipe that acquired real
+speech in cadence-transcribe. `--gene lateral0-resting` adds the resting-bias initialization
+(`resting_bias=0.5` on the processing regions, issue 106). On 2026-10-03, with `--nudged-steps
+512`, neither passed the 24-row screen: `fixed-lateral-local-rms` reached 15/24 with zero
+refusals at update 48 and was then stopped by one nudged phase that did not settle within 512
+sweeps (residual 0.0074), which the protocol treats as the end of the stage; the lateral-0
+genes failed the four-row stage at rates 0.02 and 0.05. The recall trail of the fixed gene
+(2, 5, 9, 10, 12, 15 at updates 8 to 48) was still rising when the refusal ended it.
+
 `protocol.json` freezes arguments, fixture/runtime/source hashes, gates and
 resource model before numerical work. The microscope reproduces the finite
 free/positive/negative phases, checks the original residual through independent

@@ -283,11 +283,18 @@ class Brain:
         working_memory_amplitude: float = 3.0,
         learning: LearnerConfig | None = None,
         reward: ActorCriticConfig | None = None,
+        resting_bias: float = 0.0,
         seed: int = 0,
         backend: Backend = "cpu",
         device: str | None = None,
     ) -> None:
         populations = connectome.populations
+        if (
+            isinstance(resting_bias, bool)
+            or not np.isfinite(resting_bias)
+            or resting_bias < 0
+        ):
+            raise ValueError("resting_bias must be a finite nonnegative number")
         for name in ("association", "motor"):
             if name not in populations:
                 raise ValueError(f"a generic brain needs a population named {name!r}")
@@ -298,9 +305,23 @@ class Brain:
         self.sensory_index = np.asarray(populations[sensory], dtype=np.int64)
         self.motor_index = np.asarray(populations["motor"], dtype=np.int64)
         self.association_index = np.asarray(populations["association"], dtype=np.int64)
+        bias = None
+        if resting_bias:
+            # A selectable initialization gene (issue 106): processing regions start at a
+            # resting bias instead of zero, so that under a sign-symmetric projection their
+            # neurons sit in the responsive range rather than at or below rest. Sensory,
+            # working-memory and motor populations keep zero bias; the parameter is plastic
+            # and learning moves it from there like any other bias.
+            bias = np.zeros(connectome.n)
+            for name, members in populations.items():
+                head = name.split("/", 1)[0]
+                if head in (sensory, "prefrontal", "motor", "visual"):
+                    continue
+                bias[np.asarray(members, dtype=np.int64)] = float(resting_bias)
         brain = NeuralGraph(
-            connectome, learning_neuron_model(dt=1.0), backend=backend, device=device
+            connectome, learning_neuron_model(dt=1.0), backend=backend, device=device, bias=bias
         )
+        self.resting_bias = float(resting_bias)
         self.learner = Learner(brain, list(self.motor_index), learning or _learning())
         self.basal_ganglia = ActorCritic(
             self.learner, list(self.association_index), reward or _reward(), seed=seed
@@ -460,7 +481,8 @@ class Brain:
         This reuses the existing trace, synaptic memory and learning mechanisms.
         Observer wiring is an experiment, not evidence of learned self-reflection.
         Inputs are fixed external drives; their neural representations can vary.
-        ``options`` configures the existing constructor's learning and memory.
+        ``options`` configures the existing constructor's learning and memory;
+        ``resting_bias`` starts the processing regions above rest (issue 106).
         Use ``genome``/``Genome`` for custom ports, sparsity and named wiring.
         """
 

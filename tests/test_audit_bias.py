@@ -88,3 +88,31 @@ def test_silent_hidden_neurons_carry_little_contrast_and_a_resting_bias_repairs_
     activation_biased, contrast_biased, _ = contrast(0.5)
     assert (activation_biased.max(axis=0) <= 0.0).mean() < 0.2
     assert contrast_biased.mean() > 2.0 * contrast_zero.mean()
+
+
+def test_resting_bias_is_a_selectable_initialization_gene() -> None:
+    """Issue 106: the composed brain can start its processing regions above rest. The default
+    stays at zero (the xfail above records that), sensory, working-memory and motor
+    populations keep zero bias, and the option is a plain plastic bias from there on."""
+    rng = np.random.default_rng(0)
+    x = rng.random((16, 10))
+    for resting in (0.0, 0.5):  # where the bias lands in a deep layout with an observer
+        g = cd.Brain.compose(10, 4, modules=(64, 16), observers=(8,), seed=0, resting_bias=resting)
+        pops = g.connectome.populations
+        bias = g.brain.bias
+        for name in ("sensory", "prefrontal", "motor"):
+            assert not bias[np.asarray(pops[name], dtype=np.int64)].any(), name
+        for name in ("module_0", "association", "observer_0"):
+            members = np.asarray(pops[name], dtype=np.int64)
+            assert np.allclose(bias[members], resting), name
+        assert g.resting_bias == resting
+    silent = {}
+    for resting in (0.0, 0.5):  # the responsive fraction on the default single-module layout
+        g = cd.Brain.compose(10, 4, modules=(64,), seed=0, resting_bias=resting)
+        silent[resting] = _silent_fraction(g.brain, g.stimulus(x, memory=False), list(g.association_index))
+    assert silent[0.0] > 0.25 > silent[0.5]
+    image = cd.Brain.build((8, 8), 4, hidden=64, seed=0, resting_bias=0.5)
+    assert not image.brain.bias[np.asarray(image.connectome.populations["visual/input"], dtype=np.int64)].any()
+    assert np.allclose(image.brain.bias[image.association_index], 0.5)
+    with pytest.raises(ValueError):
+        cd.Brain.compose(10, 4, seed=0, resting_bias=-0.1)
