@@ -1,5 +1,9 @@
 # Cadence documentation
 
+New readers start with [the guided entry](README.md): the principle, the test that tells a
+Cadence brain from a layered network, what is implemented today, and the guides in reading
+order. This page is the catalogue.
+
 Cadence is an experimental brain built from local state, ports, plastic
 relationships, memory and repair. **System 1** is the default continuing brain.
 **System 2** optionally adds observing cortical regions whose recursive feedback
