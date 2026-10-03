@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.72.1 — 2026-10-03
+
+- Warn at learner or actor-critic config construction when `normalize > 0` and
+  either `eta` or `eta_bias` exceeds `0.05`; include the actor's independent bias
+  rate and point the warning to the constructor caller. The diagnostic excludes
+  the critic's separate rate and does not change optimizer equations or defaults.
+- Document the RMS update, floor and momentum effects, independent bias rates
+  and the limits of the reported Atari, Transcribe and Patch World pilots from
+  [issue 131](https://github.com/muellerberndt/cadence/issues/131). The warning
+  threshold and suggested development sweeps are not stability guarantees.
+
 ## 0.72.0 — 2026-10-03
 
 - Add optional `resting_bias` to `Brain` and `Brain.compose`, with finite scalar

@@ -24,6 +24,7 @@ steps, the local counterpart of an adaptive optimiser.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -218,6 +219,15 @@ class ActorCriticConfig:
             value = getattr(self, name)
             if not np.isfinite(value) or value < 0:
                 raise ValueError(f"{name} must be finite and nonnegative")
+        if self.normalize > 0 and max(self.eta, self.eta_bias) > 0.05:
+            warnings.warn(
+                "ActorCriticConfig with normalize > 0 and eta or eta_bias above 0.05: "
+                "RMS normalization can make parameter steps much larger than raw contrasts "
+                "suggest and may saturate the policy. Consider smaller actor rates; "
+                "see docs/reward.md#rates-under-normalization.",
+                RuntimeWarning,
+                stacklevel=3,
+            )
 
     def to_dict(self) -> dict[str, Any]:
         values = {k: getattr(self, k) for k in self.__slots__}

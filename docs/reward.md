@@ -231,3 +231,28 @@ the remedy for each; run it first.
   its cell sat near saturation; sugar then rewarded whichever nudge had been larger, and three
   rewards taught avoidance. One decision per episode, credited to that decision, as the T-maze
   has it.
+
+## Rates under normalization
+
+`ActorCriticConfig.normalize` divides the actor's reward-modulated eligibility
+signal by its own bias-corrected running RMS plus `1e-3`. With momentum, the
+numerator is its bias-corrected running mean. This applies independently to
+efficacies (`eta`) and neuron biases (`eta_bias`), using the actor's optimizer
+history; the supervised learner's normalization setting does not enable or
+disable it. The [learning guide](learning.md#rates-under-normalization) gives
+the formula, its limits and the reported Atari, Transcribe and Patch World
+pilots that motivated the warning.
+
+A consistent signal above the floor gives a parameter increment near its
+rate before masks, tying, decay and clipping. The rate is not a fixed increment
+or an upper bound. Retune both actor rates when enabling normalization; small
+`eta` alone does not reduce `eta_bias`. A development sweep of `eta=0.001` to
+`0.003` is a starting experiment, with the bias rate selected independently.
+Measure free behavior against the task's controls; no range guarantees learning
+or prevents a policy from collapsing to a held action.
+
+Construction emits `RuntimeWarning` if `normalize > 0` and either `eta` or
+`eta_bias` exceeds `0.05`. This advisory threshold does not alter settings or
+certify smaller rates. `eta_critic` is excluded: `critic_normalize` divides the
+critic update by trace energy, which is a separate rule from the actor's RMS
+normalization. The warning introduces no new learning rule or default.

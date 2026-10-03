@@ -18,16 +18,16 @@ and [memory](memory.md) have distinct tested update rules. Internal consistency
 does not establish correct understanding or inexpensive computation.
 
 Python 3.11+ and NumPy are required.
-These guides use Cadence 0.72.0, including `last_settlement`:
+These guides use Cadence 0.72.1, including `last_settlement`:
 
 ```sh
-python -m pip install cadence-net==0.72.0
+python -m pip install cadence-net==0.72.1
 ```
 
 ## Start here
 
 For a version-pinned reading order, use the
-[release documentation](https://github.com/muellerberndt/cadence/blob/v0.72.0/docs/README.md).
+[release documentation](https://github.com/muellerberndt/cadence/blob/v0.72.1/docs/README.md).
 
 1. [The continuing world model](world-model.md): lifecycle, design intent and current boundaries.
 2. [Quickstart](quickstart.md): run one brain through observations and outcomes.
