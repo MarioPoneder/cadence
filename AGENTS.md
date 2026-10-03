@@ -17,6 +17,21 @@ guides. Read the owning guide, [numerical contracts](docs/contracts.md) and
 | Work on the population equilibrium solver | [Its entry guide](docs/equilibrium/README.md), [agent instructions](docs/equilibrium/AGENTS.md) and [reference](docs/equilibrium/REFERENCE.md) |
 | Change or release the library | [Contributing and required checks](CONTRIBUTING.md), [task design](docs/task-design.md), [protocols](docs/protocols.md), [receipts](docs/receipts.md) |
 
+## What Cadence is, and is not
+
+We are building an animal brain. Cadence is not a classifier, not any kind of
+traditional naive neural network, not an MLP, and not a transformer with an
+attention matrix that scales badly with context. A patch net set up like a
+layered feed-forward network, a window of input pressed into one observation,
+one processing region and a readout taught on every presentation, learns
+exactly what that network learns and nothing more; that result is a control,
+never the demonstration. The brain bootstraps into an equilibrium that is its
+world model, carries its state and memory through a continuing life, runs at
+low energy while that model holds, and repairs locally when a witnessed failure
+disturbs it. Build and judge it as a creature: streams, retained state, lessons
+on mismatch, free behaviour over time, retention and recovery, with
+backpropagation networks as baselines.
+
 ## Goal and mechanism
 
 Cadence aims to build a simulated human-like brain from simplified biological
