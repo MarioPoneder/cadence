@@ -5,7 +5,7 @@ and optional observers. [NeuralGraph](#neuralgraph-cadence) is the lower-level
 graph API. The [quickstart](quickstart.md) runs the main interaction loop;
 sections below describe specialist operations. Pass optional arguments by keyword.
 
-This reference describes the published `cadence-net==0.71.0` package.
+This reference describes the published `cadence-net==0.71.1` package.
 Use the [quickstart](quickstart.md) to install it, or the
 [source installation](../README.md#development-checkout) to work from a checkout.
 
@@ -953,6 +953,9 @@ that recursive benefit or automatic reflective behavior has been learned.
   An optional `report` dictionary receives attempted solve work, final observed
   means and target gaps, including refused work. Qualification certifies the
   states, not monotonicity, target attainment or useful learning.
+  Finite searches also reject nonfinite or
+  inconsistent midpoint/final states with `RuntimeError`, including when
+  `report=None`. This validation does not require finite phases to equilibrate.
 - `naive_efficacy(connectome, plastic) -> np.ndarray`: efficacies that give every plastic
   synapse class the same weight (sign times mean count over the class's count); the other
   synapses keep their sign. For a lesson that should start naive at a memory site whose counts

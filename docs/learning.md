@@ -341,6 +341,12 @@ raises `RuntimeError` and leaves the supplied graph unchanged. Even a qualified
 candidate can miss its target: bisection still needs a suitable response over
 its chosen span. Inspect the observed means before installing the bias array.
 
+Finite bias searches also validate every midpoint
+and the final state, even without a report. Nonfinite potentials, activation or
+adaptation, or inconsistent activation, raise `RuntimeError` before their
+output can steer the search. The source graph remains unchanged. Finite states
+with a large equation residual remain permitted; qualification is still opt-in.
+
 This small example calibrates a motor population on training drives before
 any teaching. It removes motor lateral connections explicitly while keeping
 the processing/motor feedback, checks the result, then installs it:

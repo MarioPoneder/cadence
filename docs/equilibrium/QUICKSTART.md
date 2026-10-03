@@ -1,11 +1,11 @@
 # Build a brain, teach it a routine, keep it
 
-Install **Cadence 0.71.0** with Python 3.11 or later. The containing package
+Install **Cadence 0.71.1** with Python 3.11 or later. The containing package
 requires NumPy; this solver uses the Python standard library unless
 you select an optional tensor backend:
 
 ```sh
-python -m pip install "cadence-net==0.71.0"
+python -m pip install "cadence-net==0.71.1"
 ```
 
 Or install from a checkout of this version:

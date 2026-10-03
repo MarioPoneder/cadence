@@ -6,10 +6,10 @@ together, in order. Read [Cadence for machine-learning people](orientation.md) f
 if the words are new, and the [quickstarts](quickstart.md) for the shortest form of
 each brain.
 
-These guides use Cadence 0.71.0. Install the published package:
+These guides use Cadence 0.71.1. Install the published package:
 
 ```bash
-python -m pip install cadence-net==0.71.0
+python -m pip install cadence-net==0.71.1
 ```
 
 ## A record patch on a stream

@@ -1365,7 +1365,9 @@ def calibrate_bias(
     leaves the bias at the span's end, and the caller checks the returned means. Returns the
     bias array, the brain's own plus the calibration; the brain itself is unchanged.
 
-    Finite bisection is the default. With ``qualified=True``, every midpoint and
+    Every midpoint and final state must be finite and have consistent activation,
+    including finite searches without a report. Finite bisection is the default.
+    With ``qualified=True``, every midpoint and
     the final cold state must satisfy the original equations within ``steps``
     sweeps, using up to ``damping`` numerical halvings. A refused solve raises
     ``RuntimeError`` before its activity can steer the search. ``report`` retains
@@ -1472,21 +1474,22 @@ def calibrate_bias(
 
     def solve(b: np.ndarray, *, kind: str, round_index: int, group: int | None) -> BrainState:
         trial = candidate(b)
+        phase: Equilibrium | None = None
         if qualified:
             assert tolerance is not None
             phase = trial.equilibrate(drives, budget=steps, tolerance=tolerance, damping=damping)
+            state = phase.state
         else:
             state = trial.settle_batch(drives, steps=steps, tolerance=tolerance)
-            if report is None:
-                return state
-            phase = Equilibrium(
-                state, trial.residual(drives, state), state.steps,
-                tolerance if tolerance is not None else 0.0, residual_checks=1,
-            )
-        state = phase.state
-        finite = all(np.isfinite(value).all() for value in (
-            state.v, state.activation, state.adaptation, phase.residual,
-        ))
+            if report is not None:
+                phase = Equilibrium(
+                    state, trial.residual(drives, state), state.steps,
+                    tolerance if tolerance is not None else 0.0, residual_checks=1,
+                )
+        values = [state.v, state.activation, state.adaptation]
+        if phase is not None:
+            values.append(phase.residual)
+        finite = all(np.isfinite(value).all() for value in values)
         rounding = 8 * np.finfo(
             np.float32 if trial._mlx is not None or (trial._torch is not None
                 and trial._torch.dtype == trial._torch.torch.float32) else np.float64
@@ -1495,6 +1498,12 @@ def calibrate_bias(
             state.activation, trial.neuron_model.activation(state.v),
             rtol=rounding, atol=rounding,
         ))
+        if phase is None:
+            # A finite search need not meet an equation tolerance, but invalid
+            # numerical states cannot decide which half of the bias span survives.
+            if not consistent:
+                raise RuntimeError(f"invalid bias calibration {kind}; original graph unchanged")
+            return state
         passed = bool(consistent and np.all(phase.qualified))
         admitted = bool(consistent and (passed or not qualified))
         rows = len(drives)
@@ -1521,8 +1530,9 @@ def calibrate_bias(
         receipt["attempted_presentations"] += rows
         for name, value in counts.items():
             receipt[f"total_{name}"] += value
-        if qualified and not admitted:
-            raise RuntimeError(f"unqualified bias calibration {kind}; original graph unchanged")
+        if not admitted:
+            reason = "unqualified" if qualified else "invalid"
+            raise RuntimeError(f"{reason} bias calibration {kind}; original graph unchanged")
         return state
 
     for round_index in range(rounds):
@@ -1538,8 +1548,8 @@ def calibrate_bias(
                 else:
                     hi = mid
             bias[idx] = 0.5 * lo + 0.5 * hi
+    final = solve(bias, kind="final", round_index=rounds, group=None)
     if qualified or report is not None:
-        final = solve(bias, kind="final", round_index=rounds, group=None)
         receipt["final_means"] = [float(final.activation[:, idx].mean()) for idx, _ in groups]
         receipt["target_gaps"] = [
             abs(mean - target)

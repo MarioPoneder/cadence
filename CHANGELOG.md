@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.71.1 — 2026-10-03
+
+- Reject nonfinite or inconsistent states during finite bias calibration, even
+  without a report. Check the final candidate before returning biases; an invalid
+  solve raises `RuntimeError` without using its output to advance the search or
+  changing the source graph. Finite searches still permit unsettled states.
+
 ## 0.71.0 — 2026-10-03
 
 - Add opt-in qualified graph learning through `LearnerConfig.qualified`. The

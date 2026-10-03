@@ -21,10 +21,10 @@ mechanisms, and the [README](../README.md#why-cadence) lists what this gives an
 embodied system.
 
 Python 3.11+ and NumPy are required.
-These guides describe Cadence 0.71.0. Install the published package:
+These guides describe Cadence 0.71.1. Install the published package:
 
 ```sh
-python -m pip install cadence-net==0.71.0
+python -m pip install cadence-net==0.71.1
 ```
 
 ## Start here

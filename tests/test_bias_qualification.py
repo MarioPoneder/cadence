@@ -94,6 +94,69 @@ def test_finite_bias_search_keeps_its_output_and_reports_unqualified_endpoints()
     assert report["solves"][-1]["residual"][0] > 1
 
 
+@pytest.mark.parametrize("with_report", [False, True])
+def test_finite_bias_search_refuses_numerical_overflow_before_using_its_output(with_report):
+    # All inputs and weights are finite, but their transport overflows. Saturated
+    # activation alone is finite and must not conceal the invalid potential.
+    wire = cd.Connectome.from_synapses(
+        3, pre=[0, 1], post=[2, 2], sign=[1e308, 1e308],
+        populations={"motor": [2]},
+    )
+    graph = cd.NeuralGraph(wire, cd.learning_neuron_model(dt=1))
+    before = (graph.efficacy.copy(), graph.bias.copy(), graph.log_gain.copy())
+    report = {} if with_report else None
+    with np.errstate(over="ignore", invalid="ignore"):
+        with pytest.raises(RuntimeError, match="invalid bias calibration midpoint"):
+            cd.calibrate_bias(
+                graph, np.array([[1., 1., 1e308]]), {"motor": 0.5},
+                rounds=1, iterations=1, steps=4, report=report,
+            )
+    for actual, expected in zip((graph.efficacy, graph.bias, graph.log_gain), before, strict=True):
+        np.testing.assert_array_equal(actual, expected)
+    if report is not None:
+        assert not report["completed"] and report["attempted_solves"] == 1
+        assert report["admitted_solves"] == 0
+        assert not report["solves"][0]["finite"]
+        assert report["solves"][0]["mean_output"] is None
+        assert report["final_means"] == report["target_gaps"] == []
+
+
+@pytest.mark.parametrize("with_report", [False, True])
+@pytest.mark.parametrize("kind", ["midpoint", "final"])
+@pytest.mark.parametrize("broken", ["potential", "adaptation", "cache"])
+def test_finite_bias_search_validates_all_candidate_state(monkeypatch, with_report, kind, broken):
+    graph = isolated_graph()
+    settle = cd.NeuralGraph.settle_batch
+    calls = 0
+    failing_call = 1 if kind == "midpoint" else 2
+
+    def corrupt(candidate, drive, **kwargs):
+        nonlocal calls
+        calls += 1
+        state = settle(candidate, drive, **kwargs)
+        if calls == failing_call:
+            if broken == "cache":
+                state.activation[:] = 0.5
+            elif broken == "potential":
+                state.v[:] = np.nan
+            else:
+                state.adaptation[:] = np.nan
+        return state
+
+    monkeypatch.setattr(cd.NeuralGraph, "settle_batch", corrupt)
+    report = {} if with_report else None
+    with pytest.raises(RuntimeError, match="invalid bias calibration " + kind):
+        cd.calibrate_bias(
+            graph, np.zeros((1, 1)), {"motor": 0.25}, rounds=1, iterations=1,
+            steps=4, report=report,
+        )
+    assert calls == failing_call
+    np.testing.assert_array_equal(graph.bias, [0])
+    if report is not None:
+        assert not report["completed"] and not report["solves"][-1]["admitted"]
+        assert report["solves"][-1]["kind"] == kind
+
+
 def test_qualified_bias_does_not_promise_the_target_is_reachable():
     graph = isolated_graph()
     report = {}

@@ -27,7 +27,7 @@ A settled answer can still be wrong about the world, so capability is measured
 through free behavior.
 Cadence is alpha research software, not a claim of human-level intelligence.
 
-These pages describe Cadence 0.71.0, including opt-in qualified teaching,
+These pages describe Cadence 0.71.1, including opt-in qualified teaching,
 calibration and work reports. Install the published package for the
 examples below, or use the [source installation](#development-checkout).
 
@@ -110,10 +110,10 @@ Python 3.11+ and NumPy are required.
 Install the published release for this basic example:
 
 ```sh
-python -m pip install cadence-net==0.71.0
+python -m pip install cadence-net==0.71.1
 ```
 
-Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.71.0/docs/index.md)
+Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.71.1/docs/index.md)
 describes the APIs included in that package.
 
 ```python
