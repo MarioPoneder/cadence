@@ -40,7 +40,6 @@ the alignment of the rule against finite differences.
 from __future__ import annotations
 
 import warnings
-
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -137,11 +136,12 @@ class LearnerConfig:
                 raise ValueError(f"{name} must be a nonnegative integer")
         if self.normalize > 0 and max(self.eta, self.eta_bias) > 0.05:
             warnings.warn(
-                "with normalize > 0 the rates are absolute per-synapse steps: eta or eta_bias above 0.05 "
-                "saturates a readout within a few updates (measured on Atari, speech and Patch World); "
-                "1e-3 to 3e-3 is the working range",
+                "LearnerConfig with normalize > 0 and eta or eta_bias above 0.05: "
+                "RMS normalization can make parameter steps much larger than raw contrasts "
+                "suggest and may saturate the readout. Consider smaller rates; "
+                "see docs/learning.md#rates-under-normalization.",
                 RuntimeWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
 
     def to_dict(self) -> dict[str, Any]:
