@@ -1,6 +1,6 @@
 # Numerical and learning contracts
 
-This page describes Cadence 0.72.0 numerical, learning and feedback contracts.
+This page describes Cadence 0.72.1 numerical, learning and feedback contracts.
 
 Cadence exposes several implementations of state, repair and learning. Choose
 an API by its equations, stopping rule and update contract. Sharing the word
@@ -77,6 +77,15 @@ fields, including refused work alongside any earlier accepted reward. Direct
 `contrast`/`update` and the `ActorCritic` eligibility path retain their own
 contracts. Qualification does not establish a smooth stable branch, an exact
 gradient at finite nudge, or acquired free behavior.
+
+RMS-normalized learner and actor updates divide each parameter's signal by a
+bias-corrected running RMS plus a floor before applying its learning rate.
+The rate is neither a fixed increment nor a stability bound; masks, momentum
+history, tying, decay and efficacy clipping also affect the installed change.
+Config construction warns when normalization is enabled and either efficacy
+or bias rate exceeds `0.05`, without changing the numerical rule or defaults.
+The warning is advisory and excludes the critic's separate trace-energy rule.
+See [normalized rates and evidence](learning.md#rates-under-normalization).
 
 A refused `Brain.learn` feedback solve restores hippocampal records, terminal
 working-trace resets and actor state, preserving the executed action awaiting

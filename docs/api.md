@@ -5,8 +5,8 @@ and optional observers. [NeuralGraph](#neuralgraph-cadence) is the lower-level
 graph API. The [quickstart](quickstart.md) runs the main interaction loop;
 sections below describe specialist operations. Pass optional arguments by keyword.
 
-This reference describes Cadence 0.72.0, including `Brain.last_settlement`
-diagnostics. Install it with `python -m pip install cadence-net==0.72.0`.
+This reference describes Cadence 0.72.1, including `Brain.last_settlement`
+diagnostics. Install it with `python -m pip install cadence-net==0.72.1`.
 
 The temporal patch: [TemporalPatchNet](#temporalpatchnet-cadencetemporal),
 [TemporalPlan](#temporalplan-cadenceplanning), [TemporalMemory](#temporalmemory-cadencetemporal_memory),
@@ -902,6 +902,11 @@ that recursive benefit or automatic reflective behavior has been learned.
   `momentum` steps each synapse on a running average of its own contrast; `decay` shrinks every
   plastic synapse's efficacy and every plastic neuron's bias by that fraction on each update
   (a leak on the synapses, for streams).
+  `normalize > 0` divides both efficacy and bias signals by their own
+  bias-corrected running RMS of the raw contrast plus `normalize_floor`.
+  Construction emits `RuntimeWarning` if normalization is enabled and either
+  `eta` or `eta_bias` exceeds `0.05`; rates and defaults remain unchanged. The
+  threshold is advisory, not a stability bound. See [normalized rates](learning.md#rates-under-normalization).
   `qualified=True` requires each free and nudged phase to meet the full equation
   residual at `tolerance` before `step` applies an update. Direct `update` remains
   unchecked. `damping` is the maximum number of
@@ -1048,7 +1053,12 @@ that recursive benefit or automatic reflective behavior has been learned.
 - `ActorCriticConfig(gamma=0.99, lam=0.9, eta=0.5, eta_bias=0.05, eta_critic=0.05, normalize=0.0, momentum=0.0, dopamine_cap=1.0, dopamine_center=0.0, dopamine_floor=0.0, center_scale=True, critic_normalize=True, critic_signal="auto", eligibility_steps=None)`:
   `gamma` the discount and `lam` the trace's decay; `eta` and `eta_bias` the actor's rates,
   `eta_critic` the critic's; `normalize` and `momentum` the adaptive local step, as the
-  learner's; `dopamine_center` the rate at which the reward's running level and scale follow
+  learner's, with the actor's own history and a fixed RMS floor of `1e-3`.
+  Construction emits `RuntimeWarning` if `normalize > 0` and either actor rate
+  (`eta` or `eta_bias`) exceeds `0.05`, without changing the settings. This
+  advisory check excludes `eta_critic`, whose normalization uses trace energy.
+  See [normalized actor rates](reward.md#rates-under-normalization).
+  `dopamine_center` the rate at which the reward's running level and scale follow
   it (0 for no centring), `dopamine_floor` the band around the level, in scales, within
   which the dopamine is zero, `dopamine_cap` its cap, `center_scale` whether the surprise is
   measured in scales of the usual (`True`) or in the reward's own units; `critic_normalize`

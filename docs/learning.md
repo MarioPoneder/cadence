@@ -468,13 +468,51 @@ night's chunks wrecks tracking, and a steering patch's rate scale above one pins
 
 ## Rates under normalization
 
-With `normalize > 0` (the per-synapse RMS step, usually with `momentum`) `eta` and `eta_bias`
-stop being multipliers of the contrast and become absolute per-synapse steps: every update
-moves every synapse by about `eta`, whatever the contrast's size. The composed defaults
-(`eta=0.5` for teaching, `1.0` for the actor) belong to the unnormalized rule. Under
-normalization they saturate a readout or a policy within a few updates. Measured three times:
-the Atari qualification (actor `0.003` rose and collapsed onto a held action, `0.001` stayed
-stable), the Cadence Transcribe pilots (teacher `0.03` fell to 0.048 top-1 by 20,000 rows where
-`0.003` reached 0.44 to 0.53), and Patch World v2 (actor `0.2` locked every creature onto one
-action; `0.002` learned to eat within 500 ticks; `0.0005` starved before learning). Start a
-normalized learner at `eta=0.002` to `0.003`; the constructors warn above `0.05`.
+With `normalize > 0`, each plastic efficacy and neuron bias has a running
+second moment of its own raw update signal. Before masks, synapse-rate
+multipliers, tying, decay and efficacy clipping, the proposed increment is:
+
+```text
+increment = rate * signal / (sqrt(bias_corrected_second_moment) + floor)
+```
+
+`rate` is `eta` for efficacies and `eta_bias` for neuron biases. `signal` is the
+raw contrast, or its bias-corrected running mean when `momentum > 0`; the second
+moment always uses the raw contrast. The learner's floor is `normalize_floor`.
+For a first update with raw contrast `g`, the formula reduces to
+`rate * g / (abs(g) + floor)`. A consistent signal much larger than the floor
+therefore gives increments close to the rate in magnitude. Quiet signals are
+attenuated, a zero signal with no momentum history stays zero, and changing
+signals or momentum history can give different sizes, including sizes above
+the rate. These are parameter increments, not fixed changes in effective
+synaptic drive or a promise that every synapse moves.
+
+The composed teaching default `eta=0.5` and actor default `eta=1.0` use
+`normalize=0`. Enabling RMS normalization can make their updates much larger
+relative to a small raw signal and can saturate outputs. Retune both `eta` and
+`eta_bias`; changing one does not change the other. A starting development sweep
+of `eta=0.001` to `0.003` is motivated by the reported pilots below, but is not a
+universal safe range or a replacement for task measurements. Select the bias
+rate independently and check acquisition, retention and actual update sizes.
+
+Both `LearnerConfig` and `ActorCriticConfig` emit `RuntimeWarning` at construction
+when `normalize > 0` and either `eta` or `eta_bias` exceeds `0.05`. This is a
+conservative diagnostic threshold, not a stability bound: smaller rates can
+also fail. The warning does not change rates, optimizer equations or defaults.
+The actor's normalization and critic's separate rate are described in
+[the reward guide](reward.md#rates-under-normalization).
+
+[Issue 131](https://github.com/muellerberndt/cadence/issues/131) reports the
+application observations that motivated the warning:
+
+| Reported pilot | Observation and scope |
+| --- | --- |
+| Atari, Cadence 0.70.0 | Actor `eta=0.003` rose and collapsed to a held action; `0.001` was reported as more stable. The [qualification](https://github.com/muellerberndt/cadence/issues/97#issuecomment-5947900523) established held-action retention and continuation, with no measured improvement from reward. |
+| [Transcribe, Cadence 0.71.0](https://github.com/muellerberndt/cadence-transcribe/blob/26d8667a33eec38df35bddd9e743b32c0d28dd23/STATUS.md) | At 20,000 rows, P03 (`eta=0.03`, `eta_bias=0.003`) scored 0.048 top-1; P01 (`eta=0.003`, `eta_bias=0.02`) scored 0.441. Both rates changed, so this comparison does not isolate the effect of `eta`. Other architectures with `eta=0.003` reached 0.53. |
+| [Patch World v2, Cadence 0.72.0](https://github.com/FloatingPragma/oph-meta/blob/fd36f5b58ca7b3efcbd99db0d0490be4bae5de67/cadence-patchworld-v2/STATUS.md) | Actor `eta=0.2` was reported to produce stereotyped actions; `0.002` reached 0.53 eat-when-hungry within 500 ticks in a lone-creature assay, versus 0.20 for uniform random actions. Random actions still outlived and outbred the learning brains in the reported population assays; the eating result does not establish learned navigation. |
+
+These reports motivate checking normalized rates. They do not constitute a
+matched cross-task rate study or establish an improved learning algorithm in
+0.72.1. Transcribe's [pilot configurations](https://github.com/muellerberndt/cadence-transcribe/tree/26d8667a33eec38df35bddd9e743b32c0d28dd23/protocols/pilot071)
+and [base learning settings](https://github.com/muellerberndt/cadence-transcribe/blob/26d8667a33eec38df35bddd9e743b32c0d28dd23/transcribe/brain.py)
+retain the independent efficacy and bias rates.
