@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add `resting_bias` to `Brain` and `Brain.compose`: processing regions can start above
+  rest (issue 106). The default stays at zero; sensory, working-memory and motor
+  populations keep zero bias. A regression test records the responsive fraction.
+- Add the vanished-cue recall chamber (`benchmarks/recall/vanished_cue.py`, issue 84): a
+  continuing brain's free recall of a cue across blank or distracting delays, against
+  erased, shuffled and equal-information controls, with the sweeps charged.
+- Add the `lateral0-local-rms` candidate gene to the acquisition microscope (issue 110).
+
 ## 0.71.2 — 2026-10-03
 
 - Expose immutable `Brain.last_settlement` diagnostics for successful and refused

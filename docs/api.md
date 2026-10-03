@@ -705,7 +705,7 @@ that recursive benefit or automatic reflective behavior has been learned.
   with `working_memory`, `prefrontal`; projections sensory to association (reciprocal for a
   visual cortex), association to motor (reciprocal), and prefrontal to association at
   `memory_scale`.
-- `Brain(connectome, *, episodic=True, consolidation=0.05, working_memory_decay=0.2, working_memory_amplitude=3.0, learning=None, reward=None, seed=0, backend="cpu", device=None)`:
+- `Brain(connectome, *, episodic=True, consolidation=0.05, working_memory_decay=0.2, working_memory_amplitude=3.0, learning=None, reward=None, resting_bias=0.0, seed=0, backend="cpu", device=None)`: `resting_bias` starts every processing region (modules, association, observers) at that bias; sensory, working-memory and motor populations keep zero (issue 106).
   needs populations `sensory` or `visual/input`, `association` and `motor`, and uses
   `prefrontal` for a working memory when present. `learning` defaults to
   `LearnerConfig(beta=0.1, eta=0.5, temperature=0.2, tolerance=3e-3, free_steps=1024, nudged_steps=12, momentum=0.9)`,
