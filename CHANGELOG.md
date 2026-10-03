@@ -57,6 +57,10 @@
   refused-lesson retry. Correct Atari settings and pooled processing-time labels;
   retain historical finite-probe measurements and their source identity.
 
+- Document focused local contract checks, separate foundation/population suites
+  and a NumPy-only environment for shorter iteration. Keep full CI coverage,
+  fixtures and assertions; optional backend skips remain explicit.
+
 Finite supervised teaching remains the default. System 1 memory, plasticity,
 private imagination and action remain available; optional System 2 continues
 to join the same neural graph. Numerical qualification alone does not establish

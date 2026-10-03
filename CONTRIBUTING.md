@@ -53,6 +53,45 @@ Formal proofs are maintained in the canonical
 with its pinned toolchain and checker. They are not duplicated in this runtime
 package; a numerical API must state which theorem assumptions it satisfies.
 
+### Short local feedback
+
+Run the contracts affected by a change while iterating. For teaching, phase
+qualification and actual-feedback transactions:
+
+```bash
+python -m pytest -q tests/test_qualified_learning.py tests/test_damping_stagnation.py tests/test_learning_reports.py tests/test_feedback_transaction.py
+```
+
+For gain selection, bias calibration, backend continuation and motor wiring:
+
+```bash
+python -m pytest -q tests/test_learner_calibration.py tests/test_calibration_backends.py tests/test_bias_qualification.py tests/test_composed_lateral.py
+```
+
+Run the default foundation and preserved population solver separately to locate
+slow cases. These two commands together retain the complete test inventory:
+
+```bash
+python -m pytest -q tests --ignore=tests/equilibrium --durations=10
+python -m pytest -q tests/equilibrium --durations=10
+```
+
+A fresh NumPy-only environment avoids optional accelerator startup and runs
+the required-dependency paths. Use a separate environment; installing fewer
+packages into an existing development environment does not remove its backends.
+The environment below is inside the ignored `.venv/` directory:
+
+```bash
+python -m venv .venv/numpy-only
+.venv/numpy-only/bin/python -m pip install -e . pytest
+.venv/numpy-only/bin/python -m pytest -q tests --ignore=tests/equilibrium -rs --durations=10
+```
+
+Focused runs and a NumPy-only run provide partial coverage. Report optional
+backend skips explicitly; they do not establish accelerator parity. Before
+publication, retain the full suite and installed-package checks in the declared
+environments. Run one substantial local QA process at a time on a busy machine.
+
 ## What a change needs
 
 - **A test.** A new operation gets a test of its contract, and a numerical claim gets a
