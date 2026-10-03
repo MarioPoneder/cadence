@@ -465,3 +465,16 @@ cap of 0.1, the boundary carried, the cortex asleep while the steering patch lea
 (`Steered.run(learn_cortex=False)`) or gated by a governor (`Life`); the day's cap on the
 night's chunks wrecks tracking, and a steering patch's rate scale above one pins a sense.
 [How to build a rung demo](howto-rung.md) has the numbers.
+
+## Rates under normalization
+
+With `normalize > 0` (the per-synapse RMS step, usually with `momentum`) `eta` and `eta_bias`
+stop being multipliers of the contrast and become absolute per-synapse steps: every update
+moves every synapse by about `eta`, whatever the contrast's size. The composed defaults
+(`eta=0.5` for teaching, `1.0` for the actor) belong to the unnormalized rule. Under
+normalization they saturate a readout or a policy within a few updates. Measured three times:
+the Atari qualification (actor `0.003` rose and collapsed onto a held action, `0.001` stayed
+stable), the Cadence Transcribe pilots (teacher `0.03` fell to 0.048 top-1 by 20,000 rows where
+`0.003` reached 0.44 to 0.53), and Patch World v2 (actor `0.2` locked every creature onto one
+action; `0.002` learned to eat within 500 ticks; `0.0005` starved before learning). Start a
+normalized learner at `eta=0.002` to `0.003`; the constructors warn above `0.05`.

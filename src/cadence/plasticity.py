@@ -24,6 +24,8 @@ steps, the local counterpart of an adaptive optimiser.
 
 from __future__ import annotations
 
+import warnings
+
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -218,6 +220,14 @@ class ActorCriticConfig:
             value = getattr(self, name)
             if not np.isfinite(value) or value < 0:
                 raise ValueError(f"{name} must be finite and nonnegative")
+        if self.normalize > 0 and self.eta > 0.05:
+            warnings.warn(
+                "with normalize > 0 the actor's eta is an absolute per-synapse step: values above 0.05 "
+                "collapse the policy onto one action within a few updates (measured on Atari and "
+                "Patch World); 1e-3 to 3e-3 is the working range",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
     def to_dict(self) -> dict[str, Any]:
         values = {k: getattr(self, k) for k in self.__slots__}

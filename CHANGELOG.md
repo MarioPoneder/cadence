@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.72.1 — 2026-10-03
+
+- Warn when a learner or actor-critic is configured with `normalize > 0` and a rate above
+  `0.05`: under per-synapse normalization `eta` and `eta_bias` are absolute steps, and the
+  unnormalized defaults saturate a readout or a policy within a few updates. The learning,
+  reward and brain guides state the working range (`0.002` to `0.003`) with the Atari,
+  Transcribe and Patch World measurements. No default changes in this release.
+
 ## 0.72.0 — 2026-10-03
 
 - Add optional `resting_bias` to `Brain` and `Brain.compose`, with finite scalar

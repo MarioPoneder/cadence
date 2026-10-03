@@ -126,6 +126,10 @@ configuration; it does not merge just the named fields. The defaults differ:
 | `nudged_steps` | `12` | `50` |
 | `tolerance` | `3e-3` | `1e-4` |
 
+These rates belong to the unnormalized rule. With `normalize > 0` they are absolute
+per-synapse steps and the working range is `0.002` to `0.003`; see [rates under
+normalization](learning.md#rates-under-normalization).
+
 Other operations have independent defaults: `Brain.imagine` uses residual
 tolerance `1e-6`, `NeuralGraph.equilibrate` uses `1e-5`, and `calibrate_bias`
 uses `1e-4` (finite movement by default, full residual with `qualified=True`).

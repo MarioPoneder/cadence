@@ -39,6 +39,8 @@ the alignment of the rule against finite differences.
 
 from __future__ import annotations
 
+import warnings
+
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -133,6 +135,14 @@ class LearnerConfig:
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 0:
                 raise ValueError(f"{name} must be a nonnegative integer")
+        if self.normalize > 0 and max(self.eta, self.eta_bias) > 0.05:
+            warnings.warn(
+                "with normalize > 0 the rates are absolute per-synapse steps: eta or eta_bias above 0.05 "
+                "saturates a readout within a few updates (measured on Atari, speech and Patch World); "
+                "1e-3 to 3e-3 is the working range",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in self.__slots__}
