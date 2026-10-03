@@ -30,9 +30,37 @@ def test_continuing_brain_example():
     for outcome in report["outcomes"]:
         # Validate the witness independently of the example's label/execute helpers.
         cue = outcome["cue"]
-        expected = cue if outcome["phase"] == "changed_environment" else 1 - cue
+        changed = outcome["phase"] in {"changed_environment", "repair", "continued_use"}
+        expected = cue if changed else 1 - cue
         assert outcome["observed_target"] == expected
         assert outcome["reward"] == float(outcome["action"] == expected)
+        if outcome["next_teacher"] is not None:
+            assert outcome["reward"] == 0.0
+            assert outcome["phase"] in {"bootstrap", "repair"}
+            assert outcome["next_cue"] == cue
+            assert outcome["next_teacher"] == expected
+        else:
+            assert outcome["next_cue"] == 1 - cue
+        free = outcome["free_answer"]
+        assert free["scope"] == "free_answer" and free["operation"] == "act"
+        assert free["qualified"] and free["max_residual"] <= free["tolerance"]
+        assert free["steps"] <= free["budget"]
+        work = outcome["step_settlement_work"]
+        assert work["sweeps"] >= free["steps"] + work["nudged_sweeps"]
+    for previous, current in zip(report["outcomes"], report["outcomes"][1:], strict=False):
+        if previous["phase"] != current["phase"]:
+            # The first scored action of a new phase must not carry a teacher.
+            assert previous["next_teacher"] is None
+    for stage in report["stages"]:
+        rows = [row for row in report["outcomes"] if row["phase"] == stage["phase"]]
+        assert stage["executed_transitions"] == len(rows)
+        assert stage["correct_actions"] == sum(row["reward"] for row in rows)
+        assert stage["corrective_lessons"] == sum(row["next_teacher"] is not None for row in rows)
+        assert stage["free_answer_sweeps"] == sum(row["free_answer"]["steps"] for row in rows)
+        if stage["phase"] in {"unchanged_environment", "changed_environment", "continued_use"}:
+            assert stage["corrective_lessons"] == 0
+            # No teacher does not mean free of reward eligibility work.
+            assert sum(row["step_settlement_work"]["nudged_sweeps"] for row in rows) > 0
 
 
 PAGES = [
@@ -106,7 +134,7 @@ def test_every_python_block_is_run_or_marked_illustrative():
 
 def test_local_documentation_links_resolve():
     problems = []
-    for page in [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]:
+    for page in [ROOT / "README.md", ROOT / "AGENTS.md", *sorted((ROOT / "docs").rglob("*.md"))]:
         for target in re.findall(r"\[[^\]\n]*\]\(([^\s)]+)\)", page.read_text()):
             if re.match(r"[a-z]+:", target):
                 continue

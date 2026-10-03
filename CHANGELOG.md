@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Expose immutable `Brain.last_settlement` diagnostics for successful and refused
+  action/prediction solves: per-row residuals, qualification, sweeps, checks and
+  damping. Keep diagnostic state outside checkpoints and preserve action and
+  feedback transactions. The report explicitly excludes learning and memory work.
+- Add a guided documentation entry and link previously orphaned guides. Clarify
+  reciprocal composition, the equilibrium world-model hypothesis, separate
+  transition predictors, concrete memory/readback mechanisms, configuration
+  defaults and the scope of centered dopamine and `Life`.
+- Give contributors and agents a task-to-guide map, continuing-brain construction
+  recipe and explicit sleep/dream preservation guidance. Include `AGENTS.md` in
+  source distributions and validate its documentation links.
+- Extend the continuing example with witnessed corrective teaching, repair and
+  continued use, reporting actual outcomes alongside free-answer and other
+  settling work. Preserve saved pending-feedback continuation.
+
 - Center introductory and contributor guidance on one continuing equilibrium
   brain across bootstrap, use, witnessed disruption and local correction. Add
   an executable world-model guide with explicit current integration boundaries;

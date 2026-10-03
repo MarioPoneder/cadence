@@ -1,8 +1,21 @@
 # Building on Cadence
 
-Read [the documentation index](docs/index.md), [the continuing-world-model guide](docs/world-model.md),
-[numerical contracts](docs/contracts.md) and [API reference](docs/api.md) before
-changing semantics.
+Start with [the guided documentation README](docs/README.md), then read the
+[continuing-world-model guide](docs/world-model.md) before designing an application,
+tutorial or experiment. Use [the catalogue](docs/index.md) to find individual
+guides. Read the owning guide, [numerical contracts](docs/contracts.md) and
+[API reference](docs/api.md) before changing semantics.
+
+| Task | Read and use |
+| --- | --- |
+| Build a continuing brain | [Quickstart](docs/quickstart.md), [composition](docs/brain.md), [architecture](docs/architecture.md), [runnable lifecycle](examples/continuing_brain.py) |
+| Manage streams, outcomes and memory | [Continuous interaction](docs/continuous.md), [memory](docs/memory.md), [reward](docs/reward.md), [experience](docs/experience.md) |
+| Diagnose learning or settling work | [Learning](docs/learning.md), [contracts](docs/contracts.md), [API diagnostics](docs/api.md), [troubleshooting](docs/troubleshooting.md) |
+| Use retained-record dreaming and sleep | [Record patches](docs/record-patch.md): `RecordPatchNet.dream` and `sleep`; this is a separate model from `Brain.compose` |
+| Learn transitions, plan or protect responses | [Temporal patches](docs/temporal.md), [planning](docs/planning.md), [temporal memory](docs/temporal-memory.md), [runnable example](examples/memory_imagination.py) |
+| Add optional recursive observation | [Cortical regions](docs/cortex.md), [recursive settlement](docs/recursive-settlement.md), [recursive training](docs/recursive-training.md) |
+| Work on the population equilibrium solver | [Its entry guide](docs/equilibrium/README.md), [agent instructions](docs/equilibrium/AGENTS.md) and [reference](docs/equilibrium/REFERENCE.md) |
+| Change or release the library | [Contributing and required checks](CONTRIBUTING.md), [task design](docs/task-design.md), [protocols](docs/protocols.md), [receipts](docs/receipts.md) |
 
 ## Goal and mechanism
 
@@ -15,10 +28,11 @@ observation.
 
 The organizing lifecycle is **bootstrap a useful reciprocal interpretation and
 memory → use it → witness a failure → repair locally → continue the same brain**.
-Learned parameters and memory encode a family of equilibria under changing
-evidence, not one permanently fixed activation. Preserve one acquired brain
-across normal use, interference and correction. Biological names are functional
-software roles, not claims of literal biology.
+The architectural hypothesis is that the learned equilibrium is the world model
+in operation. Learned parameters and memory support a family of equilibria under
+changing evidence, not one permanently fixed activation. Preserve one acquired
+brain across normal use, interference and correction. Biological names are
+functional software roles, not claims of literal biology.
 
 Lead applications and tutorials with that continuing lifecycle. A fresh brain
 per observation, memory-bypassing classification, and an external trained answer
@@ -27,19 +41,47 @@ Keep isolated learning and calibration controls, clearly labeled, because they
 test mechanisms the composition still needs. Do not remove working capabilities
 or blur model identities to make the design story simpler.
 
-Bounded observer-like regions have local state, ports, readback, records and
-plastic relationships. Local disagreement repair seeks a coherent shared state.
-A retained trace may be a held boundary during a present solve; a live coordinate
-must still qualify. Do not freeze unresolved live state or weaken qualification
-to manufacture a whole-brain answer.
+The intended observer-like structure has bounded local state, sensory/action
+boundaries, inspection, retained evidence and returning constraints. Name the
+actual implementation: composed brains expose sensory/motor indices, neural
+state, a working trace and associative memory. These are not the typed `Ports`
+or record readback of the record/temporal APIs, nor the population solver's exact
+state-and-error readback. A retained trace may be a held boundary during a present
+solve; a live coordinate must still qualify. Do not freeze unresolved live state
+or weaken qualification to manufacture a whole-brain answer.
+
+## Build and demonstrate the lifecycle
+
+1. Declare observations, action meanings, stream identities and the environment's
+   outcome signal. State which state persists and which boundaries are held.
+2. Compose one reciprocal System 1 brain and bootstrap useful behavior. The
+   default already has recurrence and memory; a layered layout does not make it
+   feed-forward. Add depth or optional observers for a task requirement, not as a
+   substitute for testing the lifecycle.
+3. Keep that brain alive during interaction. Use `act`/`step` to read memory,
+   execute its action, and report the actual outcome exactly once. Declare the
+   application's teacher/correction policy; teaching targets label the current
+   observation, while rewards describe the preceding executed action.
+4. Introduce a disturbance, detect a witnessed mismatch or failed objective,
+   and apply supported learning. Keep numerical settlement separate from durable
+   repair. Do not silently redefine `learn=True`, reward feedback or memory
+   writes as an automatic failure-only gate.
+5. Measure recovery and earlier skills with answers free, alongside normal and
+   repair work. Save and reload the same brain, including pending feedback, and
+   verify its continuation. Charge rehearsal, imagination and refused work.
 
 ## Keep the main interface simple
 
-Use `Brain.compose` for a continuing brain. `modules` defines reciprocal
-base regions; optional `observers` read and return to the same graph. Working
-trace and consolidating associative memory are included. Add a new abstraction
-only for a demonstrated general need; changing an interface must preserve the
-behavior it serves.
+Use `Brain.compose` for a continuing brain and `NeuralGraph` for its lower-level
+neural graph. `modules` selects region sizes; adjacent regions and the
+association/motor pair exchange signals, while sensory inputs supply a held
+drive. Optional `observers` read and return to that same graph. Working trace
+and consolidating associative memory are included. Add a new abstraction only
+for a demonstrated general need; changing an interface must preserve the
+behavior it serves. When changing selected learner or actor settings, use
+`dataclasses.replace` on the composition's existing config: a fresh config has
+its own defaults and replaces more than the fields named in the call. Consult
+the defaults table in [the composition guide](docs/brain.md).
 
 `step` receives a current observation and the preceding executed action's actual
 outcome. `teacher` labels the current observation. Preserve stream identity,
@@ -60,6 +102,14 @@ record patches combine context, learned relations and writable records. The
 population solver under `cadence.experimental.equilibrium` provides exact
 state-and-error readback. Do not transfer its mathematical guarantees to a
 neural-graph or record operation without an actual correspondence.
+
+Preserve `RecordPatchNet.dream(inputs)` and `sleep(cues)`: dreams complete cues
+from retained records without learning; sleep fixes those targets, teaches slow
+weights and rewrites record residuals against the changed weights. This retained
+capability is separate from `Brain.imagine` and online `SynapticMemory`
+consolidation; `Brain.compose` does not expose the record-patch sleep cycle.
+Dreamed targets are not witnessed environmental outcomes. Use the owning guide's
+model and source-pinned evidence when reproducing sleep results.
 
 Graph and temporal learners use free/nudged equilibrium contrasts. Record and
 belief models also use explicit adjoints and record writes. State those
@@ -87,6 +137,14 @@ A small residual does not measure physical power or establish transformer-level
 quality, scalability or efficiency; those require matched behavioral and resource
 measurements over bootstrap, normal operation and repair.
 
+`Brain.last_settlement` reports the latest completed free-answer solve, including
+refusal. `step` exposes its final `act`; scoring exposes the final `predict`
+batch. Its residuals and sweep/check counts exclude feedback, teaching, reward
+eligibility, imagination and memory work. Use `last_learning` and opt-in
+`record_settlements` where appropriate; none is a total-work or energy meter.
+Diagnostics are observational and are not checkpointed. Preserve transactional
+state even when a refused attempt updates its diagnostic report.
+
 `predict` and `accuracy` omit working and associative memory; `act` reads them.
 Test graph plasticity, working traces and consolidated records separately, then
 test their composition. Current teacher labels update the graph; the reward loop
@@ -111,9 +169,20 @@ salience do not establish general lifelong retention.
   runnable examples and useful refusal/retry behavior.
 - Run [contributing checks](CONTRIBUTING.md), executable documentation and local
   links. Test installed wheel/sdist behavior as well as the source checkout.
+- Preserve capability tests when changing composition or simplifying APIs:
+  [acquisition](tests/test_composed_acquisition.py),
+  [feedback transactions](tests/test_feedback_transaction.py),
+  [memory and continuation](tests/test_generic_memory_checkpoint.py),
+  [private imagination](tests/test_composed_brain.py),
+  [record recall and sleep](tests/test_record_patch.py), and
+  [settlement diagnostics](tests/test_settlement_reports.py).
 - Numerical changes need independent reference, derivative or adversarial checks.
   Measure behavior after teaching with answers free, and count query, training,
   replay, planning and refused work. Preserve failed runs and evidence.
+- A passing suite is not a blanket performance guarantee. Claims of unchanged
+  or improved performance need before/after behavior and cost comparisons with
+  matched tasks, inputs, seeds, information and resource accounting. Keep working
+  baselines and acquisition/retention thresholds when refactoring.
 - Changes to the population solver need `tests/equilibrium`; default neural
   changes need their own tests. Optional backends must preserve the applicable
   qualification and continuation rules.

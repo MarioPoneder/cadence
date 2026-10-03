@@ -65,12 +65,18 @@ pytest -q
 
 The test suite includes `tests/test_documentation.py`, which executes every Python block
 of the listed guides in order and checks that every local link and anchor in `README.md`
-and `docs/` resolves. A change to a guide's code is a change to a test. The minimal-install
-job builds the wheel with NumPy alone and runs the quickstart, the record patch, the
-continuing-world-model, temporal, belief, steering and build guides without optional
-backends. It also executes the continuing-brain lifecycle example. For changes to
-these guides or examples, run `python -m pytest -q tests/test_documentation.py`
-and `ruff check examples/continuing_brain.py tests/test_documentation.py`.
+and `docs/` resolves. A change to a guide's code is a change to a test. The
+[minimal-install job](.github/workflows/ci.yml) builds the wheel with NumPy alone
+and runs 20 pages without optional backends: `README.md` and, under `docs/`,
+`world-model.md`, `patchnet.md`, `quickstart.md`, `temporal.md`,
+`temporal-memory.md`, `architecture.md`, `planning.md`, `interaction.md`,
+`partitioned.md`, `record-patch.md`, `build.md`, `belief.md`, `steering.md`,
+`recursive-settlement.md`, `recursive-training.md`, `api.md`, `learning.md`,
+`protocols.md` and `receipts.md`. It also executes
+`examples/continuing_brain.py`, `examples/memory_imagination.py` and
+`examples/equilibrium/layout_learning.py`. For changes to these guides or
+examples, run `python -m pytest -q tests/test_documentation.py` and
+`ruff check examples/continuing_brain.py tests/test_documentation.py`.
 
 Formal proofs are maintained in the canonical
 [Cadence flagship Lean library](https://github.com/FloatingPragma/oph-meta/blob/main/cadence-flagship/lean/README.md),

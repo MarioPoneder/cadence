@@ -5,9 +5,11 @@ and optional observers. [NeuralGraph](#neuralgraph-cadence) is the lower-level
 graph API. The [quickstart](quickstart.md) runs the main interaction loop;
 sections below describe specialist operations. Pass optional arguments by keyword.
 
-This reference describes the published `cadence-net==0.71.1` package.
-Use the [quickstart](quickstart.md) to install it, or the
-[source installation](../README.md#development-checkout) to work from a checkout.
+This reference describes the development checkout, including unreleased
+`Brain.last_settlement` diagnostics. Use the
+[source installation](../README.md#development-checkout), or consult the
+[0.71.1 release reference](https://github.com/muellerberndt/cadence/blob/v0.71.1/docs/api.md)
+for the published package.
 
 The temporal patch: [TemporalPatchNet](#temporalpatchnet-cadencetemporal),
 [TemporalPlan](#temporalplan-cadenceplanning), [TemporalMemory](#temporalmemory-cadencetemporal_memory),
@@ -765,6 +767,20 @@ that recursive benefit or automatic reflective behavior has been learned.
     Qualified actions advance the working trace. Keep batch row identities fixed;
     call `reset()` before introducing a different set of streams. Reward eligibility
     retains its separate finite nudged-phase contract.
+  - `last_settlement: Mapping[str, Any] | None`: an immutable snapshot of the latest
+    completed free-answer solve, including a refused one. Fields are `operation`
+    (`"act"` or `"predict"`), `scope="free_answer"`, `qualified` (whole-batch boolean),
+    `row_qualified` and `residual` (per-row tuples), `max_residual`, `steps`, `budget`,
+    `tolerance`, `residual_checks`, `damping_halvings` and `stagnation_checks`.
+    `steps` includes numerical fallback and stays within the shared budget.
+    `step` exposes its final `act`; batched `accuracy` and `fit` scoring expose only
+    their last prediction batch. Invalid arguments and failures before a free-answer
+    solve retain the prior report. `learn` and `imagine` do not replace it.
+    The report holds no mutable state arrays, is excluded from save files and is
+    `None` after construction, reset or load. It excludes reward eligibility,
+    feedback, teaching and memory work. Inspect `last_learning` and opt-in
+    [settlement records](#record-every-settling-step) for additional work; neither
+    residual nor sweep count is physical energy or environmental prediction error.
   - `learn(reward, done, next_observations, *, bootstrap=None, salience=None) -> report`: the hippocampus records the
     reward of the chosen action for its situation, `done` rows reset their working memory,
     and the basal ganglia learn from dopamine. For truncated episodes `bootstrap` supplies

@@ -198,6 +198,11 @@ returned phase is checked against the original model's equations. These
 numerical choices are candidates to compare with finite teaching on acquired
 free behavior.
 
+This component example supplies a fresh `LearnerConfig`, including its
+`eta=0.2` and `momentum=0.0` defaults. To change qualification while preserving
+the composition's learning rates and momentum, use the
+[`dataclasses.replace` recipe](brain.md#settle-and-check).
+
 ```python
 brain = cd.Brain.compose(
     inputs=4, actions=2, modules=(8,), seed=7,

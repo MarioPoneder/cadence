@@ -1,17 +1,24 @@
-"""One System 1 life through bootstrap, unchanged conditions and disruption.
+"""One System 1 life through bootstrap, disruption, correction and continued use.
 
-Run after installing cadence-net: python examples/continuing_brain.py
-Or from this checkout: PYTHONPATH=src python examples/continuing_brain.py
+Run from this checkout: PYTHONPATH=src python examples/continuing_brain.py
+The example uses the current source API, including Brain.last_settlement.
 
 Two sensory cues have observed action labels. The independent environment
 rewards the action actually executed, then changes its rule during the same
-life. The brain receives outcomes without a notice that the rule changed.
-Brain.compose supplies local state, reciprocal regions, readback, working
-trace and consolidating memory. Optional observers can extend the same graph.
-Teaching uses the default finite rule; qualified teaching is an explicit choice.
-Outcome counts describe this short run, not a promised acquisition/recovery
-rate. Unchanged conditions do not mean the brain has learned a stable world
-model. See docs/world-model.md for the design and current integration boundaries.
+life. The body reveals the observed target after execution. During bootstrap
+and repair, the application repeats a mistaken cue and teaches that witnessed
+target. Successful actions receive their actual reward without a teacher.
+This application policy does not gate reward learning or memory writes.
+Brain.compose supplies reciprocal regions, working trace and consolidating
+memory. Optional observers can extend the same graph. Teaching uses the default
+finite rule; qualified teaching is an explicit choice.
+
+Each executed action retains its free-answer residual and sweep count. Recorded
+step sweeps also include feedback, teaching and reward eligibility, but exclude
+residual checks, memory work and optimizer work. They are not joules or total
+computation. Recording itself adds overhead and uses the inspectable CPU path.
+Outcome counts describe this short run, not demonstrated acquisition, recovery,
+or long-term retention. See docs/world-model.md for the integration boundaries.
 """
 
 from __future__ import annotations
@@ -22,7 +29,7 @@ from pathlib import Path
 
 import numpy as np
 
-from cadence import Brain
+from cadence import Brain, record_settlements
 
 
 def observation(cue):
@@ -47,36 +54,80 @@ def same_checkpoint(first, second):
         )
 
 
+def issue(brain, cue, **feedback):
+    """Keep the free answer separate from the other settlements inside step."""
+    work = {"calls": 0, "sweeps": 0, "nudged_sweeps": 0}
+
+    def count(record):
+        work["calls"] += 1
+        work["sweeps"] += record.steps
+        if record.nudge is not None:
+            work["nudged_sweeps"] += record.steps
+
+    with record_settlements(count, label="continuing_brain.step"):
+        action = brain.step(observation(cue), **feedback)
+    # Save a snapshot now: the next call will replace last_settlement.
+    free_answer = dict(brain.last_settlement)
+    return action, free_answer, work
+
+
 def run():
     brain = Brain.compose(2, 2, modules=(8,), observers=(), backend="cpu", seed=7)
     cue = 0
-    # teacher describes this cue. There is no previous action to reward yet.
-    action = brain.step(observation(cue), teacher=label(cue))
+    # First try is free of a teacher; there is no previous action to reward.
+    action, free_answer, step_work = issue(brain, cue)
     outcomes = []
     stages = []
-    for phase, transitions, changed, teach in (
+    for phase, transitions, changed, correct_mistakes in (
         ("bootstrap", 16, False, True),
         ("unchanged_environment", 8, False, False),
         ("changed_environment", 8, True, False),
+        ("repair", 16, True, True),
+        ("continued_use", 8, True, False),
     ):
         correct = 0
-        for _ in range(transitions):
+        phase_outcomes = []
+        for trial in range(transitions):
             # Score the issued action before revealing its measured outcome.
             reward, next_cue = execute(action, cue, changed=changed)
-            outcomes.append({
+            observed_target = int(label(cue, changed=changed)[0])
+            # The next issued action must belong to this teaching phase.
+            # Otherwise its label would leak into the following free-use phase.
+            correction = correct_mistakes and trial + 1 < transitions and not bool(reward[0])
+            if correction:
+                # Reward belongs to the executed action. Teacher belongs to
+                # the CURRENT observation, so repeat the witnessed cue.
+                next_cue = cue
+            outcome = {
                 "phase": phase, "cue": cue, "action": int(action[0]),
-                "observed_target": int(label(cue, changed=changed)[0]),
+                "observed_target": observed_target,
                 "reward": float(reward[0]),
-            })
+                "next_cue": next_cue,
+                "next_teacher": observed_target if correction else None,
+                "free_answer": free_answer,
+                # This work issued the action above, including any reward
+                # for its predecessor and any teacher for its own cue.
+                "step_settlement_work": step_work,
+            }
+            outcomes.append(outcome)
+            phase_outcomes.append(outcome)
             correct += int(reward[0])
             cue = next_cue
-            action = brain.step(
-                observation(cue), reward=reward, done=np.array([False]),
-                teacher=label(cue, changed=changed) if teach else None,
+            action, free_answer, step_work = issue(
+                brain, cue, reward=reward, done=np.array([False]),
+                teacher=np.array([observed_target]) if correction else None,
             )
         stages.append({
             "phase": phase, "executed_transitions": transitions,
             "correct_actions": correct, "witnessed_mistakes": transitions - correct,
+            "corrective_lessons": sum(row["next_teacher"] is not None for row in phase_outcomes),
+            "free_answer_sweeps": sum(row["free_answer"]["steps"] for row in phase_outcomes),
+            "free_answer_residual_checks": sum(
+                row["free_answer"]["residual_checks"] for row in phase_outcomes
+            ),
+            "max_free_answer_residual": max(
+                row["free_answer"]["max_residual"] for row in phase_outcomes
+            ),
         })
 
     # No reset or replacement across stages: both memory pathways remain live.
@@ -108,6 +159,11 @@ def run():
         assert same_checkpoint(before, brain.save(folder / "after-recall.npz"))
 
     return {
+        "measurement_scope": (
+            "Per-action free-answer diagnostics; step settlement sweeps also include "
+            "previous feedback, current teaching and eligibility. They exclude residual "
+            "checks, memory, optimizer and recording overhead. No energy or total-cost claim."
+        ),
         "stages": stages,
         "outcomes": outcomes,
         "executed_transitions": len(outcomes) + 1,

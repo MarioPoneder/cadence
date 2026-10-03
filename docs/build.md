@@ -1,10 +1,14 @@
 # Build your own brain
 
-This page takes your own data to a trained, evaluated and saved brain, for each of
-the three kinds. Every block runs on NumPy in seconds; the blocks of one section run
-together, in order. Read [Cadence for machine-learning people](orientation.md) first
-if the words are new, and the [quickstarts](quickstart.md) for the shortest form of
-each brain.
+This page trains, evaluates and saves three supported mechanisms: a record patch,
+a supervised neural graph and a temporal model. These component recipes test
+their own learning and memory contracts. For a continuing brain, start with the
+[world-model lifecycle](world-model.md) and the [Brain quickstart](quickstart.md),
+then retain that same brain through use, disturbance and correction. The recipes
+below do not measure that complete lifecycle.
+
+Every block runs on NumPy; the blocks of one section run together, in order.
+Read [Cadence for machine-learning people](orientation.md) if the terms are new.
 
 These guides use Cadence 0.71.1. Install the published package:
 
@@ -14,8 +18,8 @@ python -m pip install cadence-net==0.71.1
 
 ## A record patch on a stream
 
-The record patch is the brain for a stream of moments: at each moment it hears
-something and has to say what follows. Use it when single facts must be kept after one
+The record patch learns from a stream of moments: at each moment it hears
+something and predicts an outcome. Use it when single facts must be kept after one
 exposure, when a regularity should move into the weights, and when the data will be
 gone before the brain has learned them.
 
@@ -193,14 +197,17 @@ unit variance.
 - A brain in a page: the examples' [viewer](pages.md) draws any connectome; the quickstart
   demos there show how a record patch is drawn as one.
 
-## A settling brain on a table of features
+## A supervised graph-learning control
 
-The settling brain is the brain for a decision over a fixed set of inputs: a genome
-names regions and projections, `develop` lays them out as one connectome, `NeuralGraph` settles
-it and a `Learner` over the output neurons moves the synapses on the contrast of a free and
-a nudged settle. Use it when the wiring matters (a measured connectome, lateral inhibition,
-several heads on one brain), for a policy that learns from reward, or when you want to
-watch every neuron.
+This independent-row classifier tests custom wiring and graph plasticity. A
+genome names regions and projections, `develop` creates one connectome,
+`NeuralGraph` settles it, and `Learner` updates synapses using free and nudged
+phases. The graph has reciprocal feedback; arranging regions in a chain does
+not make its settlement a feed-forward pass.
+
+The example measures held-out classification and checks saved predictions.
+It does not exercise continuing context, memory recall, interference or recovery.
+Use [Brain.compose](brain.md) for the continuing interaction route.
 
 ### 1. Encode
 
@@ -252,7 +259,8 @@ def drive(x):
 Hidden neurons learn only where a nudge on the outputs reaches them, so the projection
 from the cortex to the motor region is reciprocal. `lateral=-0.5` makes the actions
 compete. [Write a cortex](cortex.md) has the catalogue of regions, projections and heads;
-[compose a brain](brain.md) adds a records cortex and reward beside the policy.
+[compose a brain](brain.md) adds working trace, associative memory and actual-outcome
+reward feedback around the neural graph.
 
 ### 3. Calibrate, learn, evaluate
 
@@ -312,9 +320,10 @@ settles in the browser under a stimulus you draw ([the brain viewer](pages.md)).
 
 - Reward instead of labels: `ActorCritic` over the same learner, eligibility traces and a
   broadcast prediction error ([reward](reward.md)); `Brain` is the ready composition
-  with a critic, a working memory and an episodic store ([compose a brain](brain.md#brain)).
-- Consequences and values in one write: a records cortex beside the policy
-  ([compose a brain](brain.md#one-experience-step-by-hand)).
+  with a critic, a working trace and associative memory ([compose a brain](brain.md#brain)).
+- Learned consequences and planning: a separate temporal model
+  ([learn consequences, then act](interaction.md)); this is not automatically
+  integrated into `Brain.compose`.
 - Let selection size the regions: `evolve` over the genome across lives
   ([evolve a brain](evolution.md)); any hand-set constant can be a gene.
 - A measured connectome: `Connectome.from_synapses` from a synapse list, then a
@@ -324,7 +333,7 @@ settles in the browser under a stimulus you draw ([the brain viewer](pages.md)).
 
 ## A temporal patch on continuous observations and actions
 
-The temporal patch is the brain for a body: continuous observations and actions on
+The temporal patch models a body: continuous observations and actions on
 paths of shape `(batch, time, ports)`, a learned dynamics model, and planning that
 repairs the action ports under that model.
 
@@ -358,8 +367,9 @@ imagination that consumes no observation, use [the belief patch](belief.md).
 - The control is stated: the majority outcome, persistence, a linear predictor, the
   search alone, a shuffled connectome.
 - The slow weights and the records are scored separately.
-- The residual, or the certificate, says the settle converged; a reported `reason` other
-  than an update is read, never ignored.
+- The full equation residual meets the declared tolerance for a qualified settle;
+  movement alone is not that check. Certificates retain their own hypotheses, and
+  a reported `reason` other than an update is read, never ignored.
 - The seed, the library version and the data revision are recorded; a
   [receipt](receipts.md) binds the numbers to the sources.
 - [Common missteps](missteps.md) lists the ways a good-looking number is wrong.

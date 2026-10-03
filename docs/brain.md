@@ -85,7 +85,7 @@ labels the current observation instead. Keep batch-row identities fixed until
 `reset()`. [Continuous interaction](continuous.md) covers episodes, teaching,
 private imagination and retries. The
 [continuing brain example](../examples/continuing_brain.py) shows the complete
-reward, teacher and checkpoint loop using the published `0.71.0` API.
+reward, teacher and checkpoint loop using the current composition API.
 Independent [Records](memory.md#records) can
 store declared observation/action/outcome fields; their reads and writes have
 an explicit record rule rather than a neural-settlement certificate.
@@ -96,18 +96,36 @@ an explicit record rule rather than a neural-settlement certificate.
 equations before returning answers, including observer state. The defaults allow
 1024 free steps at residual tolerance `3e-3`. A difficult free solve may use
 half-step numerical damping within that same total budget; its final residual
-is checked against the original model. Default teaching uses finite nudged phases.
-Select qualified teaching explicitly:
+is checked against the original model. Default teaching uses finite nudged phases,
+where `tolerance` checks activity movement rather than the full equation residual.
+
+Passing `learning=LearnerConfig(...)` replaces the composition's learning
+configuration; it does not merge just the named fields. The defaults differ:
+
+| Setting | `Brain.compose` without `learning` | Fresh `LearnerConfig()` |
+| --- | --- | --- |
+| `eta` | `0.5` | `0.2` |
+| `momentum` | `0.9` | `0.0` |
+| `free_steps` | `1024` | `100` |
+| `nudged_steps` | `12` | `50` |
+| `tolerance` | `3e-3` | `1e-4` |
+
+Other operations have independent defaults: `Brain.imagine` uses residual
+tolerance `1e-6`, `NeuralGraph.equilibrate` uses `1e-5`, and `calibrate_bias`
+uses `1e-4` (finite movement by default, full residual with `qualified=True`).
+They do not inherit the action tolerance. Record the actual tolerance and phase
+contract when comparing answers or work.
+
+Use `dataclasses.replace` to change selected settings while preserving the
+composition's other defaults. Here qualified teaching receives a longer nudged
+budget and checks the original full equations in every phase:
 
 ```python
-from cadence import LearnerConfig
+from dataclasses import replace
 
 qualified = Brain.compose(
     inputs=4, actions=2, modules=(16, 8), seed=7,
-    learning=LearnerConfig(
-        qualified=True, damping=3, free_steps=1024, nudged_steps=1024,
-        tolerance=3e-3,
-    ),
+    learning=replace(brain.learner.config, qualified=True, nudged_steps=1024),
 )
 qualified.step(observation, teacher=np.array([0]))
 assert qualified.last_learning["demonstration_qualified"] == 1.0
@@ -193,6 +211,10 @@ assert network.connectome.n == connectome.n
 
 [Write a cortex](cortex.md) describes ports and projections;
 [evolution](evolution.md) describes genomes and selection.
+The lower-level `motor_cortex`, `cortex` and `layered` factories default to
+`lateral=0.0`; the custom example above therefore has no motor competition.
+Pass the intended value explicitly when comparing it with `Brain.compose`,
+whose default is `lateral=-0.5`.
 `Brain.build` offers the image/vector builder, and
 `Brain(connectome, ...)` accepts the named populations required by its
 interaction loop. These are advanced construction options for specific wiring
