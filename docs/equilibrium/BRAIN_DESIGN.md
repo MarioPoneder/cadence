@@ -1,5 +1,13 @@
 # Choose, train and run a brain
 
+Start from [one continuing equilibrium brain](../world-model.md). Design for
+bootstrap, ordinary use, witnessed disruption and local repair in the same
+acquired model; retain its learned relations and declared memory. An independent
+classifier or external answer network is a control, not this application.
+This guide owns the experimental population model's joint stationary energy
+solve. Its explicit history and parameter admission must not be confused with
+`Brain.compose`'s memory pathways and neural contrast rule.
+
 A brain is one connected graph whose patches repair disagreement together.
 Start with a sensing population read by an output population, then choose sizes
 and connections from the information the task needs. More patches add capacity;

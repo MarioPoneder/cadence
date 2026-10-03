@@ -6,6 +6,9 @@ not a history of benchmark outcomes.
 
 | Misstep | Why it fails | Check or correction |
 | --- | --- | --- |
+| Presenting independent classification as a continuing world model | Fresh state and memory-free reads omit the acquired context and continuity being claimed. | Keep it as a mechanism control; test [one acquired brain](world-model.md) across bootstrap, use, disruption and repair. |
+| Equating a small residual with a useful stable world model | Internal equations can hold for a wrong interpretation, and residuals do not measure hardware power. | Separately measure task quality, retention, stable-use work and repair cost. |
+| Supplying the answer through a trained external readout | The extra model can carry the capability attributed to the settling brain. | Read the brain's declared output state; report an external answer-producing model as a separate baseline. |
 | Treating a normal form as a correct answer | The declared equations can agree while modeling the task poorly. | Measure predictions and executed behavior against observations. |
 | Reading free-state energy as surprise | The temporal causal recurrence has zero defect even for a wrong prediction. | Compare a prediction with actual sensor readback; retain the parameter revision that made it. |
 | Treating two converged detunings as an accurate learning direction | Positive local curvature does not prove that both solutions remain on the free state's smooth branch. | Check finite-beta sensitivity and actual free loss; reject harmful candidate steps rather than relying on solver convergence alone. |

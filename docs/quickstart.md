@@ -6,6 +6,11 @@ carry local state, exchange signals and repair disagreement in one neural
 settlement. Optional **System 2** adds observing regions with returning feedback
 in that same graph.
 
+The [world-model guide](world-model.md) explains the intended lifecycle:
+bootstrap a useful interpretation, use it, repair witnessed failures and continue
+the same brain. This quickstart exercises the implemented policy/memory loop;
+it does not yet integrate learned environmental transitions.
+
 Python 3.11+ and NumPy are required:
 
 ```bash

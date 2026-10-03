@@ -4,21 +4,16 @@ Cadence is an experimental brain built from local state, ports, plastic
 relationships, memory and repair. **System 1** is the default continuing brain.
 **System 2** optionally adds observing cortical regions whose recursive feedback
 joins the same neural-graph settlement. The base can already be deep and modular.
-The goal is a simulated human-like brain; the current mechanisms have bounded,
-testable contracts.
+The goal is a simulated human-like brain; biological names describe functional
+roles. Bootstrap useful reciprocal relations and memory, act in the world,
+repair witnessed failures, and continue the same acquired brain.
 
-Animal and human brains learn from experience and not by backpropagation with
-gradient descent. Cadence follows that design: [local free/nudged learning](learning.md),
-[reward plasticity](reward.md) and [memory](memory.md) change the brain while it
-runs, with no separate training mode. An answer is the settled state of the whole
-brain, a consensus that its regions reach through local repair. Teaching
-compares free and nudged activity; finite phases are the default, while
-explicit qualified teaching requires their full equations before a parameter
-update. The [README](../README.md#how-a-cadence-brain-differs-from-a-feed-forward-network)
-sets this beside a feed-forward network trained by backpropagation,
-[concepts](concepts.md#compared-with-backprop-networks) compares the update
-mechanisms, and the [README](../README.md#why-cadence) lists what this gives an
-embodied system.
+Start with [one continuing equilibrium brain](world-model.md). It explains how
+parameters and memory support a family of equilibria under changing evidence,
+and where the implemented policy/memory loop ends and integrated world-model
+development begins. [Local learning](learning.md), [reward plasticity](reward.md)
+and [memory](memory.md) have distinct tested update rules. Internal consistency
+does not establish correct understanding or inexpensive computation.
 
 Python 3.11+ and NumPy are required.
 These guides describe Cadence 0.71.1. Install the published package:
@@ -29,11 +24,12 @@ python -m pip install cadence-net==0.71.1
 
 ## Start here
 
-1. [Build a brain](brain.md): compose System 1, add optional observers and save it.
-2. [Continuous interaction](continuous.md): observations, actual rewards,
+1. [The continuing world model](world-model.md): lifecycle, design intent and current boundaries.
+2. [Quickstart](quickstart.md): run one brain through observations and outcomes.
+3. [Build a brain](brain.md): compose System 1, add optional observers and save it.
+4. [Continuous interaction](continuous.md): observations, actual rewards,
    demonstrations, memory and private imagination.
-3. [Quickstarts](quickstart.md): small learning tasks you can run.
-4. [Contracts](contracts.md): numerical qualification, learning and refusal.
+5. [Contracts](contracts.md): numerical qualification, learning and refusal.
 
 `Brain.compose(inputs, actions, modules=(64,), observers=())` includes
 working and consolidating memory. Add observer widths when you want recursive
@@ -44,6 +40,8 @@ better decisions.
 
 | Need | Guide |
 | --- | --- |
+| Bootstrap, use, disruption and saved continuation in one life | [Continuing brain example](../examples/continuing_brain.py), [experience design](experience.md) |
+| Isolated graph learning or calibration controls | [Learning rule](learning.md), [task recipes](tasks.md) |
 | Trace and associative-memory rules | [Memory](memory.md), [continued learning](continuous.md) |
 | Event records and consolidation | [Record patch](record-patch.md) |
 | Learned environmental consequences and private action planning | [Interaction](interaction.md), [temporal model](temporal.md), [planning](planning.md) |

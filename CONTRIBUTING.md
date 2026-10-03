@@ -20,6 +20,27 @@ capability-preservation test. State the actual learning rule and the scope of
 its equilibrium guarantee; record scans, temporal repair and graph settlement
 must not inherit one another's claims.
 
+Use [one continuing equilibrium brain](docs/world-model.md) as the application
+and tutorial frame: bootstrap useful relations and memory, operate with them,
+repair witnessed failures, then resume the same acquired brain. Parameters and
+memory support a family of equilibria under changing evidence. Deep reciprocal
+modules remain part of System 1; biological role names do not assert literal
+biology.
+
+Keep independent classification, calibration and memory-isolation tests as
+labeled controls. A default application must not replace the continuing brain
+with a new instance for each row, silently bypass memory or supply its answer
+through an external trained readout. Preserve acquired state through disruption
+and test both recovery and earlier capabilities. Numerical settlement, correct
+world prediction and measured cost are different observations.
+
+Document the seam between working mechanisms and the intended world model.
+The current `Brain` reward loop is not universal failure-gated plasticity, and
+private responses to supplied observations are not learned world transitions.
+A proposal for cheap stable use or automatic mismatch repair needs an explicit
+contract and evidence before a guide advertises it. Do not change defaults or
+invent success thresholds to make an example read as a completed capability.
+
 ## Set up
 
 ```bash
@@ -46,7 +67,10 @@ The test suite includes `tests/test_documentation.py`, which executes every Pyth
 of the listed guides in order and checks that every local link and anchor in `README.md`
 and `docs/` resolves. A change to a guide's code is a change to a test. The minimal-install
 job builds the wheel with NumPy alone and runs the quickstart, the record patch, the
-temporal, belief, steering and build guides without optional backends.
+continuing-world-model, temporal, belief, steering and build guides without optional
+backends. It also executes the continuing-brain lifecycle example. For changes to
+these guides or examples, run `python -m pytest -q tests/test_documentation.py`
+and `ruff check examples/continuing_brain.py tests/test_documentation.py`.
 
 Formal proofs are maintained in the canonical
 [Cadence flagship Lean library](https://github.com/FloatingPragma/oph-meta/blob/main/cadence-flagship/lean/README.md),
@@ -133,6 +157,12 @@ Each demo's README names its library version, mechanisms, setup and behavioral s
 Keep receipts and reproduction checks behind measured claims, and state data rights
 and known limits. The separate research archive retains its own example layout and
 library pins; use those when reproducing archived results.
+
+The primary local entry is [the continuing brain](examples/continuing_brain.py):
+one brain, actual feedback through changed conditions, and saved continuation.
+The [memory/planning example](examples/memory_imagination.py) separately exercises
+`TemporalPatchNet` and finite response protection. Do not present those distinct
+model equations as an already integrated `Brain.compose` world model.
 
 The preserved population solver lives in `cadence.experimental.equilibrium`,
 with guides in `docs/equilibrium`, examples in `examples/equilibrium` and tests

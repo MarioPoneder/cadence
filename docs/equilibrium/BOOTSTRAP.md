@@ -5,6 +5,14 @@ learning loop. This guide explains how to prepare a useful teaching stream,
 check acquisition and continue learning without confusing a qualified solve
 with a competent brain.
 
+The [canonical lifecycle](../world-model.md) keeps the acquired world
+interpretation and memory through ordinary use, failure and local repair.
+The scalar exercises here isolate acquisition in the experimental population
+model; keep that label when presenting them. This model uses its own joint
+energy/stationarity law and explicit history, not the default Brain's trace and
+associative-memory loop. A successful bootstrap does not establish automatic
+failure detection, cheap stable use or general retention.
+
 **Bootstrapping** is initial guided practice. **Live operation** uses the same
 brain in its environment and may include more learning. These lifecycle phases
 use the same public learning operations and processing-patch rule. Choose one

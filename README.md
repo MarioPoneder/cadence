@@ -9,23 +9,35 @@
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
 
-**An experimental brain that learns, remembers, imagines and acts.**
+**One continuing equilibrium brain: learn a world, act in it, repair what fails.**
+
+Cadence is not a feed-forward deep neural network. Its primary application is
+one acquired brain continuing through experience.
 
 Cadence aims to build a simulated human-like brain from simplified biological
 mechanisms. Its default **System 1** is a continuing animal-like brain with
 perception, plastic connections, memory and action. Optional **System 2** adds
 recursive feedback through observing cortical regions in the same neural graph.
-The base can already be deep and modular.
+The base can already be deep and modular. Biological names describe functional
+software roles.
 
 Bounded, observer-like regions carry local state, communicate through ports,
-read back activity and retain records. They repair disagreement until the whole
-brain settles into one coherent state; actual observations and consequences
-guide learning. A Cadence brain can be deep. It learns without backpropagation,
-through local contrasts between free and nudged activity. Actions require a
-qualified equilibrium; teaching has its own finite or qualified phase contract.
-A settled answer can still be wrong about the world, so capability is measured
-through free behavior.
-Cadence is alpha research software, not a claim of human-level intelligence.
+read back activity and retain records. Reciprocal regions constrain one another
+as the neural graph settles; actions require its full equations to qualify.
+Actual observations and consequences guide local plasticity and memory writes.
+The aim is to bootstrap a useful interpretation, use it in an ongoing life, and
+repair witnessed failures while retaining the same acquired brain.
+
+Learned parameters and memories support a **family of equilibria** under changing
+evidence and context. They do not hold the brain at one frozen state. An internally
+consistent answer can still be wrong about the world: numerical settlement and
+useful understanding need separate evidence.
+
+Start with [one continuing equilibrium brain](docs/world-model.md), the canonical
+guide to this lifecycle and its current implementation boundaries. `Brain.compose`
+already supplies continuing action, local learning and memory. Integrated learned
+world prediction and automatic failure-triggered repair with cheap stable
+operation remain development goals. Cadence is alpha research software.
 
 These pages describe Cadence 0.71.1, including opt-in qualified teaching,
 calibration and work reports. Install the published package for the
@@ -33,74 +45,38 @@ examples below, or use the [source installation](#development-checkout).
 
 ## How a Cadence brain differs from a feed-forward network
 
-A feed-forward deep network computes an answer in one pass. Activity moves from
-the input layer to the output layer, every layer is evaluated once, and nothing
-travels back while the answer forms. Training uses backpropagation: an error
-measured at the output is sent backwards through all layers as a chain of
-derivatives, and every weight moves by its share of that single global error.
+`Brain.compose(inputs=4, actions=2, modules=(64, 32, 16))` builds reciprocal
+processing regions whose activity settles together. Later regions can shape
+earlier ones while an answer forms. Working and associative memory contribute to
+the current drive; the selected motor action comes from the qualified neural
+state. An external trained readout would be a separate answer-producing model.
 
-A Cadence brain reaches its answer by settling. Its regions are connected in
-both directions, and every neuron keeps moving its own state toward what its
-inputs and its neighbours drive it to. This local repair repeats until every
-neuron agrees with its neighbours within a tolerance. The answer is that
-equilibrium of the whole brain: a consensus among local patches, reached through
-local repair alone. A later region shapes an earlier one while the answer forms,
-and a brain that does not settle refuses to act.
+The graph learner compares local activities in free and nudged phases, without
+a backward differentiation pass through those phases. Default teaching and
+reward eligibility are finite; `LearnerConfig(qualified=True, ...)` explicitly
+requires supervised phases to qualify before updating. Other Cadence model
+families have [their own learning contracts](docs/contracts.md), including
+explicit adjoints in record and belief models.
 
-Learning uses the same local dynamics. A nudge at the motor neurons points
-toward a demonstrated answer or along the action just taken. Each synapse
-compares the activity of its own two neurons between free and nudged phases;
-the label or measured outcome sets the update. The default teaching and reward
-eligibility phases run for a finite duration. Set `LearnerConfig(qualified=True, ...)`
-to require the full free and teaching equations before accepting a supervised
-update. A refused lesson keeps parameters and optimizer history intact.
-When the situation returns, the brain settles with its changed connections.
-No error is sent backwards through a stack of layers, and the brain keeps no
-backward computation graph.
-
-Cadence brains can be deep. `Brain.compose(inputs=4, actions=2, modules=(64, 32, 16))`
-chains three processing regions, each exchanging activity with the next, and all
-of them settle together. Depth adds regions to the one settlement. The learning
-rule stays local at every depth.
-
-| | Feed-forward deep network | Cadence brain |
-| --- | --- | --- |
-| An answer | The output of one pass through the layers | The settled state of the whole brain, a consensus among its patches |
-| Influence while answering | Input to output only | Both ways: regions exchange activity and settle together |
-| How the answer forms | Each layer is evaluated once | Local repair repeats until the state equations hold within tolerance; a brain that does not get there refuses to act |
-| Learning signal | One global loss, sent backwards through every layer | A nudge at the motor neurons changes local activity; finite phases are the default and qualified teaching is explicit |
-| What changes a weight | Its share of the backpropagated error | The activity of its own two neurons, compared between free and nudged phases and scaled by the label or measured outcome |
-| Depth | More layers in the forward and the backward pass | More regions in the same settlement |
-| Training and use | Separate phases | One running brain that acts and learns |
+Independent classification and calibration remain useful mechanism tests.
+They do not exercise the complete continuing brain. Recurrent networks trained
+by backpropagation can also learn online and use memory: the relevant comparison
+is acquired behavior and total work on the same task and information, not an
+architectural label. See [the update mechanisms](docs/concepts.md#compared-with-backprop-networks).
 
 ## Why Cadence
 
-Animal and human brains learn from experience and not by backpropagation with
-gradient descent. Cadence is designed the same way. Synapses change from the
-activity of the two neurons they connect, reward scales that change, and memory
-writes are local too. The brain has no separate training mode.
+The library makes continuing state, reciprocal interpretation, local plasticity
+and memory available in one small interface. A saved brain can resume an action
+awaiting its actual outcome. Private imagination can inspect responses without
+rewriting live experience. These are mechanisms for testing acquisition,
+retention and recovery through a life.
 
-For embodied AI this design gives:
-
-- **Learning on the job.** The same brain acts and learns from every measured
-  outcome. There is no difference between training and inference.
-- **Adaptation to changed conditions.** A changed body or world shows up in what
-  the brain measures, and the live brain adjusts without being told what changed.
-- **Local learning.** No backward pass through the network is needed, so learning
-  can run where the brain runs.
-- **Memory.** A working trace carries the recent past, and fast and persistent
-  associative memory keep what mattered.
-- **Settled answers.** Every action is a qualified settled state of the whole
-  brain. A brain that does not settle refuses to act.
-- **Inspection.** Region activity can be read while the brain runs, and private
-  imagination tests a response before the body commits to it.
-
-Under idealized conditions the local contrast follows the gradient that
-backpropagation would compute. [The learning rule](https://github.com/muellerberndt/cadence/blob/main/docs/learning.md)
-states those conditions, and [the comparison](https://github.com/muellerberndt/cadence/blob/main/docs/concepts.md#compared-with-backprop-networks)
-is of update mechanisms. These properties are shown in simulation in the
-[examples](https://github.com/muellerberndt/cadence-demos). An advantage on a
-physical robot is a separate test.
+The target includes full-sentence language and reusable world understanding.
+A small fixed-label task is a control, not that destination. Greater capability,
+scalability and efficiency than transformers must be established with matched
+comparisons. A small numerical residual does not measure low physical energy
+or guarantee a correct answer.
 
 <a id="get-started"></a>
 
@@ -136,8 +112,9 @@ next action. `teacher=` can label the **current observation**. Keep each batch
 row attached to the same life. There is no training/inference mode switch.
 [Continuous interaction](https://github.com/muellerberndt/cadence/blob/main/docs/continuous.md)
 covers teaching, resets and saved continuation.
-The [continuing brain example](examples/continuing_brain.py) combines actual
-rewards, current teacher labels and a checkpoint awaiting feedback on `0.71.0`.
+The [continuing brain example](examples/continuing_brain.py) keeps the same brain
+through bootstrap, unchanged conditions and a changed environment, then checks
+a checkpoint awaiting feedback.
 
 The constructor includes a working trace and fast/persistent associative memory.
 The trace carries recent activity; learned graph parameters and consolidated

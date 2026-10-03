@@ -6,6 +6,12 @@ observer regions add **System 2** feedback in the same neural graph. `step`
 connects either layout to its body: observe, learn from the preceding outcome,
 then act again. There is no training/inference mode switch.
 
+This is the runtime loop for [one continuing equilibrium brain](world-model.md).
+Bootstrap, unchanged conditions and witnessed disruption belong to the same
+life. Current reward learning processes each actual outcome; it does not yet
+implement a universal policy of learning only after failure. Keep a task error
+separate from a numerical failure to settle.
+
 ## Observations, actions and reward
 
 ```python
@@ -47,7 +53,9 @@ use a separate instance. Its `predict` and `accuracy` ignore both the working
 trace and associative memory; greedy `act` reads both and advances the trace.
 Lower-level `act`/`learn` separates action and feedback timing.
 The [continuing brain example](../examples/continuing_brain.py) runs this loop
-and checks a saved pending action's continuation with the published `0.71.0` API.
+through bootstrap, unchanged conditions and changed conditions, then checks a
+saved pending action's continuation. It reports actual task outcomes without
+assuming that settlement guarantees recovery.
 
 ## Qualification and refusal
 

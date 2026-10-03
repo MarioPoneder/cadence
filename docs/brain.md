@@ -5,6 +5,12 @@ graph with sensory input, reciprocal processing regions, motor choices, a workin
 trace and fast/persistent associative memory. Optional observer regions add
 **System 2** feedback within that graph.
 
+Keep this brain through acquisition, ordinary use and correction. The
+[world-model guide](world-model.md) explains why its learned relations and memory
+support changing equilibria, and distinguishes that design from the mechanisms
+implemented today. The calibration and isolated response examples below are
+controls for those mechanisms.
+
 ## Brain
 
 ```python

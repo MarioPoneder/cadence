@@ -20,8 +20,24 @@ def snippets(page: str) -> list[str]:
     return [code for marker, code in BLOCK.findall((ROOT / page).read_text()) if not marker]
 
 
+def test_continuing_brain_example():
+    """Exercise real outcomes and saved feedback, including the private graph control."""
+    example = runpy.run_path(str(ROOT / "examples/continuing_brain.py"))
+    report = example["run"]()
+    assert report["saved_feedback_continuation_identical"]
+    assert report["free_queries_preserved_live_checkpoint"]
+    assert report["associative_writes"] == report["executed_transitions"]
+    for outcome in report["outcomes"]:
+        # Validate the witness independently of the example's label/execute helpers.
+        cue = outcome["cue"]
+        expected = cue if outcome["phase"] == "changed_environment" else 1 - cue
+        assert outcome["observed_target"] == expected
+        assert outcome["reward"] == float(outcome["action"] == expected)
+
+
 PAGES = [
     "README.md",
+    "docs/world-model.md",
     "docs/patchnet.md",
     "docs/temporal.md",
     "docs/architecture.md",

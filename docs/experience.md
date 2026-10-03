@@ -1,8 +1,10 @@
 # Experience in a continuing brain
 
 Use `Brain.compose` for a continuing System 1 brain, with optional System 2
-observers. This page explains experience and custom compositions; start with
-[building a brain](brain.md) and [continuous interaction](continuous.md).
+observers. Start with [one continuing equilibrium brain](world-model.md) for the
+bootstrap/use/repair lifecycle and its implementation boundaries. This page
+explains experience and custom compositions; [building a brain](brain.md) and
+[continuous interaction](continuous.md) specify the current interface.
 
 Design the brain and its learning life together. What can it observe and change?
 What persists, what counts as evidence, and what makes a decision useful?
@@ -39,9 +41,12 @@ A named region has no function until its connections and experience make it usef
 
 `Brain` supplies a recurrent sensory/association/motor policy, a critic,
 working trace and associative reward memory through `compose`. Its `hippocampus` remembers
-chosen-action rewards for sensory cues. A world model is a records cortex composed
-beside it ([compose a brain](brain.md)); learned hierarchical goals and language require
-additional compositions and evidence.
+chosen-action rewards for sensory cues. A records cortex can supply a separate
+consequence predictor; `TemporalPatchNet` supplies a separate learned temporal
+model. Neither is automatically an integrated reciprocal world model inside
+`Brain.compose`. Learned hierarchical goals and language require additional
+compositions and evidence. Preserve each model's equations and identity when
+testing an integration.
 
 ## Keep the causal order
 

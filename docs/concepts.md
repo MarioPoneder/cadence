@@ -9,6 +9,11 @@ A Cadence brain is software state organised into neurons, synapses and regions,
 with readouts, records and a learning update. It is a design for computation. It
 does not ascribe experience to the software or establish a biological brain model.
 
+For the application frame, start with [one continuing equilibrium brain](world-model.md):
+bootstrap useful relationships and memory, use them, repair witnessed failures,
+then continue the same life. The equations and isolated controls below describe
+mechanisms within that design.
+
 In OPH terms this is an observer-like, self-reading design: local state, declared
 synaptic boundaries, readback, records and feedback, with protocols and source-bound
 receipts for evidence. The biological names describe computational roles.

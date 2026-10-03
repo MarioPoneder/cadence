@@ -1,11 +1,21 @@
 # Agent guide: build one brain, measure its behavior
 
-Follow the repository's [contributor instructions](../../AGENTS.md), including
-the principle they open with: a Cadence brain is one equilibrium of patches
-settling against each other. For API spelling and numerical semantics, use
+Follow the repository's [contributor instructions](../../AGENTS.md) and
+[continuing-world-model guide](../world-model.md): bootstrap useful relations
+and memory, operate, witness a failure, repair locally and continue the same
+brain. Cadence is not a feed-forward classifier with an added answer readout.
+For API spelling and numerical semantics, use
 [the reference](REFERENCE.md) and [specification](SPECIFICATION.md). The
 practical explanation is [brain design](BRAIN_DESIGN.md); start a small
 application from [the quickstart](QUICKSTART.md).
+
+This subtree owns `cadence.experimental.equilibrium`, with a joint stationary
+energy solve and explicit `History`. It does not inherit `Brain.compose`'s
+trace/associative-memory implementation or the neural graph's contrast-learning
+law. Keep independent calibration examples as labeled mechanism controls;
+measure continuing applications with the same acquired brain across disruption
+and recovery. Cheap stable execution and automatic failure-triggered repair are
+targets, not consequences of a low stationarity residual.
 
 The design goal is a simulated human-like brain built from simplified biological
 mechanisms. Cortical organization, memory, plasticity and recursive correction

@@ -1,5 +1,12 @@
 # Build a brain, teach it a routine, keep it
 
+Use [one continuing equilibrium brain](../world-model.md) as the application
+frame: bootstrap, use, witnessed failure, local repair and continued use of the
+same acquired model. This tutorial is a small calibration control for the
+separate `cadence.experimental.equilibrium` population solver. Its joint
+stationarity rule and explicit `History` are not the default `Brain.compose`
+neural/memory implementation. Free scalar accuracy checks only this relation.
+
 Install **Cadence 0.71.1** with Python 3.11 or later. The containing package
 requires NumPy; this solver uses the Python standard library unless
 you select an optional tensor backend:

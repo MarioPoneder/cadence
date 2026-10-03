@@ -5,6 +5,14 @@ covers live observations, actions, outcomes and continued learning using the
 existing public API. Begin with a skill that passes free assessment;
 [bootstrapping](BOOTSTRAP.md) explains how to acquire and check one.
 
+Follow the [continuing-world-model lifecycle](../world-model.md): use the
+acquired brain, compare saved expectations with actual outcomes, repair and
+resume that same model. This guide exercises the experimental population
+solver's own stationarity and witness-admission contracts. `observe` is explicit
+and the examples may learn from every outcome; they do not implement universal
+failure-gated learning or guarantee cheap operation after bootstrap. Explicit
+history remains a separate memory mechanism from the default Brain's stores.
+
 Named observations enter one connected graph, qualified outputs expose selected
 patch states, and actual consequences supply experience. All populations repair
 together. Choose their sizes and connections from measured behavior; optional

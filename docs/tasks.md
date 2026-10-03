@@ -4,6 +4,11 @@ Start with the operation your experience stream requires. These recipes describe
 interfaces; observation encoding, feedback timing and held-out lifetimes belong
 to your application.
 
+Use [one continuing equilibrium brain](world-model.md) as the application frame.
+The small independent prediction heads below are unit controls for encoding and
+plasticity. A continuing application retains its acquired brain, memories and
+stream identities through bootstrap, operation and correction.
+
 | Task | Input | Operation and output | Guide |
 |---|---|---|---|
 | Known interacting constraints | A drive and a declared connectome | Settle; read output activations and residual | [Neural dynamics](concepts.md) |

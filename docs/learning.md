@@ -1,11 +1,17 @@
 # Learning: the free/nudged rule
 
-Start with [the continuing-brain quickstart](quickstart.md#observe-act-and-learn).
+Start with [one continuing equilibrium brain](world-model.md) and
+[the continuing-brain quickstart](quickstart.md#observe-act-and-learn).
 This page explains local prediction repair and demonstrations without adaptation: the neuron
 equations, a numerical update, the gradient assumptions, and configuration choices.
 This rule changes the synapses of the settled regions. A [records cortex](memory.md#records)
 learns consequences and reward with one read and one delta-rule write per outcome, without
 settling phases.
+
+The isolated classification, calibration and derivative examples here are
+mechanism controls. They help diagnose local plasticity; they are not a substitute
+for a continuing brain whose memory and acquired relations survive use and
+correction. Keep the teaching signal absent when measuring acquired answers.
 
 For continuous action-return targets on a jointly settled recursive graph, use
 the [recursive-training guide](recursive-training.md). It uses `PatchNet.observe`

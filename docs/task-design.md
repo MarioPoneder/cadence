@@ -6,6 +6,12 @@ learning signal preserve the distinctions the task requires. The current
 library does not establish that arbitrary tasks become solvable by increasing
 width, data or compute.
 
+Design a [continuing life](world-model.md): bootstrap, ordinary use, witnessed
+disruption and local correction in the same acquired brain. Keep isolated
+classification and calibration as mechanism controls. Measure retained and new
+behavior after repair, alongside stable-use work and repair work; do not replace
+the brain or bypass its memory between observations to stand in for this test.
+
 ## Start at the boundary
 
 A patch has bounded local state, declared ports, readback and a repair rule.

@@ -31,7 +31,7 @@ jobs:
           import tempfile
           from pathlib import Path
 
-          for name in ("README.md", "docs/patchnet.md", "docs/quickstart.md", "docs/temporal.md",
+          for name in ("README.md", "docs/world-model.md", "docs/patchnet.md", "docs/quickstart.md", "docs/temporal.md",
                        "docs/temporal-memory.md", "docs/architecture.md",
                        "docs/planning.md", "docs/interaction.md", "docs/partitioned.md",
                        "docs/record-patch.md", "docs/build.md", "docs/belief.md",

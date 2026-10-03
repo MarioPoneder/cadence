@@ -6,6 +6,9 @@ The body below is a declared deterministic test environment, not a second
 controller. Its observations teach the model; planning receives only a goal
 and a mask of action ports. Protection is explicitly requested and finite.
 This does not demonstrate autonomous importance selection or a general brain.
+It is a separate TemporalPatchNet mechanism example, not an integrated world
+model inside Brain.compose. Start with docs/world-model.md and
+examples/continuing_brain.py for the continuing-brain application frame.
 """
 
 from __future__ import annotations

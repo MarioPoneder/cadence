@@ -6,6 +6,13 @@ loop with memory and learning. **System 2** optionally adds recursive observer
 regions within that same neural graph. Local disagreement repair seeks a coherent
 state; actual consequences determine whether its behavior was useful.
 
+The [world-model guide](world-model.md) is the canonical application frame:
+bootstrap reusable relations and memory, operate with them, repair witnessed
+failures and resume the same brain. Learned relationships support a family of
+equilibria under changing evidence. The separate implementations below retain
+their own contracts; listing their mechanisms does not establish an integrated
+world model or automatic failure-gated cheap operation.
+
 ## One continuing brain
 
 `Brain.compose` connects sensory, processing, motor and memory regions.

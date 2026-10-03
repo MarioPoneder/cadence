@@ -1,8 +1,17 @@
 # Advanced population experiments
 
-Start with [the main brain guide](../brain.md) for System 1 and optional
-System 2. This section covers `cadence.experimental.equilibrium`, a separate
+Start with [one continuing equilibrium brain](../world-model.md) for the
+bootstrap/use/repair lifecycle, and [the main brain guide](../brain.md) for
+default System 1 and optional System 2. This section covers
+`cadence.experimental.equilibrium`, a separate
 experimental population model for studying exact prediction-error feedback.
+
+Retain the acquired model through normal use and correction. Its learned
+relations support different equilibria under different evidence. Scalar
+calibration examples below are mechanism controls, not a complete world-model
+application. The population model's joint stationarity law stays distinct from
+the default neural graph; neither a small residual nor a saved state establishes
+correct world understanding or cheap routine computation.
 
 Each bounded patch has state, ports, retained relations and a local prediction.
 Connected patches repair their shared state. A population can read live states

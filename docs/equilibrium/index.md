@@ -1,5 +1,12 @@
 # Cadence documentation
 
+The [canonical application guide](../world-model.md) starts from one continuing
+equilibrium brain: bootstrap useful relations and memory, use them, repair
+witnessed failures and resume the same acquired model. The population experiments
+below retain their own energy/stationarity equations and explicit history; they
+do not stand in for the default `Brain.compose` implementation. Small independent
+calibrations are mechanism controls within that larger research direction.
+
 This advanced guide covers `cadence.experimental.equilibrium`: one connected graph of patches
 that repair disagreement together. Choose population sizes and the ports they
 read, teach through the same joint repair, then measure free behavior. Learned

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Center introductory and contributor guidance on one continuing equilibrium
+  brain across bootstrap, use, witnessed disruption and local correction. Add
+  an executable world-model guide with explicit current integration boundaries;
+  keep independent learning controls and distinct model families labeled.
+
 ## 0.71.1 — 2026-10-03
 
 - Reject nonfinite or inconsistent states during finite bias calibration, even

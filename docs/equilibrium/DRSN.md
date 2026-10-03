@@ -1,6 +1,13 @@
 # One connected brain, one repair problem
 
-Cadence builds one connected graph of processing populations. Each patch predicts
+The [continuing-world-model guide](../world-model.md) gives the application
+frame: bootstrap, use, witness failure, repair and continue the same acquired
+brain. This page specifies the separate experimental population model; its
+energy/stationarity law does not replace the default `Brain.compose` neural
+equations or confer its memory mechanisms. Deep connected populations are
+allowed, and biological role names do not imply literal biology.
+
+This model builds one connected graph of processing populations. Each patch predicts
 its own state from the ports it reads and carries the disagreement as a live
 error. The patches repair their states together; the qualified joint stationary
 state is the brain's equilibrium under the supplied observations and constraints.

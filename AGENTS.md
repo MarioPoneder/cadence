@@ -1,7 +1,8 @@
 # Building on Cadence
 
-Read [the documentation index](docs/index.md), [numerical contracts](docs/contracts.md)
-and [API reference](docs/api.md) before changing semantics.
+Read [the documentation index](docs/index.md), [the continuing-world-model guide](docs/world-model.md),
+[numerical contracts](docs/contracts.md) and [API reference](docs/api.md) before
+changing semantics.
 
 ## Goal and mechanism
 
@@ -11,6 +12,20 @@ memory, plasticity, private imagination and action. **System 2 is optional:**
 observing cortical regions add recursive feedback in that same neural graph.
 Base modules can already be deep and specialized; ordinary depth is not recursive
 observation.
+
+The organizing lifecycle is **bootstrap a useful reciprocal interpretation and
+memory → use it → witness a failure → repair locally → continue the same brain**.
+Learned parameters and memory encode a family of equilibria under changing
+evidence, not one permanently fixed activation. Preserve one acquired brain
+across normal use, interference and correction. Biological names are functional
+software roles, not claims of literal biology.
+
+Lead applications and tutorials with that continuing lifecycle. A fresh brain
+per observation, memory-bypassing classification, and an external trained answer
+readout are controls or separate models, not the flagship brain demonstration.
+Keep isolated learning and calibration controls, clearly labeled, because they
+test mechanisms the composition still needs. Do not remove working capabilities
+or blur model identities to make the design story simpler.
 
 Bounded observer-like regions have local state, ports, readback, records and
 plastic relationships. Local disagreement repair seeks a coherent shared state.
@@ -31,6 +46,13 @@ outcome. `teacher` labels the current observation. Preserve stream identity,
 event order and pending feedback. `imagine` evaluates supplied observations
 using a private trace and read-only durable memory; it does not predict the
 world's transitions or turn predictions into witnessed experience.
+
+Distinguish implemented contracts from the desired world-model lifecycle.
+`Brain.compose` does not yet integrate learned environmental transition prediction
+or automatically gate all learning on witnessed failure. Stable inputs do not
+guarantee cheap operation. Do not invent thresholds, success policies or runtime
+changes to make documentation imply those capabilities. Missing integration and
+behavioral contracts need their own capability issues and tests.
 
 Advanced APIs have explicit contracts: `TemporalPatchNet.plan` uses a learned
 world model; `TemporalMemory` protects selected responses at finite capacity;
@@ -60,6 +82,10 @@ Qualified free solves may use numerical damping within their one declared budget
 then check the undamped model's residual. This does not change the live model or
 finite teaching law, and it is not System 2. A numerical qualification does not
 prove correctness about the world, reliable recall or a cognitive advantage.
+Keep equation residuals distinct from prediction errors and failed task outcomes.
+A small residual does not measure physical power or establish transformer-level
+quality, scalability or efficiency; those require matched behavioral and resource
+measurements over bootstrap, normal operation and repair.
 
 `predict` and `accuracy` omit working and associative memory; `act` reads them.
 Test graph plasticity, working traces and consolidated records separately, then
