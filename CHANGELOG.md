@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.71.2 — 2026-10-03
+
 - Expose immutable `Brain.last_settlement` diagnostics for successful and refused
   action/prediction solves: per-row residuals, qualification, sweeps, checks and
   damping. Keep diagnostic state outside checkpoints and preserve action and

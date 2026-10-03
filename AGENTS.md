@@ -19,18 +19,20 @@ guides. Read the owning guide, [numerical contracts](docs/contracts.md) and
 
 ## What Cadence is, and is not
 
-We are building an animal brain. Cadence is not a classifier, not any kind of
-traditional naive neural network, not an MLP, and not a transformer with an
-attention matrix that scales badly with context. A patch net set up like a
-layered feed-forward network, a window of input pressed into one observation,
-one processing region and a readout taught on every presentation, learns
-exactly what that network learns and nothing more; that result is a control,
-never the demonstration. The brain bootstraps into an equilibrium that is its
-world model, carries its state and memory through a continuing life, runs at
-low energy while that model holds, and repairs locally when a witnessed failure
-disturbs it. Build and judge it as a creature: streams, retained state, lessons
-on mismatch, free behaviour over time, retention and recovery, with
-backpropagation networks as baselines.
+We are building an animal-like brain. An independent input/label classifier,
+an MLP or a transformer does not establish the intended Cadence lifecycle.
+A feed-forward patch chain with an external trained answer head is a control;
+the default reciprocal composition already has a different settlement and
+memory contract, even with one processing region.
+
+The intended brain bootstraps a useful equilibrium world model, carries state
+and memory through a continuing life, and repairs witnessed failures locally.
+Low routine work remains a measured target; a small residual does not establish
+low physical energy or efficient task performance. Build and judge the brain
+through streams, retained state, witnessed corrections, free behavior over time,
+retention and recovery, with backpropagation networks as matched baselines.
+Keep supported actual-reward updates distinct from an application's selective
+teacher policy; an automatic failure-only learning gate is not implemented.
 
 ## Goal and mechanism
 

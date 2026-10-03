@@ -6,9 +6,9 @@ relationships and retained memories support a family of such interpretations
 across situations. Start with [the world-model guide](world-model.md), then run
 the [quickstart](quickstart.md) and [continuing example](../examples/continuing_brain.py).
 
-These guides describe the development checkout. Install it with `pip install -e .`
-from the repository root. For the published package, use its
-[release documentation](https://github.com/muellerberndt/cadence/blob/v0.71.1/docs/index.md).
+These guides use Cadence 0.71.2. Install it with
+`python -m pip install cadence-net==0.71.2`; contributors can install the checkout
+with `python -m pip install -e .` from the repository root.
 The [index](index.md) is the catalogue; this page gives a reading order.
 
 ## Start here

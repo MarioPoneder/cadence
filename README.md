@@ -40,9 +40,8 @@ already supplies continuing action, local learning and memory. Integrated learne
 world prediction and automatic failure-triggered repair with cheap stable
 operation remain development goals. Cadence is alpha research software.
 
-The basic examples below work with Cadence 0.71.1. The linked development guides
-also cover unreleased action diagnostics through `last_settlement`; use the
-[source installation](#development-checkout) for those examples.
+The examples and guides use Cadence 0.71.2, including action diagnostics through
+`Brain.last_settlement`.
 
 ## How a Cadence brain differs from a feed-forward network
 
@@ -87,10 +86,10 @@ Python 3.11+ and NumPy are required.
 Install the published release for this basic example:
 
 ```sh
-python -m pip install cadence-net==0.71.1
+python -m pip install cadence-net==0.71.2
 ```
 
-Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.71.1/docs/index.md)
+Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.71.2/docs/README.md)
 describes the APIs included in that package.
 
 ```python
@@ -147,7 +146,7 @@ python -m pip install -e .
 
 This installs the local source as an editable package.
 
-The development API keeps each completed action solve's residual, qualification,
+The API keeps each completed action solve's residual, qualification,
 sweeps and check counts in read-only `brain.last_settlement`, including refused
 attempts. These diagnostics exclude learning, reward eligibility and memory work.
 The [quickstart](https://github.com/muellerberndt/cadence/blob/main/docs/quickstart.md#inspect-the-work-of-answering) shows how to
