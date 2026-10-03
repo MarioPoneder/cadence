@@ -40,6 +40,25 @@ reflection. These observers read neural state. The advanced
 [population solver](equilibrium/index.md) separately implements exact state-and-error
 readback under its own equations.
 
+## Operating point and motor competition
+
+The development checkout exposes `Brain.compose(..., lateral=-0.5)`. This is
+the signed weight between each distinct pair of motor neurons; zero removes
+those lateral connections while keeping reciprocal processing/motor feedback.
+The default stays at -0.5. A larger action vocabulary adds more inhibitory
+inputs per motor neuron, so inspect free activity and its full residual on the
+actual task before selecting a different value. This option is
+[unreleased](../CHANGELOG.md#unreleased).
+
+Global gain changes synaptic drive throughout the graph; population bias
+changes selected neurons' operating points. Integration steps and numerical
+damping affect how the equations are solved. A faster qualified solve does not
+establish that its motor state responds usefully to teaching. The
+[calibration guide](learning.md#calibrating-the-operating-point) shows how to
+check candidate biases before installing them. Choose gain, bias targets and
+lateral wiring on development inputs, retain their hand-set controls, and
+freeze them before confirmation.
+
 ## One experience step by hand
 
 `step` combines learning from the previous outcome and choosing the next action.
@@ -59,7 +78,10 @@ next_action = body_brain.act(following)
 Reward and termination describe the preceding executed action. A demonstration
 labels the current observation instead. Keep batch-row identities fixed until
 `reset()`. [Continuous interaction](continuous.md) covers episodes, teaching,
-private imagination and retries. Independent [Records](memory.md#records) can
+private imagination and retries. The
+[continuing brain example](../examples/continuing_brain.py) shows the complete
+reward, teacher and checkpoint loop using the published `0.70.0` API.
+Independent [Records](memory.md#records) can
 store declared observation/action/outcome fields; their reads and writes have
 an explicit record rule rather than a neural-settlement certificate.
 
@@ -69,14 +91,49 @@ an explicit record rule rather than a neural-settlement certificate.
 equations before returning answers, including observer state. The defaults allow
 1024 free steps at residual tolerance `3e-3`. A difficult free solve may use
 half-step numerical damping within that same total budget; its final residual
-is checked against the original model. Finite teaching uses its own nudged-phase
-contract.
+is checked against the original model. Default teaching uses finite nudged phases.
+The following qualified-teaching option is unreleased and requires
+the [development checkout](../README.md#development-checkout):
+
+```python
+from cadence import LearnerConfig
+
+qualified = Brain.compose(
+    inputs=4, actions=2, modules=(16, 8), seed=7,
+    learning=LearnerConfig(
+        qualified=True, damping=3, free_steps=1024, nudged_steps=1024,
+        tolerance=3e-3,
+    ),
+)
+qualified.step(observation, teacher=np.array([0]))
+assert qualified.last_learning["demonstration_qualified"] == 1.0
+```
+
+This requires every free and teaching phase to satisfy the original full
+equations before a supervised update. `LearningPhaseError` retains the attempted
+phases and their cost report; a refusal preserves parameters and optimizer
+history. `last_learning` records accepted and refused teaching diagnostics under
+`demonstration_` keys, including attempted presentations and row work.
+These qualified development solves use configurable damping: a stalled attempt
+can move to a smaller numerical step sooner, within the same total budget and
+without relaxing the original equation check.
+Qualified teaching does not change the reward eligibility contract: the
+Brain default allows up to 12 finite nudged steps, configured separately through
+`ActorCriticConfig.eligibility_steps`.
 
 An exhausted `act` raises `RuntimeError` without changing live activity, memory,
 randomness or pending feedback. If `step` learned an outcome before the next action
 refused, keep the learning and retry `act`; do not send the same reward again.
 A qualified state satisfies the equations to tolerance. Accuracy, uniqueness
 and stability require their own evidence.
+
+`predict` and `accuracy` start independent cold graph solves without reading the
+working trace or associative memory. Use greedy `act` on a separately loaded
+brain to measure the complete memory-aware response. Reset live state and the
+trace for each independent query; clear fast associative residuals too when the
+question is recall from consolidated associations alone. Keep those resets
+separate from erasing durable parameters or records. [Memory](memory.md) describes
+the three stores and their limits.
 
 The lower-level `NeuralGraph.equilibrate` returns an `Equilibrium` with per-row
 `residual` and `converged`, the state and total steps. `NeuralGraph.residual` checks an
@@ -139,6 +196,9 @@ needs. A custom `NeuralGraph` alone does not install the complete Brain loop.
 
 ## The brain in a browser page
 
-The [viewer](https://github.com/muellerberndt/cadence-examples/tree/main/viewer)
-visualizes a connectome and recorded settlement. `record_settlements` supplies
-actual iterations; the library does not provide a browser environment or body.
+The archived [viewer](https://github.com/muellerberndt/cadence-examples/tree/main/viewer)
+visualizes a connectome and recorded settlement in its declared environment.
+Current `record_settlements` captures actual graph iterations for an
+application-owned display. [cadence-demos](https://github.com/muellerberndt/cadence-demos)
+contains current application examples; the library does not provide a browser
+environment or body.

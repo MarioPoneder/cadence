@@ -72,7 +72,7 @@ def _learning() -> LearnerConfig:
 
 
 def _reward() -> ActorCriticConfig:
-    return ActorCriticConfig(gamma=0.9, lam=0.8, eta=1.0, eta_critic=0.3)
+    return ActorCriticConfig(gamma=0.9, lam=0.8, eta=1.0, eta_critic=0.3, eligibility_steps=12)
 
 
 def _load_memory(metadata: Any, data: Mapping[str, Any], neurons: int) -> FastSynapses | None:
@@ -415,6 +415,7 @@ class Brain:
         *,
         modules: Sequence[int] = (64,),
         observers: Sequence[int] = (),
+        lateral: float = -0.5,
         seed: int = 0,
         **options: Any,
     ) -> Brain:
@@ -426,6 +427,11 @@ class Brain:
         motor regions, including earlier observers. Every region participates
         in the same neural settlement; observer regions never run as a separate
         critic or override an already completed answer.
+
+        ``lateral`` is the signed weight between each pair of motor neurons.
+        Zero removes those lateral synapses, preserving motor/association feedback.
+        Select alternatives against the default on development tasks; changing
+        inhibition does not itself establish a responsive or useful learner.
 
         This reuses the existing trace, synaptic memory and learning mechanisms.
         Observer wiring is an experiment, not evidence of learned self-reflection.
@@ -442,6 +448,15 @@ class Brain:
             return int(value)
 
         inputs, actions = size(inputs), size(actions)
+        if (
+            isinstance(lateral, (bool, np.bool_))
+            or not isinstance(lateral, (int, float, np.integer, np.floating))
+            or not np.isfinite(lateral)
+        ):
+            raise ValueError("lateral must be a finite signed weight")
+        lateral = float(lateral)
+        if not np.isfinite(lateral):
+            raise ValueError("lateral must be a finite signed weight")
         if (
             isinstance(seed, (bool, np.bool_))
             or not isinstance(seed, (int, np.integer))
@@ -462,7 +477,7 @@ class Brain:
         names = [f"module_{index}" for index in range(len(widths) - 1)] + ["association"]
         regions = [Region("sensory", inputs)]
         regions.extend(Region(name, width) for name, width in zip(names, widths, strict=True))
-        regions.extend((prefrontal_cortex(widths[-1]), motor_cortex(actions, lateral=-0.5)))
+        regions.extend((prefrontal_cortex(widths[-1]), motor_cortex(actions, lateral=lateral)))
         projections = [Projection("sensory", names[0], reciprocal=False)]
         projections.extend(
             Projection(left, right) for left, right in zip(names, names[1:], strict=False)
@@ -519,7 +534,7 @@ class Brain:
         epochs: int = 30,
         batch: int = 32,
     ) -> list[float]:
-        """Supervised learning on independent samples; the training accuracy after each epoch."""
+        """Teach independent samples; return qualified training accuracy after each epoch."""
         drive = self.stimulus(observations, memory=False)
         labels = self.learner._labels(np.asarray(labels))
         if len(labels) != len(drive):
@@ -539,7 +554,7 @@ class Brain:
             for start in range(0, len(labels), batch):
                 rows = order[start : start + batch]
                 self.learner.step(drive[rows], labels[rows])
-            history.append(self.learner.accuracy(drive, labels))
+            history.append(self.accuracy(observations, labels))
         return history
 
     def _equilibrate(
@@ -547,15 +562,20 @@ class Brain:
     ) -> Equilibrium:
         """One bounded free solve, with underrelaxation if fast repair does not qualify.
 
-        Reserve half the sweeps for numerical damping. The second attempt uses
-        identical parameters and fixed-point equations, with half the integration
-        step. It never changes the live model or its recovered finite teaching
-        law. Both attempts together respect the caller's exact sweep budget.
+        Finite learners retain the one half-step fallback. Qualified learners
+        use their declared damping count, with identical model equations and
+        parameters, within the caller's exact total sweep budget.
         This numerical fallback is independent of optional observer wiring.
         """
         from .patch import _copy_state
 
+        cfg = self.learner.config
         brain = self.brain
+        if cfg.qualified:
+            return brain.equilibrate(
+                drive, state=_copy_state(state), budget=budget, tolerance=tolerance,
+                damping=cfg.damping,
+            )
         first_budget = budget if budget < 2 else (budget + 1) // 2
         phase = brain.equilibrate(
             drive, state=_copy_state(state), budget=first_budget, tolerance=tolerance
@@ -582,9 +602,12 @@ class Brain:
         following = damped.equilibrate(
             drive, state=_copy_state(phase.state), budget=budget - phase.steps, tolerance=tolerance
         )
-        # Certify against the original model, not a changed interpretation.
         residual = brain.residual(drive, following.state)
-        return Equilibrium(following.state, residual, phase.steps + following.steps, tolerance)
+        return Equilibrium(
+            following.state, residual, phase.steps + following.steps, tolerance,
+            residual_checks=phase.residual_checks + following.residual_checks + 1,
+            damping_halvings=1,
+        )
 
     def _qualified(self, drive: np.ndarray, state: BrainState | None = None) -> BrainState:
         """Check the complete current graph before publishing an answer."""
@@ -672,8 +695,20 @@ class Brain:
         else:
             self.last_learning = {}
         if labels is not None:
+            from .learning import LearningPhaseError
+
             drive = self.stimulus(x)
-            self.learner.step(drive, labels)
+            try:
+                _, teaching = self.learner.step(drive, labels)
+            except LearningPhaseError as error:
+                self.last_learning.update(
+                    {"demonstration_" + name: value for name, value in error.report.items()}
+                )
+                self.last_learning["demonstrations"] = 0.0
+                raise
+            self.last_learning.update(
+                {"demonstration_" + name: value for name, value in teaching.items()}
+            )
             # A demonstration teaches the slow policy, not an invented reward value.
             self._prepared = None
             self.basal_ganglia._drive = None
@@ -786,7 +821,9 @@ class Brain:
         """Dopamine from the reward of the last action; ``done`` rows start a new episode.
 
         The hippocampus records the reward of the chosen action for the situation it was
-        chosen in, and the next choice in that situation reads the record.
+        chosen in, and the next choice in that situation reads the record. A refused
+        feedback update preserves that pending action and both memories; retry this
+        outcome after adjusting its numerical configuration.
         """
         following = self._observations(next_observations)
         # Preflight without reading or resetting memories: invalid input must not write an episode.
@@ -796,21 +833,47 @@ class Brain:
         importance = SynapticMemory.salience_vector(
             np.abs(reward) if salience is None else salience, len(following)
         )
-        if self.hippocampus is not None and self._moment is not None:
-            keys, action = self._moment
-            if isinstance(self.hippocampus, SynapticMemory):
-                target = np.zeros((len(action), len(self.motor_index)))
-                target[np.arange(len(action)), action] = reward
-                observed = np.zeros(target.shape, bool)
-                observed[np.arange(len(action)), action] = True
-                self.hippocampus.observe(keys, target, salience=importance, value_mask=observed)
-            else:
-                target = self.hippocampus.recall(keys)
-                target[np.arange(len(action)), action] = reward
-                self.hippocampus.observe(keys, target)
-        if self.working_memory is not None and done.any():
-            self.working_memory.reset(len(done), rows=np.flatnonzero(done))
-        report = self.basal_ganglia.learn(reward, done, self.stimulus(following), bootstrap)
+        memory = self.hippocampus
+        # Synaptic writes replace arrays, so retain their old references rather
+        # than copying a potentially large persistent matrix for every outcome.
+        memory_values = {} if memory is None else {
+            name: getattr(memory, name) for name in ("strength", "mass", "writes")
+        }
+        if isinstance(memory, SynapticMemory):
+            memory_values["consolidated"] = memory.consolidated
+        separator_mean = (
+            None if memory is None or memory.separator is None else memory.separator.mean
+        )
+        trace = self.working_memory
+        trace_values = {} if trace is None or not done.any() else {
+            name: getattr(trace, name).copy() for name in ("trace", "last", "cold")
+        }
+        try:
+            if memory is not None and self._moment is not None:
+                keys, action = self._moment
+                if isinstance(memory, SynapticMemory):
+                    target = np.zeros((len(action), len(self.motor_index)))
+                    target[np.arange(len(action)), action] = reward
+                    observed = np.zeros(target.shape, bool)
+                    observed[np.arange(len(action)), action] = True
+                    memory.observe(keys, target, salience=importance, value_mask=observed)
+                else:
+                    target = memory.recall(keys)
+                    target[np.arange(len(action)), action] = reward
+                    memory.observe(keys, target)
+            if trace is not None and done.any():
+                trace.reset(len(done), rows=np.flatnonzero(done))
+            report = self.basal_ganglia.learn(reward, done, self.stimulus(following), bootstrap)
+        except Exception:
+            if memory is not None:
+                for name, value in memory_values.items():
+                    setattr(memory, name, value)
+                if memory.separator is not None and separator_mean is not None:
+                    memory.separator.mean = separator_mean
+            if trace is not None:
+                for name, value in trace_values.items():
+                    setattr(trace, name, value)
+            raise
         self._moment = None
         self._prepared = following.copy()
         return report

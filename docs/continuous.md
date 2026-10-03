@@ -40,9 +40,14 @@ student.step(observation, teacher=np.array([0]))
 ```
 
 Use actual labels and consequences. Teaching from the brain's own guesses can
-reinforce mistakes. Associative memory records only the chosen action's observed
-reward. For frozen measurements, use a separate instance's `predict` or greedy
-`act`. Lower-level `act`/`learn` separates action and feedback timing.
+reinforce mistakes. `teacher` changes graph parameters; it does not write its
+label into associative memory. The reward loop records the chosen action's
+observed reward, with unobserved action entries masked. For frozen measurements,
+use a separate instance. Its `predict` and `accuracy` ignore both the working
+trace and associative memory; greedy `act` reads both and advances the trace.
+Lower-level `act`/`learn` separates action and feedback timing.
+The [continuing brain example](../examples/continuing_brain.py) runs this loop
+and checks a saved pending action's continuation with the published `0.70.0` API.
 
 ## Qualification and refusal
 
@@ -50,7 +55,8 @@ Every `Brain` action and independent prediction must satisfy the full
 neural equation residual, including optional observers. Default free answers
 have a 1024-step budget and tolerance `3e-3`. The solver may use half-step
 numerical damping within that total budget, then checks the original model's
-residual. It does not alter the finite teaching rule or add a second controller.
+residual. This numerical fallback does not alter the finite teaching rule or add
+a second controller.
 
 A refused `act` raises `RuntimeError` before changing activity, memory, random
 state or pending feedback. If `step` has learned a real outcome and its following
@@ -58,6 +64,26 @@ action refuses, that learning remains. Retry `act` after adjusting the solve;
 do not submit that outcome twice. `tolerance=None` cannot disable action
 qualification. See [contracts](contracts.md) for the separate finite
 free/nudged learning and eligibility rules.
+
+The following teaching diagnostics, eligibility option and feedback rollback
+describe the [unreleased development checkout](../README.md#development-checkout).
+`LearnerConfig(qualified=True, ...)` requires full-equation qualification
+of every supervised free and teaching phase before changing parameters.
+`LearningPhaseError` reports an attempted lesson that could not qualify.
+Qualified development solves use configurable damping; stagnation detection can
+admit a smaller numerical step sooner within the same budget and original
+equation check. The default finite configuration keeps its half-step fallback.
+Accepted and refused teaching diagnostics appear in `brain.last_learning` with
+`demonstration_` prefixes, alongside any preceding accepted reward report. They
+count attempted presentations and solver work. See [building a brain](brain.md)
+for a runnable configuration. Reward eligibility is configured independently:
+`ActorCriticConfig.eligibility_steps=12` is the Brain default. For a standalone
+`ActorCritic`, `None` uses its learner's `nudged_steps`.
+
+If learning cannot qualify the next state needed for a reward bootstrap, it
+preserves the preceding action, memories, optimizer state and random state.
+Adjust the solve and retry that same outcome. Once the outcome has been accepted,
+a later action refusal has the different retry rule above: call `act` alone.
 
 ## Private imagination
 
@@ -77,7 +103,11 @@ provide the separate learned action-consequence interface.
 
 `compose` includes a working `Trace` and `SynapticMemory`; `episodic=False` omits
 the associative pathway. The trace retains earlier activity as input to later
-settlement. A warm numerical starting state alone does not guarantee recall.
+settlement. Durable graph plasticity retains learned weights and biases, while
+the associative pathway retains cue-to-outcome records. These are separate
+mechanisms with separate acquisition and retention tests. Losing an old response
+after new teaching can be parameter interference even when no working trace is
+involved. A warm numerical starting state alone does not guarantee recall.
 
 `SynapticMemory` has persistent matrix `C`, shared across streams, and fast
 residual `F` for each stream. With a normalized key `k` and an observed value `v`:
@@ -108,6 +138,11 @@ assert memory.recall(cue)[0, 0] > 0.85
 
 Orthogonal keys preserve one another under the stated rule; correlated keys can
 interfere. Storage is fixed and new observations can revise associations.
+Rehearsing actual earlier observations can protect recall, but consumes extra
+writes and does not guarantee retention. Test old and new responses in the same
+brain after intervening experience, with answers free and the relevant transient
+state cleared. A successful record-store test does not establish acquisition by
+the graph's contrast rule.
 Persistent memory costs `key_width × value_width` numbers, plus that amount per
 stream for fast weights. Reads neither consolidate nor decay memory. Learning
 weights does not require growing new anatomical connections.

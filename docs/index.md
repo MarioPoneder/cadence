@@ -11,14 +11,26 @@ Animal and human brains learn from experience and not by backpropagation with
 gradient descent. Cadence follows that design: [local free/nudged learning](learning.md),
 [reward plasticity](reward.md) and [memory](memory.md) change the brain while it
 runs, with no separate training mode. An answer is the settled state of the whole
-brain, a consensus that its regions reach through local repair, and learning
-moves the brain to a new equilibrium. The [README](../README.md#how-a-cadence-brain-differs-from-a-feed-forward-network)
+brain, a consensus that its regions reach through local repair. Teaching
+compares free and nudged activity; finite phases are the default, while
+explicit qualified teaching requires their full equations before a parameter
+update. The [README](../README.md#how-a-cadence-brain-differs-from-a-feed-forward-network)
 sets this beside a feed-forward network trained by backpropagation,
 [concepts](concepts.md#compared-with-backprop-networks) compares the update
 mechanisms, and the [README](../README.md#why-cadence) lists what this gives an
 embodied system.
 
 Python 3.11+ and NumPy are required.
+These guides describe the development checkout, including
+[unreleased changes](../CHANGELOG.md#unreleased). Install that local source from
+its repository root to use every API shown here:
+
+```sh
+python -m pip install -e .
+```
+
+For the published package and its
+[released guides](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md):
 
 ```sh
 python -m pip install cadence-net==0.70.0
@@ -62,7 +74,10 @@ learning and numerical contracts when combining them.
 [certificates](certificate.md), [protocols](protocols.md) and [receipts](receipts.md)
 help separate numerical qualification from useful acquired behavior. Test free
 recall, competing experience, actual outcomes and saved continuation.
-[Examples](https://github.com/muellerberndt/cadence-demos) show application work.
+[Application demos](https://github.com/muellerberndt/cadence-demos) show current
+applications, including `Brain.compose`. The separate
+[research archive](https://github.com/muellerberndt/cadence-examples) retains
+examples and viewer tools with their own library pins.
 
 [API](api.md) · [Architecture](architecture.md) · [Troubleshooting](troubleshooting.md) ·
 [Contributing](../CONTRIBUTING.md) · [Changelog](../CHANGELOG.md) ·

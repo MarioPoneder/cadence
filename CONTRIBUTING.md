@@ -1,7 +1,7 @@
 # Contributing
 
 Issues and pull requests are welcome in this repository and in
-[cadence-examples](https://github.com/muellerberndt/cadence-examples). This page says
+[cadence-demos](https://github.com/muellerberndt/cadence-demos). This page says
 how to set up, what the checks are, and what a change needs.
 
 ## Preserve the capable foundation
@@ -82,23 +82,18 @@ package; a numerical API must state which theorem assumptions it satisfies.
 
 ## Examples
 
-The atlas, browser renderer and local quickstart pages live in
+The archived atlas, browser renderer and local quickstart pages live in
 [`cadence-examples/viewer`](https://github.com/muellerberndt/cadence-examples/tree/main/viewer)
 and [`quickstart`](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart).
-Their tests run in the examples repository against an installed library:
+Their tests run in that archive's declared environment and library version:
 `python -m pytest -q viewer quickstart`. The core package no longer supplies
 `cadence.atlas`, `cadence.demo` or the `cadence-demo` executable.
 
-Worked applications live in [cadence-examples](https://github.com/muellerberndt/cadence-examples),
-one directory each with a README, a static page that runs the brain in the browser, the
-receipts behind every stated number and a `verify.py` that recomputes them. An example
-pins the library release its checks were run against. A new example follows that layout
-and opens its README with the card that repository's
-[contributing section](https://github.com/muellerberndt/cadence-examples#contributing)
-defines: name, author, description, Cadence version, hardware used for the initial
-training, the library features it showcases, the problems met while building it, the
-hosted URL, its receipts and checks, its data and rights, and what is work in progress.
-Half-working examples with a filled card are welcome; every one is data.
+Current applications live in [cadence-demos](https://github.com/muellerberndt/cadence-demos).
+Each demo's README names its library version, mechanisms, setup and behavioral scope.
+Keep receipts and reproduction checks behind measured claims, and state data rights
+and known limits. The separate research archive retains its own example layout and
+library pins; use those when reproducing archived results.
 
 The preserved population solver lives in `cadence.experimental.equilibrium`,
 with guides in `docs/equilibrium`, examples in `examples/equilibrium` and tests

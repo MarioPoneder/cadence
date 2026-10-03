@@ -188,6 +188,9 @@ class ActorCriticConfig:
     # "auto": the raw error ("td") whenever the dopamine is centred, the modulated one otherwise;
     # a critic fed the centred signal chases a moving target and its value runs away.
     critic_signal: Literal["modulated", "td", "auto"] = "auto"
+    # Reward credit uses finite nudged phases, independently of a supervised
+    # learner's qualification budget. None keeps standalone learner inheritance.
+    eligibility_steps: int | None = None
 
     @property
     def critic_target(self) -> str:
@@ -199,6 +202,12 @@ class ActorCriticConfig:
     def __post_init__(self) -> None:
         if self.critic_signal not in ("modulated", "td", "auto"):
             raise ValueError("critic_signal must be modulated, td or auto")
+        if self.eligibility_steps is not None and (
+            isinstance(self.eligibility_steps, (bool, np.bool_))
+            or not isinstance(self.eligibility_steps, (int, np.integer))
+            or self.eligibility_steps < 0
+        ):
+            raise ValueError("eligibility_steps must be a nonnegative integer, or None")
         for name in ("gamma", "lam"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} must lie in [0, 1]")
@@ -211,7 +220,10 @@ class ActorCriticConfig:
                 raise ValueError(f"{name} must be finite and nonnegative")
 
     def to_dict(self) -> dict[str, Any]:
-        return {k: getattr(self, k) for k in self.__slots__}
+        values = {k: getattr(self, k) for k in self.__slots__}
+        if self.eligibility_steps is not None:
+            values["eligibility_steps"] = int(self.eligibility_steps)
+        return values
 
 
 class ActorCritic:
@@ -420,7 +432,13 @@ class ActorCritic:
             groups=self.group_id,
         )
         return self.learner.brain.settle_batch(
-            drive, steps=cfg.nudged_steps, state=free, nudge=nudge, tolerance=cfg.tolerance
+            drive,
+            steps=cfg.nudged_steps
+            if self.config.eligibility_steps is None
+            else self.config.eligibility_steps,
+            state=free,
+            nudge=nudge,
+            tolerance=cfg.tolerance,
         )
 
     @property

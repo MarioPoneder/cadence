@@ -5,6 +5,12 @@ and optional observers. [NeuralGraph](#neuralgraph-cadence) is the lower-level
 graph API. The [quickstart](quickstart.md) runs the main interaction loop;
 sections below describe specialist operations. Pass optional arguments by keyword.
 
+This reference describes the local development checkout, including
+[unreleased APIs](../CHANGELOG.md#unreleased). Use the
+[source installation](../README.md#development-checkout) for those additions.
+The [0.70.0 reference](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/api.md)
+matches the published `cadence-net==0.70.0` package.
+
 The temporal patch: [TemporalPatchNet](#temporalpatchnet-cadencetemporal),
 [TemporalPlan](#temporalplan-cadenceplanning), [TemporalMemory](#temporalmemory-cadencetemporal_memory),
 [fixed connectivity](#experimental-fixed-connectivity-cadenceexperimental).
@@ -83,8 +89,11 @@ fields are described in the [planning guide](planning.md).
 
 ## The quickstart demos
 
-The three quickstart brains behind a local page are
-[cadence-examples/quickstart](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart).
+The [current quickstart](quickstart.md) runs `Brain.compose`; application demos
+live in [cadence-demos](https://github.com/muellerberndt/cadence-demos).
+[cadence-examples/quickstart](https://github.com/muellerberndt/cadence-examples/tree/main/quickstart)
+retains three archived browser quickstarts. Follow their declared library pin
+and environment when reproducing them.
 
 ## RecordPatchNet (`cadence.record_patch`)
 
@@ -449,13 +458,21 @@ and a complete runnable example.
   that amount in a step. `None` or zero uses the full step cap. Nonfinite drives and warm
   potentials/adaptation are rejected. Use floating arrays for dense drives and maps for
   selected indices: the legacy integer vector of length `n` containing only 0/1 is a drive.
-- `equilibrate(drive, *, budget=512, chunk=32, tolerance=1e-5, state=None, mask=None, nudge=None) -> Equilibrium`:
+- `equilibrate(drive, *, budget=512, chunk=32, tolerance=1e-5, state=None, mask=None, nudge=None, damping=0) -> Equilibrium`:
   seek a joint state whose equation residual is below tolerance, checking after each chunk.
   `budget` caps additional settling steps exactly, including a short final chunk;
   zero checks the starting state. Each check uses one transport; unread float64 Torch
-  states stay on their device and return one scalar per row. The returned
-  `Equilibrium` has `state`, per-row `residual`, total `steps`, `tolerance`, and a boolean
-  per-row `converged` property. `state.steps` is the last chunk's count. Convergence here
+  states stay on their device and return one scalar per row.
+  Optional `damping` divides the same budget among successively halved integration
+  steps, with every result checked against the original equations. Two consecutive
+  repeated complete-state checkpoints can end a stalled attempt early when another
+  halving remains; unused sweeps stay available to the later attempts. Repetition
+  never qualifies an answer, and the final attempt does not stop for stagnation.
+  `Equilibrium` has `state`, per-row `residual`, total `steps`, `tolerance`,
+  `residual_checks`, `damping_halvings`, `stagnation_checks`, and a boolean
+  per-row `converged` property. `residual_checks` counts additional transport
+  evaluations outside the sweeps; `stagnation_checks` counts complete-state comparisons
+  without synaptic transport. `state.steps` is the last chunk's count. Convergence here
   does not prove stability, uniqueness or task quality. `qualified` equals
   `converged` for these local solves. Hybrid `PatchNet` solves additionally
   require positive local energy curvature and a successful refinement status;
@@ -667,7 +684,7 @@ to positive region widths to add optional System 2 state feedback within the
 same neural-graph settlement. This is an implemented interface, not a claim
 that recursive benefit or automatic reflective behavior has been learned.
 
-- `Brain.compose(inputs, actions, *, modules=(64,), observers=(), seed=0, **options) -> Brain`:
+- `Brain.compose(inputs, actions, *, modules=(64,), observers=(), lateral=-0.5, seed=0, **options) -> Brain`:
   the direct vector-input constructor. Positive `modules` widths form a reciprocal
   processing chain; the final module is the association cortex. Optional positive
   `observers` widths add regions with reciprocal state-reading and returning connections
@@ -677,6 +694,11 @@ that recursive benefit or automatic reflective behavior has been learned.
   default. Constructor `options` can select the documented learning, reward, memory
   and backend settings. This state feedback is distinct from exact error readback
   in `cadence.experimental.equilibrium`.
+  The unreleased `lateral` option is the finite signed weight between each pair
+  of distinct motor neurons; zero removes those connections while preserving
+  reciprocal association/motor feedback. The default remains -0.5. More actions
+  add more incoming lateral connections, so compare their observed operating
+  points rather than assuming the same activity at every vocabulary size.
 - `Brain.build(inputs, actions, *, hidden=64, density=1.0, lateral=-0.5, working_memory=False, memory_scale=12.0, episodic=True, features=8, field=3, seed=0, **options)`:
   develops `Brain.genome(...)` and wraps it. `inputs` is a vector length, or an image
   shape `(height, width)` or `(height, width, channels)` for a `visual_cortex`. `options` go
@@ -690,13 +712,16 @@ that recursive benefit or automatic reflective behavior has been learned.
   needs populations `sensory` or `visual/input`, `association` and `motor`, and uses
   `prefrontal` for a working memory when present. `learning` defaults to
   `LearnerConfig(beta=0.1, eta=0.5, temperature=0.2, tolerance=3e-3, free_steps=1024, nudged_steps=12, momentum=0.9)`,
-  `reward` to `ActorCriticConfig(gamma=0.9, lam=0.8, eta=1.0, eta_critic=0.3)`.
+  `reward` to `ActorCriticConfig(gamma=0.9, lam=0.8, eta=1.0, eta_critic=0.3, eligibility_steps=12)`.
   The live model and finite teaching phases retain `dt=1.0`. Qualified free
   settlement reserves roughly half its sweep budget for a numerical fallback:
   if the initial finite state does not qualify, continue with half the integration
   step and the remaining budget. Both phases together stay within the requested
   budget, and the final residual is recomputed against the original model. This
   preserves its equations and parameters; it is independent of System 2 wiring.
+  With `learning.qualified=True`, independent recall and supervised learning
+  instead use the configured `learning.damping` allowance. The separate reward
+  eligibility mechanism retains its finite-phase contract.
   Attributes `connectome`, `brain`, `learner`, `basal_ganglia` (`ActorCritic` reading the
   association cortex), `working_memory` (`Trace` or `None`), `hippocampus` (`SynapticMemory`
   from sensory to motor neurons, or `None`), `sensory_index`, `association_index`,
@@ -709,14 +734,18 @@ that recursive benefit or automatic reflective behavior has been learned.
     means a real zero-reward transition. Wait for the outcome before calling again.
     There is one operating mode; no training/inference toggle is needed.
     The first call cannot receive past-action feedback.
-    `last_learning` exposes the previous transition's report and demonstration count.
+    `last_learning` exposes the previous transition's report, accepted `demonstrations`
+    count and the complete teaching report under `demonstration_*` keys. A qualified
+    teaching refusal retains its attempted work with zero accepted presentations,
+    alongside any preceding actual feedback already accepted by this call.
     Supplied salience controls memory consolidation; by default it is absolute reward.
     If real feedback is learned but the next action refuses, that learning remains.
     Retry `act(observations)`; do not submit the same reward again.
   - `fit(observations, labels, *, epochs=30, batch=32) -> list[float]` (training accuracy per
     epoch), `predict(observations)`, `accuracy(observations, labels)`: independent samples,
-    without memory. `predict` and `accuracy` require full equation qualification;
-    `fit` keeps its existing finite training-phase and training-score contract.
+    without trace or associative recall. All three score through qualified independent
+    predictions; `fit` teaches with the configured finite or qualified phase contract.
+    A refused epoch score leaves its already accepted teaching updates in place.
     These operations do not switch modes. `fit` resets pending stream
     state before its updates; use `step` for a continuing life.
   - `imagine(observations, *, budget=1024, tolerance=1e-6) -> tuple[Equilibrium, ...]`:
@@ -743,6 +772,9 @@ that recursive benefit or automatic reflective behavior has been learned.
     and the basal ganglia learn from dopamine. For truncated episodes `bootstrap` supplies
     the value of the old episode's final observation; `next_observations` holds the reset
     observation for ended rows. Reward and bootstrap are finite batch vectors; done is boolean.
+    If the feedback solve refuses, hippocampal writes, terminal trace resets and actor
+    changes are rolled back; the action remains pending. Adjust the solve and retry the
+    same outcome. This differs from an accepted outcome followed by a refused next action.
   - `reset()` clears working state, action cache, eligibility and reward centering; hippocampal
     records and slow parameters are kept. `parameters()` counts actor/critic parameters
     and the shared consolidated memory matrix; per-stream state is additional storage.
@@ -842,13 +874,19 @@ that recursive benefit or automatic reflective behavior has been learned.
 
 ## Learning (`cadence.learning`)
 
-- `LearnerConfig(beta=0.1, eta=0.2, eta_bias=0.02, centered=True, free_steps=100, nudged_steps=50, tolerance=1e-4, nudge="cross_entropy", temperature=0.2, normalize=0.0, normalize_floor=1e-3, momentum=0.0, decay=0.0, scale_cap=8.0)`:
+- `LearnerConfig(beta=0.1, eta=0.2, eta_bias=0.02, centered=True, free_steps=100, nudged_steps=50, tolerance=1e-4, nudge="cross_entropy", temperature=0.2, normalize=0.0, normalize_floor=1e-3, momentum=0.0, decay=0.0, scale_cap=8.0, qualified=False, damping=3)`:
   `scale_cap` is the magnitude a plastic synapse's efficacy may not exceed (every update clips
   to it); a smaller cap keeps a readout neuron out of saturation, where a nudge has no slope
   ([the latch](reward.md#traps-with-their-measurements)).
   `momentum` steps each synapse on a running average of its own contrast; `decay` shrinks every
   plastic synapse's efficacy and every plastic neuron's bias by that fraction on each update
   (a leak on the synapses, for streams).
+  `qualified=True` requires each free and nudged phase to meet the full equation
+  residual at `tolerance` before `step` applies an update. Direct `update` remains
+  unchecked. `damping` is the maximum number of
+  numerical integration-step halvings within each phase's existing sweep budget;
+  the original model and its fixed-point equations are preserved. Qualified
+  learning requires a finite residual tolerance.
 - `Learner(brain, outputs, config=LearnerConfig(), plastic_synapses=None, plastic_neurons=None, reciprocal=True, tie_groups=None, synapse_rate=None, slots=1, updates=0, contrast_updates=0)`:
   `plastic_synapses` and `plastic_neurons` are bool masks over synapses and neurons; only those
   move and decay, so two learners can share one brain without one's decay eroding the other's
@@ -877,15 +915,46 @@ that recursive benefit or automatic reflective behavior has been learned.
     `step(drive, labels, warm=None, weight=None) -> (LearnedState, report)`;
     labels are integer indices within each output group: `(batch,)` for one group,
     `(batch, slots)` for several; `accuracy` averages all row/slot choices;
-  - `calibrate(drive, *, level=0.5, grid=None)`, `predict(drive)`, `accuracy(drive, labels, batch=256)`,
+    Reports include attempted/accepted row presentations, all required phases' steps,
+    residual checks, damping halvings and stagnation comparisons. `total_row_sweeps`
+    and `total_row_residual_checks` multiply each phase's work by its batch size.
+    These are computation counters, not a complete hardware-operation estimate.
+    `LearningPhaseError` carries `phase`, `phases` and `report` on refusal;
+    parameters, optimizer history and update counts remain unchanged.
+  - `calibrate(drive, *, level=0.5, grid=None) -> float`: choose the tested global
+    synaptic gain whose mean free output activity is closest to `level`. Inputs
+    must be a finite, nonempty drive batch. The unreleased default grid tries the
+    current gain first, then its multiples `2**k` for `k=-8, …, 8` excluding zero,
+    retaining representable positive candidates. Explicit grids retain their
+    supplied values and order; all entries must be positive and finite.
+    `qualified=True` uses full-equation solves with `free_steps`, `tolerance` and
+    `damping`, excluding failed or nonfinite candidates; finite mode keeps finite
+    settling and reports that qualification is not required. With no usable
+    candidate, raise `RuntimeError` without changing the graph or optimizer.
+    `last_calibration` reports every candidate and total attempted work, including
+    refusals: sweeps, residual transports, stagnation comparisons and activation-
+    cache checks, with batch-row totals. Calibration does not update learned efficacy/bias or optimizer
+    history, and does not guarantee reaching `level` or useful acquisition.
+  - `predict(drive)`, `accuracy(drive, labels, batch=256)`,
     `parameters()`, `to_dict()`; attributes `brain`, `reverse` (index of each synapse's
     reverse, or −1), `second_moment` (when normalising).
-- `calibrate_bias(brain, drives, targets, *, per_neuron=False, rounds=3, span=(-6.0, 6.0), iterations=16, steps=100, tolerance=1e-4) -> np.ndarray`:
-  biases that bring populations to declared activity targets under a set of drives (rows as
-  `settle_batch` takes them). `targets` maps a population name or neuron indices to the mean
-  activation it should have over its members and the drives; one shared bias per population,
-  or one per member with `per_neuron=True` (a readout's cells). Bisection, every population in
-  turn, `rounds` times; the brain is unchanged and the array is passed to `NeuralGraph(bias=...)`.
+- `calibrate_bias(brain, drives, targets, *, per_neuron=False, rounds=3, span=(-6.0, 6.0), iterations=16, steps=100, tolerance=1e-4, qualified=False, damping=3, report=None) -> np.ndarray`:
+  candidate biases found by coordinate bisection under a finite, nonempty drive
+  batch. `targets` maps population names or neuron indices to desired mean
+  activations over their members and input rows. Use one shared bias per
+  population, or one per member with `per_neuron=True`. Every population is
+  visited in turn, `rounds` times, within `span`; targets outside the attainable
+  range can leave an endpoint bias, and coupled populations can miss their targets.
+  The original graph is unchanged; inspect the final means before installing
+  the returned array through `with_parameters(bias=...)`.
+  The unreleased `qualified=True` option requires every midpoint and the final
+  candidate to meet the full original equations for every row, using each solve's
+  `steps` budget, `tolerance` and bounded `damping`. Refusal raises `RuntimeError`
+  without changing the original graph. This option does not inherit
+  `LearnerConfig.qualified`. The default retains finite settling as a heuristic.
+  An optional `report` dictionary receives attempted solve work, final observed
+  means and target gaps, including refused work. Qualification certifies the
+  states, not monotonicity, target attainment or useful learning.
 - `naive_efficacy(connectome, plastic) -> np.ndarray`: efficacies that give every plastic
   synapse class the same weight (sign times mean count over the class's count); the other
   synapses keep their sign. For a lesson that should start naive at a memory site whose counts
@@ -897,6 +966,8 @@ that recursive benefit or automatic reflective behavior has been learned.
   plastic synapses from active senders onto a readout, two drives that drive the same neurons
   beyond `shared_max` (the senses, not the wiring, are to be told apart). Returns the readings and `warnings`, one
   sentence per finding naming the block that repairs it; an empty list is what a receipt shows.
+  These diagnostics use finite settling; an empty warning list is not a full
+  equation certificate or evidence that a lesson will learn.
 - `seam_report(connectome, pre, post) -> dict`: `classes`, `synapses`, `coverage_pre` (the
   fraction of pre neurons with a class onto the post population), `classes_per_post`,
   `median_count`; what custody left of a plastic seam.
@@ -950,7 +1021,7 @@ that recursive benefit or automatic reflective behavior has been learned.
     `(batch, dims, size)` with `Bins`), `settle(drive)`,
     `value(state)`, `value_of(drive)`, `parameters()`, `to_dict()`; the attributes `valence`,
     `salience`, `delta_mean`, `delta_var`.
-- `ActorCriticConfig(gamma=0.99, lam=0.9, eta=0.5, eta_bias=0.05, eta_critic=0.05, normalize=0.0, momentum=0.0, dopamine_cap=1.0, dopamine_center=0.0, dopamine_floor=0.0, center_scale=True, critic_normalize=True, critic_signal="auto")`:
+- `ActorCriticConfig(gamma=0.99, lam=0.9, eta=0.5, eta_bias=0.05, eta_critic=0.05, normalize=0.0, momentum=0.0, dopamine_cap=1.0, dopamine_center=0.0, dopamine_floor=0.0, center_scale=True, critic_normalize=True, critic_signal="auto", eligibility_steps=None)`:
   `gamma` the discount and `lam` the trace's decay; `eta` and `eta_bias` the actor's rates,
   `eta_critic` the critic's; `normalize` and `momentum` the adaptive local step, as the
   learner's; `dopamine_center` the rate at which the reward's running level and scale follow
@@ -963,6 +1034,10 @@ that recursive benefit or automatic reflective behavior has been learned.
   `"modulated"` otherwise, because a critic fed the centred signal chases a moving target
   (measured: a value running to -15 within 300 decisions on the fruit fly's T-maze). See
   [the choice and its measured tradeoff](reward.md).
+  `eligibility_steps` independently caps each finite reward-nudged phase. `None`
+  inherits `learner.config.nudged_steps`; an explicit nonnegative integer, including
+  zero, overrides it. The built-in `Brain` reward configuration uses 12 independently
+  of supervised phase budgets. This does not qualify reward eligibility equilibria.
 - `Bins(dims, size=9)`: the population code for `dims` continuous dimensions, each a softmax
   over `size` bins (`centres`, `groups`, `read`, `size`).
 - `Valence(level=0.0, floor=0.0, cap=1.0, units=True, per_stream=True, mean=0.0, var=1.0)`: the
@@ -1008,9 +1083,12 @@ that recursive benefit or automatic reflective behavior has been learned.
 
 ## Atlas
 
-The whole-brain viewer, the atlas that lays a connectome out and the self-contained replay page
-live in the examples repository, [cadence-examples/viewer](https://github.com/muellerberndt/cadence-examples/tree/main/viewer);
-the library ships the brains alone, and `record_settlements` supplies the settlings a page replays.
+The archived viewer, connectome atlas and replay page live in
+[cadence-examples/viewer](https://github.com/muellerberndt/cadence-examples/tree/main/viewer)
+with their own library pin and environment. The current library supplies
+`record_settlements` for capturing actual graph iterations; the application owns
+their display. Current application demos live in
+[cadence-demos](https://github.com/muellerberndt/cadence-demos).
 
 ## Receipts (`cadence.receipts`)
 

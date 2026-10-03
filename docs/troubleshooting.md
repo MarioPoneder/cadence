@@ -36,11 +36,16 @@ an observed zero must differ from no observation ([temporal learning](temporal.m
 
 ## The settling brain
 
-**Accuracy stays at chance.** Call `learner.calibrate(drive)` first, so the free motor
-activity sits in its responsive range. Check that a nudge on the outputs can reach the
-hidden neurons: the projection into the output region must be reciprocal
-(`Projection(..., reciprocal=True)`, the default). Then raise `eta` (1.0 is a good start
-on a small brain) and keep `beta` around 0.1 ([every knob](learning.md#7-every-knob)).
+**Accuracy stays at chance.** Inspect free output activity and its equation residual.
+`learner.calibrate(training_drive)` can choose a more responsive global gain,
+but cannot guarantee that its sampled candidates reach the target activity.
+The [unreleased calibration report](learning.md#calibrating-the-operating-point)
+exposes candidate residuals and refusals, and qualified learning excludes
+unqualified candidates. Check that a nudge on the outputs can reach the hidden
+neurons: the projection into the output region must be reciprocal
+(`Projection(..., reciprocal=True)`, the default). Select `eta`, `eta_bias` and
+`beta` on development data, then freeze them before confirmation
+([every knob](learning.md#7-every-knob)).
 
 **The phases do not converge.** Raise `free_steps` and `nudged_steps` in `LearnerConfig`,
 or lower the gain. Check `brain.residual(drive, state)`: a small movement per step can hide

@@ -186,8 +186,12 @@ the remedy for each; run it first.
   ([brains from a connectome](connectomes.md)); no rule downstream repairs it.
 - **A readout on a rail, and a readout with a past.** A connectome carries no operating point:
   at the global threshold the fly's approach cell sat at 1.00 under every odour and its avoidance
-  cell at 0.01, and the nudge had no slope on either. `calibrate_bias` puts each readout cell
-  at one half over the situations it will decide in, jointly. And on the measured counts of the
+  cell at 0.01, and the nudge had little response on either. `calibrate_bias`
+  searches each readout cell's bias toward a declared mean over the supplied
+  situations. Check the resulting means and full residual before installing
+  them; finite bisection does not guarantee the target. The
+  [qualified calibration option](learning.md#calibrating-the-operating-point)
+  checks every attempted state. And on the measured counts of the
   memory seam the naive readout already avoided one odour (0.17) and approached the other
   (0.83): a specimen's synapse counts at its memory site are its memories, and a smell that is
   never approached is never rewarded. `naive_efficacy` starts the seam with every plastic class

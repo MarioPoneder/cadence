@@ -4,10 +4,10 @@
 
 # Cadence
 
-[Website](https://floatingpragma.io/cadence/) · [Documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md) · [Examples](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/)
+[Website](https://floatingpragma.io/cadence/) · [Development documentation](docs/index.md) · [Application demos](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/)
 
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
-[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/v0.70.0/LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
 
 **An experimental brain that learns, remembers, imagines and acts.**
 
@@ -21,10 +21,16 @@ Bounded, observer-like regions carry local state, communicate through ports,
 read back activity and retain records. They repair disagreement until the whole
 brain settles into one coherent state; actual observations and consequences
 guide learning. A Cadence brain can be deep. It learns without backpropagation,
-by repairing local disagreements and settling into new equilibria. A settled
-answer can
-still be wrong about the world, so capability is measured through free behavior.
+through local contrasts between free and nudged activity. Actions require a
+qualified equilibrium; teaching has its own finite or qualified phase contract.
+A settled answer can still be wrong about the world, so capability is measured
+through free behavior.
 Cadence is alpha research software, not a claim of human-level intelligence.
+
+These pages describe the local development checkout. Features listed under
+[Unreleased](CHANGELOG.md#unreleased), including opt-in qualified teaching and
+its work reports, require the [source installation](#development-checkout).
+The basic quickstart below also works with the published `0.70.0` package.
 
 ## How a Cadence brain differs from a feed-forward network
 
@@ -42,14 +48,16 @@ equilibrium of the whole brain: a consensus among local patches, reached through
 local repair alone. A later region shapes an earlier one while the answer forms,
 and a brain that does not settle refuses to act.
 
-Learning is the same process. The settled brain is nudged at its motor neurons,
-toward a demonstrated answer or along the action it just took. The nudge spreads
-over the same connections, every neuron repairs its own disagreement, and the
-brain shifts to a neighbouring settled state. Each synapse compares what its own
-two neurons did in the two states, and the measured outcome sets the size and
-sign of the change. When the situation returns, the brain settles into a new
-equilibrium. No error is sent backwards through a stack of layers, and the brain
-keeps no backward computation graph.
+Learning uses the same local dynamics. A nudge at the motor neurons points
+toward a demonstrated answer or along the action just taken. Each synapse
+compares the activity of its own two neurons between free and nudged phases;
+the label or measured outcome sets the update. The default teaching and reward
+eligibility phases run for a finite duration. Set `LearnerConfig(qualified=True, ...)`
+to require the full free and teaching equations before accepting a supervised
+update. A refused lesson keeps parameters and optimizer history intact.
+When the situation returns, the brain settles with its changed connections.
+No error is sent backwards through a stack of layers, and the brain keeps no
+backward computation graph.
 
 Cadence brains can be deep. `Brain.compose(inputs=4, actions=2, modules=(64, 32, 16))`
 chains three processing regions, each exchanging activity with the next, and all
@@ -61,8 +69,8 @@ rule stays local at every depth.
 | An answer | The output of one pass through the layers | The settled state of the whole brain, a consensus among its patches |
 | Influence while answering | Input to output only | Both ways: regions exchange activity and settle together |
 | How the answer forms | Each layer is evaluated once | Local repair repeats until the state equations hold within tolerance; a brain that does not get there refuses to act |
-| Learning signal | One global loss, sent backwards through every layer | A nudge at the motor neurons disturbs the equilibrium and the brain settles again |
-| What changes a weight | Its share of the backpropagated error | The activity of its own two neurons, compared between two settled states and scaled by the measured outcome |
+| Learning signal | One global loss, sent backwards through every layer | A nudge at the motor neurons changes local activity; finite phases are the default and qualified teaching is explicit |
+| What changes a weight | Its share of the backpropagated error | The activity of its own two neurons, compared between free and nudged phases and scaled by the label or measured outcome |
 | Depth | More layers in the forward and the backward pass | More regions in the same settlement |
 | Training and use | Separate phases | One running brain that acts and learns |
 
@@ -89,8 +97,8 @@ For embodied AI this design gives:
   imagination tests a response before the body commits to it.
 
 Under idealized conditions the local contrast follows the gradient that
-backpropagation would compute. [The learning rule](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/learning.md)
-states those conditions, and [the comparison](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/concepts.md#compared-with-backprop-networks)
+backpropagation would compute. [The learning rule](https://github.com/muellerberndt/cadence/blob/main/docs/learning.md)
+states those conditions, and [the comparison](https://github.com/muellerberndt/cadence/blob/main/docs/concepts.md#compared-with-backprop-networks)
 is of update mechanisms. These properties are shown in simulation in the
 [examples](https://github.com/muellerberndt/cadence-demos). An advantage on a
 physical robot is a separate test.
@@ -100,10 +108,14 @@ physical robot is a separate test.
 ## Start with System 1
 
 Python 3.11+ and NumPy are required.
+Install the published release for this basic example:
 
 ```sh
 python -m pip install cadence-net==0.70.0
 ```
+
+Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md)
+describes the APIs included in that package.
 
 ```python
 import numpy as np
@@ -123,12 +135,18 @@ assert action.shape == (1,)
 `step` learns from the **preceding action's** measured reward, then chooses the
 next action. `teacher=` can label the **current observation**. Keep each batch
 row attached to the same life. There is no training/inference mode switch.
-[Continuous interaction](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/continuous.md)
+[Continuous interaction](https://github.com/muellerberndt/cadence/blob/main/docs/continuous.md)
 covers teaching, resets and saved continuation.
+The [continuing brain example](examples/continuing_brain.py) combines actual
+rewards, current teacher labels and a checkpoint awaiting feedback on `0.70.0`.
 
 The constructor includes a working trace and fast/persistent associative memory.
-Earlier activity can affect later answers, and actual outcomes change associations.
-Capacity is finite; correlated memories can interfere.
+The trace carries recent activity; learned graph parameters and consolidated
+associations retain changes across resets. A current teacher changes graph
+parameters. Actual chosen-action outcomes write associative memory. `act` reads
+both memory pathways; independent `predict` and `accuracy` read neither, so they
+measure the graph's learned response. Capacity is finite; overlapping associations
+and further plasticity can interfere with recall.
 
 ```python
 phases = brain.imagine([observation, next_observation])
@@ -138,7 +156,19 @@ assert phases  # Inspect phase.converged before using an imagined response.
 Imagination carries a private trace without changing live memory, random state
 or pending feedback. It evaluates responses to the observations you supply.
 For learned environmental consequences and action planning, use the separate
-[temporal model](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/interaction.md).
+[temporal model](https://github.com/muellerberndt/cadence/blob/main/docs/interaction.md).
+
+<a id="development-checkout"></a>
+
+For unreleased qualified teaching and bias calibration, configurable graph
+damping and motor `lateral` wiring, detailed work reports and reward eligibility
+budgets, install from this development checkout's repository root:
+
+```sh
+python -m pip install -e .
+```
+
+This uses the local source; `cadence-net==0.70.0` does not include those additions.
 
 ## Add optional System 2
 
@@ -157,24 +187,28 @@ Actions and independent predictions require the full neural equation residual
 to meet the configured tolerance. Exhausting the budget refuses an action without
 changing its live state, memory or pending feedback. If `step` has learned a real
 outcome before the next action refuses, retry `act` without submitting that reward
-again. Numerical damping stays within the total budget and does not change the
-teaching rule. See [contracts](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/contracts.md).
+again. Numerical damping stays within the total budget and checks the original
+equations. It does not change the teaching rule. See [contracts](https://github.com/muellerberndt/cadence/blob/main/docs/contracts.md).
 
 ## Go further
 
-[Build a brain](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/brain.md)
-for custom wiring, [memory](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/memory.md)
-for traces and associations, and [the memory/planning example](https://github.com/muellerberndt/cadence/blob/v0.70.0/examples/memory_imagination.py)
+[Build a brain](https://github.com/muellerberndt/cadence/blob/main/docs/brain.md)
+for custom wiring, [memory](https://github.com/muellerberndt/cadence/blob/main/docs/memory.md)
+for traces and associations, and [the memory/planning example](https://github.com/muellerberndt/cadence/blob/main/examples/memory_imagination.py)
 for a bounded demonstration with actual toy-body outcomes.
-[Record patches](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/record-patch.md)
+[Record patches](https://github.com/muellerberndt/cadence/blob/main/docs/record-patch.md)
 provide event records and consolidation. The advanced
-[population solver](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/equilibrium/index.md)
+[population solver](https://github.com/muellerberndt/cadence/blob/main/docs/equilibrium/index.md)
 provides exact state-and-error readback under its own numerical contract.
 
-[Documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md) ·
-[API](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/api.md) ·
-[Contributing](https://github.com/muellerberndt/cadence/blob/v0.70.0/CONTRIBUTING.md) ·
-[Changelog](https://github.com/muellerberndt/cadence/blob/v0.70.0/CHANGELOG.md) ·
+[cadence-demos](https://github.com/muellerberndt/cadence-demos) contains the active
+application demos. [cadence-examples](https://github.com/muellerberndt/cadence-examples)
+preserves research examples and viewer tools with their own declared library pins.
+
+[Documentation](https://github.com/muellerberndt/cadence/blob/main/docs/index.md) ·
+[API](https://github.com/muellerberndt/cadence/blob/main/docs/api.md) ·
+[Contributing](https://github.com/muellerberndt/cadence/blob/main/CONTRIBUTING.md) ·
+[Changelog](https://github.com/muellerberndt/cadence/blob/main/CHANGELOG.md) ·
 [Research tasks](https://github.com/muellerberndt/cadence/issues)
 
-Licensed under [GPL-3.0](https://github.com/muellerberndt/cadence/blob/v0.70.0/LICENSE).
+Licensed under [GPL-3.0](https://github.com/muellerberndt/cadence/blob/main/LICENSE).

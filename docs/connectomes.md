@@ -144,7 +144,7 @@ report = preflight(brain, outputs, plastic, drives)   # drives: the situations i
 assert report["warnings"] == []                       # each warning names the block that repairs it
 ```
 
-It settles the brain under the drives and reports a readout with no slope (`calibrate_bias`),
+It finitely settles the brain under the drives and reports a readout with little response (`calibrate_bias`),
 a plastic senders' code shared between two situations (a gain per cell class on the `specific`
 fact), and a seam too thin for eligibility (custody, `seam_report`); the fly's setup writes
 the report into its receipt. On the fly's measured wiring, set up as below, it warns nothing
@@ -159,10 +159,13 @@ connectome does not carry, both declared and both generic:
 
 - **The readout's threshold.** A connectome says who talks to whom, not how excitable a cell
   is; at one global threshold a readout cell sits on a rail (the fly's approach cell at 1.00
-  under every odour, its avoidance cell at 0.01), where a nudge has no slope and no lesson
-  moves it. `calibrate_bias(brain, drives, {outputs: 0.5}, per_neuron=True)` finds the bias of
-  each readout cell that puts its mean activation over the situations it will decide in at
-  one half, jointly, so a cell that inhibits another is accounted for. A target
+  under every odour, its avoidance cell at 0.01), where the observed nudge has
+  little response. `calibrate_bias(brain, drives, {outputs: 0.5}, per_neuron=True)` searches the bias of
+  each readout cell by coordinate bisection toward a mean of one half over the
+  supplied situations. Coupled cells are revisited, but the finite search can
+  miss its target. Check the final full-equation residual and actual means;
+  the [qualified calibration option](learning.md#calibrating-the-operating-point)
+  refuses an unresolved solve. A target
   such as 0.6/0.4 declares an engineered initial preference; it does not recover
   innate appetite from the connectome. The current export's payload and receipt
   specify the actual calibration. The array goes into `NeuralGraph(bias=...)`.
@@ -173,6 +176,10 @@ connectome does not carry, both declared and both generic:
   strengths and must be reported; it is not a reconstruction of an untrained
   biological brain. The learner starts from it (`NeuralGraph(efficacy=...)`) and the
   measured counts stay in the receipt.
+
+An empty finite `preflight` warning list does not certify equilibrium or useful
+acquisition. The selected operating point needs its own numerical check and
+free learning assay.
 
 Then the assay: every action the readout can take must have an outcome, and the outcomes the
 value can balance; one decision per episode, credited to that decision (the fly's page took a

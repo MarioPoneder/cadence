@@ -9,9 +9,52 @@ representations around that store, but the store does not learn its own keys or 
 when an observation is trustworthy.
 
 For repeated and salient experiences, [`SynapticMemory`](continuous.md) adds persistent
-shared synapses and fading per-stream residuals. New generic brains with `episodic=True`
-use this consolidation rule. The `FastSynapses` API below retains its original independent
-stream behavior and immediate residual-write rule.
+shared synapses and fading per-stream residuals. `Brain.compose` includes this
+consolidation rule; `episodic=False` omits that pathway. The `FastSynapses` API below
+provides independent stream records and an immediate residual-write rule.
+
+## Three kinds of memory in Brain
+
+| Mechanism | What it retains | What changes it | What survives `brain.reset()` |
+| --- | --- | --- | --- |
+| Working `Trace` | Recent association-region activity used as context | Each admitted live action | Nothing; the trace is cleared |
+| Graph plasticity | Learned synaptic parameters and biases | Supervised contrasts and reward-modulated eligibility | Learned parameters |
+| `SynapticMemory` | Cue-to-outcome associations, with fast per-stream `F` and shared persistent `C` | Observed chosen-action outcomes | Both `F` and `C` |
+
+These are functional software mechanisms. Their capacities follow their state
+dimensions, coding and update rules; a human working-memory estimate does not set
+the number of durable associations they can retain. A lost response can come
+from a missing trace, interfering parameter updates or interfering record writes.
+Test the mechanism that was used to acquire the response.
+
+`predict` and `accuracy` ignore both the working trace and associative store.
+They qualify the current learned graph's independent response. `act` reads both
+memory pathways before qualifying the full graph state. To test consolidated
+recall, reset live state and clear only fast residuals before each free query:
+
+```python
+import numpy as np
+from cadence import Brain
+
+remembering = Brain.compose(inputs=4, actions=2, modules=(16, 8), seed=7)
+remembering.reset()
+assert remembering.hippocampus is not None
+remembering.hippocampus.reset(1)  # Clear F; retain persistent C.
+answer = remembering.act(np.array([[1.0, 0.0, 0.0, 0.0]]), greedy=True)
+assert answer.shape == (1,)
+```
+
+`teacher=` teaches graph parameters without inserting its label into the store.
+The normal reward loop stores the actual chosen action's observed reward, not an
+invented reward for a teacher label. Direct `observe` calls are an explicit
+key/value acquisition rule; they test that store rather than graph plasticity.
+An associative read is a linear drive into the graph; the resulting action must
+still qualify the complete neural equations.
+
+Measure acquisition first, then expose the same brain to competing experience
+and query old and new responses without teachers. Rehearsal can protect recall
+and must be counted as additional teaching or record writes. Finite storage and
+successful bounded recall do not establish general lifelong retention.
 
 ## One correction
 

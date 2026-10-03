@@ -289,6 +289,9 @@ class Equilibrium:
     steps: int
     tolerance: float
     refinement: RefinementReport | None = None
+    residual_checks: int = 0  # additional transport evaluations, outside the local sweeps
+    damping_halvings: int = 0  # integration-step halvings used by this bounded solve
+    stagnation_checks: int = 0  # complete-state comparisons, with no synaptic transport
 
     @property
     def converged(self) -> np.ndarray:
@@ -649,6 +652,7 @@ class Brain:
         state: BrainState | None = None,
         mask: np.ndarray | None = None,
         nudge: Nudge | None = None,
+        damping: int = 0,
     ) -> Equilibrium:
         """Continue a joint state until its equations hold or the exact step budget expires.
 
@@ -657,8 +661,16 @@ class Brain:
         per chunk. Resident float64 Torch states are checked on their device. All rows
         advance together; a row's small residual does not freeze it.
         ``drive`` is dense, with one column per neuron, as in ``settle_batch``.
+        Optional ``damping`` reserves equal portions of the one sweep budget
+        for successively halved integration steps. Two consecutive repeated
+        complete-state checkpoints at rounding precision end an unqualified
+        attempt early, leaving its unused sweeps for the remaining attempts.
+        Every attempt checks the original equations; this changes the numerical
+        method, not the model. Repetition never qualifies an answer.
         """
-        for name, value, minimum in (("budget", budget, 0), ("chunk", chunk, 1)):
+        for name, value, minimum in (
+            ("budget", budget, 0), ("chunk", chunk, 1), ("damping", damping, 0)
+        ):
             if (
                 isinstance(value, bool)
                 or not isinstance(value, (int, np.integer))
@@ -667,9 +679,117 @@ class Brain:
                 raise ValueError(f"{name} must be an integer >= {minimum}")
         if not np.isfinite(tolerance) or tolerance < 0:
             raise ValueError("tolerance must be finite and nonnegative")
+        if damping:
+            attempts = min(damping + 1, max(1, budget))
+            minimum_rule = self.neuron_model.replace(
+                dt=float(np.ldexp(self.neuron_model.dt, -(attempts - 1)))
+            )
+            dtype = "float32" if (self._mlx is not None or (
+                self._torch is not None and self._torch.dtype == self._torch.torch.float32
+            )) else "float64"
+            minimum_rule._validate_precision(dtype)
+            used = checks = stagnation_checks = 0
+            current_state = state
+            for halving in range(attempts):
+                portion = (budget - used + attempts - halving - 1) // (attempts - halving)
+                candidate = self if halving == 0 else Brain(
+                    self.connectome,
+                    self.neuron_model.replace(dt=float(np.ldexp(self.neuron_model.dt, -halving))),
+                    backend=self.backend,
+                    efficacy=self.efficacy,
+                    log_gain=self.log_gain,
+                    bias=self.bias,
+                    device=str(self._torch.device) if self._torch is not None else None,
+                    dense_limit=self.dense_limit,
+                    layout=self.layout,
+                    precision=self.precision,
+                )
+                phase = candidate._equilibrate_local(
+                    drive, state=current_state, budget=portion, chunk=chunk,
+                    tolerance=tolerance, mask=mask, nudge=nudge,
+                    stop_if_stalled=halving < attempts - 1,
+                )
+                used += phase.steps
+                checks += phase.residual_checks
+                stagnation_checks += phase.stagnation_checks
+                error = phase.residual
+                if halving:
+                    error = self.residual(drive, phase.state, mask=mask, nudge=nudge)
+                    checks += 1
+                result = Equilibrium(
+                    phase.state, error, used, tolerance,
+                    residual_checks=checks, damping_halvings=halving,
+                    stagnation_checks=stagnation_checks,
+                )
+                if np.all(result.qualified) or used >= budget:
+                    return result
+                if not all(np.isfinite(value).all() for value in (
+                    phase.state.v, phase.state.activation, phase.state.adaptation
+                )):
+                    return result
+                current_state = phase.state
+            return result
+        return self._equilibrate_local(
+            drive, budget=budget, chunk=chunk, tolerance=tolerance,
+            state=state, mask=mask, nudge=nudge,
+        )
+
+    def _repeated_state(self, previous: BrainState, current: BrainState) -> bool:
+        """Compare all equation state on its backend, without a transport or host copy."""
+        keys = ("v", "s", "a")
+        old, new = previous.device, current.device
+        if self._torch is not None and old is not None and new is not None and (
+            old.get("holder") is self._torch and new.get("holder") is self._torch
+        ):
+            torch = self._torch.torch
+            rounding = 8 * torch.finfo(self._torch.dtype).eps
+            unchanged = [
+                ((new[key] - old[key]).abs() <= rounding * (
+                    1 + torch.maximum(new[key].abs(), old[key].abs())
+                )).all()
+                for key in keys
+            ]
+            return bool(torch.stack(unchanged).all().item())
+        if self._mlx is not None and old is not None and new is not None and (
+            old.get("holder") is self._mlx and new.get("holder") is self._mlx
+        ):
+            mx = self._mlx.mx
+            rounding = 8 * np.finfo(np.float32).eps
+            unchanged = [
+                mx.all(mx.abs(new[key] - old[key]) <= rounding * (
+                    1 + mx.maximum(mx.abs(new[key]), mx.abs(old[key]))
+                ))
+                for key in keys
+            ]
+            return bool(mx.all(mx.stack(unchanged)).item())
+        rounding = 8 * np.finfo(np.float64).eps
+        with np.errstate(over="ignore", invalid="ignore"):
+            return all(
+                np.all(np.abs(after - before) <= rounding * (
+                    1 + np.maximum(np.abs(after), np.abs(before))
+                ))
+                for before, after in zip(
+                    (previous.v, previous.activation, previous.adaptation),
+                    (current.v, current.activation, current.adaptation), strict=True,
+                )
+            )
+
+    def _equilibrate_local(
+        self,
+        drive: np.ndarray,
+        *,
+        budget: int,
+        chunk: int,
+        tolerance: float,
+        state: BrainState | None,
+        mask: np.ndarray | None,
+        nudge: Nudge | None,
+        stop_if_stalled: bool = False,
+    ) -> Equilibrium:
+        """Run a validated local attempt; only a subsequent damping attempt may skip a stall."""
         current = self.settle_batch(drive, steps=0, state=state, mask=mask, nudge=nudge)
         error = self.residual(drive, current, mask=mask, nudge=nudge)
-        used = 0
+        used, checks, stagnation_checks, repeats = 0, 1, 0, 0
         while used < budget and not np.all(error <= tolerance):
             if not np.isfinite(error).all() and any(
                 not np.isfinite(value).all()
@@ -678,12 +798,22 @@ class Brain:
                 # A divergent numerical state is not a valid warm start for
                 # another chunk. Keep its failed diagnostic, not a new exception.
                 break
+            previous = current
             current = self.settle_batch(
                 drive, steps=min(chunk, budget - used), state=current, mask=mask, nudge=nudge
             )
             used += current.steps
             error = self.residual(drive, current, mask=mask, nudge=nudge)
-        return Equilibrium(current, error, used, tolerance)
+            checks += 1
+            if stop_if_stalled and used < budget and not np.all(error <= tolerance):
+                stagnation_checks += 1
+                repeats = repeats + 1 if self._repeated_state(previous, current) else 0
+                if repeats >= 2:
+                    break
+        return Equilibrium(
+            current, error, used, tolerance, residual_checks=checks,
+            stagnation_checks=stagnation_checks,
+        )
 
     def settle_batch(
         self,

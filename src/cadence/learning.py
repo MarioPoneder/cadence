@@ -40,20 +40,21 @@ the alignment of the rule against finite differences.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 
 from .blocks import block_contrast
-from .brain import Backend, Brain, BrainState, Nudge
+from .brain import Backend, Brain, BrainState, Equilibrium, Nudge
 from .connectome import Connectome
 from .neuron import NeuronModel
 
 __all__ = [
     "Learner",
     "LearnerConfig",
+    "LearningPhaseError",
     "layered",
     "embedded",
     "learning_neuron_model",
@@ -77,7 +78,7 @@ class LearnerConfig:
     centered: bool = True  # contrast +beta against -beta rather than against the free state
     free_steps: int = 100  # most steps the free phase may take
     nudged_steps: int = 50  # most steps a nudged phase may take
-    tolerance: float | None = 1e-4  # settling stops once no neuron moves more than this
+    tolerance: float | None = 1e-4  # finite movement tolerance; qualified equation residual
     nudge: str = "cross_entropy"  # "quadratic" or "cross_entropy"
     temperature: float = 0.2  # softmax temperature of the cross-entropy nudge
     # >0: forgetting factor of the per-synapse RMS of its raw contrast that divides its step;
@@ -89,6 +90,8 @@ class LearnerConfig:
     # the magnitude a plastic synapse's efficacy may not exceed; a smaller cap keeps a readout
     # neuron out of saturation, where a nudge has no slope and nothing can move again
     scale_cap: float = SCALE_CAP
+    qualified: bool = False  # opt-in: require free and teaching equation residuals
+    damping: int = 3  # candidate numerical strategy: at most this many dt halvings
 
     def __post_init__(self) -> None:
         if self.nudge not in ("quadratic", "cross_entropy"):
@@ -116,6 +119,16 @@ class LearnerConfig:
             raise ValueError("normalize_floor must be finite and positive")
         if self.tolerance is not None and (not np.isfinite(self.tolerance) or self.tolerance < 0):
             raise ValueError("tolerance must be finite and nonnegative, or None")
+        if not isinstance(self.qualified, bool):
+            raise ValueError("qualified must be boolean")
+        if self.qualified and self.tolerance is None:
+            raise ValueError("qualified learning requires a finite residual tolerance")
+        if (
+            isinstance(self.damping, bool)
+            or not isinstance(self.damping, (int, np.integer))
+            or self.damping < 0
+        ):
+            raise ValueError("damping must be a nonnegative integer")
         for name in ("free_steps", "nudged_steps"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 0:
@@ -130,6 +143,60 @@ class LearnedState:
     free: BrainState
     nudged: BrainState
     opposite: BrainState | None = None  # the -beta phase, when centered
+
+
+def _phase_report(
+    phases: Mapping[str, Equilibrium], *, accepted: bool, qualified: bool
+) -> dict[str, float]:
+    report = {
+        "accepted": float(accepted),
+        "qualified": float(qualified and accepted),
+        "qualification_required": float(qualified),
+        "attempted_presentations": float(np.size(next(iter(phases.values())).residual)),
+    }
+    report["accepted_presentations"] = report["attempted_presentations"] if accepted else 0.0
+    for name, phase in phases.items():
+        rows = np.size(phase.residual)
+        report[f"{name}_steps"] = float(phase.steps)
+        report[f"{name}_residual"] = float(np.max(phase.residual))
+        report[f"{name}_residual_checks"] = float(phase.residual_checks)
+        report[f"{name}_damping_halvings"] = float(phase.damping_halvings)
+        report[f"{name}_stagnation_checks"] = float(phase.stagnation_checks)
+        report[f"{name}_row_sweeps"] = float(rows * phase.steps)
+        report[f"{name}_row_residual_checks"] = float(rows * phase.residual_checks)
+    report["total_steps"] = float(sum(phase.steps for phase in phases.values()))
+    report["total_residual_checks"] = float(sum(phase.residual_checks for phase in phases.values()))
+    report["total_stagnation_checks"] = float(sum(
+        phase.stagnation_checks for phase in phases.values()
+    ))
+    report["total_row_sweeps"] = float(sum(
+        np.size(phase.residual) * phase.steps for phase in phases.values()
+    ))
+    report["total_row_residual_checks"] = float(sum(
+        np.size(phase.residual) * phase.residual_checks for phase in phases.values()
+    ))
+    return report
+
+
+class LearningPhaseError(RuntimeError):
+    """A refused lesson, retaining every attempted phase and its computational work.
+
+    ``phase`` names the failed solve; ``phases`` contains the earlier and failed
+    equilibria. ``report`` counts attempted presentations, phase sweeps,
+    residual evaluations and complete-state stagnation comparisons.
+    No parameter update or optimizer-history write has occurred.
+    """
+
+    def __init__(self, phase: str, phases: Mapping[str, Equilibrium]) -> None:
+        self.phase = phase
+        self.phases = dict(phases)
+        self.report = _phase_report(phases, accepted=False, qualified=True)
+        failed = phases[phase]
+        super().__init__(
+            f"{phase} learning phase did not settle within {failed.steps} steps: "
+            f"residual={float(np.max(failed.residual)):.6g}, tolerance={failed.tolerance:g}; "
+            "no learning update applied"
+        )
 
 
 @dataclass
@@ -155,6 +222,7 @@ class Learner:
     velocity_bias: np.ndarray = field(init=False, repr=False)
     second_moment: np.ndarray = field(init=False, repr=False)
     second_moment_bias: np.ndarray = field(init=False, repr=False)
+    last_calibration: dict[str, Any] = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
         outputs = np.asarray(list(self.outputs))
@@ -280,6 +348,11 @@ class Learner:
         give different answers from different starts.
         """
         cfg = self.config
+        if cfg.qualified:
+            phase = self._qualified_phase(drive, warm, cfg.free_steps)
+            if not np.all(phase.qualified):
+                raise LearningPhaseError("free", {"free": phase})
+            return replace(phase.state, steps=phase.steps)
         return self.brain.settle_batch(
             drive, steps=cfg.free_steps, state=warm, tolerance=cfg.tolerance
         )
@@ -313,12 +386,33 @@ class Learner:
         target is an action that was taken).
         """
         cfg = self.config
+        if cfg.qualified:
+            phase = self._qualified_phase(
+                drive, free, cfg.nudged_steps,
+                self.nudge_for(target, sign * cfg.beta, weight),
+            )
+            name = "nudged" if sign >= 0 else "opposite"
+            if not np.all(phase.qualified):
+                raise LearningPhaseError(name, {name: phase})
+            return replace(phase.state, steps=phase.steps)
         return self.brain.settle_batch(
             drive,
             steps=cfg.nudged_steps,
             state=free,
             nudge=self.nudge_for(target, sign * cfg.beta, weight),
             tolerance=cfg.tolerance,
+        )
+
+    def _qualified_phase(
+        self, drive: np.ndarray, state: BrainState | None, budget: int,
+        nudge: Nudge | None = None,
+    ) -> Equilibrium:
+        cfg = self.config
+        if cfg.tolerance is None:
+            raise ValueError("qualified learning requires a finite residual tolerance")
+        return self.brain.equilibrate(
+            drive, state=state, budget=budget, tolerance=cfg.tolerance,
+            nudge=nudge, damping=cfg.damping,
         )
 
     def _labels(self, labels: np.ndarray) -> np.ndarray:
@@ -730,6 +824,28 @@ class Learner:
             drive = drive[None, :]
         if drive.ndim != 2 or drive.shape[0] != target.shape[0]:
             raise ValueError("drive and labels must have the same batch size")
+        cfg = self.config
+        if cfg.qualified:
+            phases: dict[str, Equilibrium] = {}
+            phases["free"] = self._qualified_phase(drive, warm, cfg.free_steps)
+            if not np.all(phases["free"].qualified):
+                raise LearningPhaseError("free", phases)
+            free = replace(phases["free"].state, steps=phases["free"].steps)
+            for name, sign in (("nudged", 1.0), ("opposite", -1.0)):
+                if name == "opposite" and not cfg.centered:
+                    break
+                phases[name] = self._qualified_phase(
+                    drive, free, cfg.nudged_steps,
+                    self.nudge_for(target, sign * cfg.beta, weight),
+                )
+                if not np.all(phases[name].qualified):
+                    raise LearningPhaseError(name, phases)
+            nudged = replace(phases["nudged"].state, steps=phases["nudged"].steps)
+            opposite = (replace(phases["opposite"].state, steps=phases["opposite"].steps)
+                        if "opposite" in phases else None)
+            report = self.update(free, nudged, opposite)
+            report.update(_phase_report(phases, accepted=True, qualified=True))
+            return LearnedState(free, nudged, opposite), report
         free = self.free(drive, warm)
         nudged = self.nudged(drive, free, target, weight=weight)
         opposite = (
@@ -737,9 +853,28 @@ class Learner:
             if self.config.centered
             else None
         )
+        # Finite phases retain the original update law. Their post-solve
+        # diagnostics count additional work and do not certify the lesson.
+        phases = {
+            "free": Equilibrium(free, self.brain.residual(drive, free), free.steps,
+                                cfg.tolerance if cfg.tolerance is not None else 0.0,
+                                residual_checks=1),
+            "nudged": Equilibrium(
+                nudged, self.brain.residual(drive, nudged,
+                    nudge=self.nudge_for(target, cfg.beta, weight)),
+                nudged.steps, cfg.tolerance if cfg.tolerance is not None else 0.0,
+                residual_checks=1,
+            ),
+        }
+        if opposite is not None:
+            phases["opposite"] = Equilibrium(
+                opposite, self.brain.residual(drive, opposite,
+                    nudge=self.nudge_for(target, -cfg.beta, weight)),
+                opposite.steps, cfg.tolerance if cfg.tolerance is not None else 0.0,
+                residual_checks=1,
+            )
         report = self.update(free, nudged, opposite)
-        report["free_steps"] = float(free.steps)
-        report["nudged_steps"] = float(nudged.steps)
+        report.update(_phase_report(phases, accepted=True, qualified=False))
         return LearnedState(free, nudged, opposite), report
 
     # -- calibration
@@ -747,35 +882,122 @@ class Learner:
     def calibrate(
         self, drive: np.ndarray, *, level: float = 0.5, grid: Sequence[float] | None = None
     ) -> float:
-        """Pick the rule's gain so the free output activation on ``drive`` sits near ``level``.
+        """Choose the sampled gain whose mean free output is nearest ``level``.
 
-        A net that is silent or saturated gives the rule nothing to compare.
-        The gain is chosen on training inputs only, before any label is seen,
-        and the chosen value is returned for the receipt.
+        The default tries the current gain first, then its powers-of-two multiples
+        from 1/256 to 256. An explicit grid retains its order and first-on-tie rule.
+        Qualified learners admit only fully qualified, finite candidate states;
+        finite learners keep their finite-phase contract. ``last_calibration``
+        retains every candidate and its work, including refusals. No admissible
+        candidate raises ``RuntimeError`` without changing the graph or optimizer.
+
+        Use training inputs before label-based selection. This bounded operating-
+        point heuristic need not reach the target or make every output responsive.
         """
-        candidates = list(grid) if grid is not None else [0.02 * 1.3**k for k in range(16)]
+        drive = np.asarray(drive, dtype=float)
+        if drive.ndim == 1:
+            drive = drive[None, :]
+        if (drive.ndim != 2 or drive.shape[0] == 0
+                or drive.shape[1] != self.brain.connectome.n
+                or not np.isfinite(drive).all()):
+            raise ValueError("calibration needs a nonempty finite drive with one column per neuron")
+        if np.ndim(level) != 0 or not np.isfinite(level):
+            raise ValueError("calibration needs a finite scalar target level")
+        if grid is None:
+            current = self.brain.neuron_model.gain
+            with np.errstate(over="ignore", under="ignore"):
+                multiples = np.ldexp(current, np.array([k for k in range(-8, 9) if k]))
+            candidates = [float(current), *(
+                float(gain) for gain in multiples if np.isfinite(gain) and gain > 0
+            )]
+        else:
+            values = np.asarray(list(grid), dtype=float)
+            if values.ndim != 1:
+                raise ValueError("calibration gains must be a one-dimensional sequence")
+            candidates = values.tolist()
         if (
             not candidates
             or not np.isfinite(candidates).all()
             or min(candidates) <= 0
-            or not np.isfinite(level)
         ):
-            raise ValueError("calibration needs finite positive gains and a finite target level")
-        best_gain, best_gap = candidates[0], float("inf")
+            raise ValueError("calibration needs finite positive gains")
+        cfg = self.config
+        attempts: list[dict[str, Any]] = []
+        report: dict[str, Any] = {
+            "qualification_required": cfg.qualified, "level": float(level),
+            "selected_gain": None, "candidates": attempts,
+            "attempted_candidates": 0, "admitted_candidates": 0,
+            "attempted_presentations": 0, "total_steps": 0,
+            "total_residual_checks": 0, "total_stagnation_checks": 0,
+            "total_activation_checks": 0, "total_row_activation_checks": 0,
+            "total_row_sweeps": 0, "total_row_residual_checks": 0,
+        }
+        self.last_calibration = report
+        best_brain, best_gap = None, float("inf")
         for gain in candidates:
             brain = self._with_gain(gain)
-            mean_out = float(
-                brain.settle_batch(
-                    drive, steps=self.config.free_steps, tolerance=self.config.tolerance
+            if cfg.qualified:
+                assert cfg.tolerance is not None
+                phase = brain.equilibrate(
+                    drive, budget=cfg.free_steps, tolerance=cfg.tolerance, damping=cfg.damping
                 )
-                .activation[:, self.output_index]
-                .mean()
+            else:
+                state = brain.settle_batch(drive, steps=cfg.free_steps, tolerance=cfg.tolerance)
+                phase = Equilibrium(
+                    state, brain.residual(drive, state), state.steps,
+                    cfg.tolerance if cfg.tolerance is not None else 0.0, residual_checks=1,
+                )
+            state = phase.state
+            finite = all(np.isfinite(value).all() for value in (
+                state.v, state.activation, state.adaptation, phase.residual
+            ))
+            rounding = 8 * np.finfo(
+                np.float32 if brain._mlx is not None or (brain._torch is not None
+                    and brain._torch.dtype == brain._torch.torch.float32)
+                else np.float64
+            ).eps
+            consistent = finite and np.allclose(
+                state.activation, brain.neuron_model.activation(state.v),
+                rtol=rounding, atol=rounding,
             )
-            gap = abs(mean_out - level)
-            if gap < best_gap:
-                best_gain, best_gap = gain, gap
-        self.brain = self._with_gain(best_gain)
-        return best_gain
+            qualified = bool(consistent and np.all(phase.qualified))
+            admitted = bool(consistent and (qualified or not cfg.qualified))
+            mean_out = float(state.activation[:, self.output_index].mean()) if admitted else None
+            gap = abs(mean_out - level) if mean_out is not None else None
+            rows = drive.shape[0]
+            attempts.append({
+                "gain": gain, "admitted": admitted, "qualified": qualified,
+                "finite": bool(finite), "activation_consistent": bool(consistent),
+                "mean_output": mean_out, "gap": gap,
+                "residual": [float(x) if np.isfinite(x) else None for x in phase.residual],
+                "steps": phase.steps, "residual_checks": phase.residual_checks,
+                "damping_halvings": phase.damping_halvings,
+                "stagnation_checks": phase.stagnation_checks,
+                "activation_checks": int(finite),
+                "row_activation_checks": rows * int(finite),
+                "row_sweeps": rows * phase.steps,
+                "row_residual_checks": rows * phase.residual_checks,
+            })
+            report["attempted_candidates"] += 1
+            report["admitted_candidates"] += int(admitted)
+            report["attempted_presentations"] += rows
+            for name, value in (
+                ("steps", phase.steps), ("residual_checks", phase.residual_checks),
+                ("stagnation_checks", phase.stagnation_checks),
+                ("activation_checks", int(finite)),
+                ("row_activation_checks", rows * int(finite)),
+                ("row_sweeps", rows * phase.steps),
+                ("row_residual_checks", rows * phase.residual_checks),
+            ):
+                report[f"total_{name}"] += value
+            if gap is not None and gap < best_gap:
+                best_brain, best_gap = brain, gap
+        if best_brain is None:
+            raise RuntimeError("no admissible calibration candidate; graph and optimizer unchanged")
+        self.brain = best_brain
+        selected = float(best_brain.neuron_model.gain)
+        report["selected_gain"] = selected
+        return selected
 
     def _with_gain(self, gain: float) -> Brain:
         return Brain(
@@ -783,9 +1005,11 @@ class Learner:
             self.brain.neuron_model.replace(gain=gain),
             backend=self.brain.backend,
             device=str(self.brain._torch.device) if self.brain._torch is not None else None,
-            efficacy=self.brain.efficacy,
+            efficacy=(self.brain._torch.host_scale() if self.brain._efficacy is None
+                      and self.brain._torch is not None else self.brain.efficacy),
             log_gain=self.brain.log_gain,
-            bias=self.brain.bias,
+            bias=(self.brain._torch.host_bias() if self.brain._bias is None
+                  and self.brain._torch is not None else self.brain.bias),
             dense_limit=self.brain.dense_limit,
             layout=self.brain.layout,
             precision=self.brain.precision,
@@ -1125,8 +1349,11 @@ def calibrate_bias(
     iterations: int = 16,
     steps: int = 100,
     tolerance: float | None = 1e-4,
+    qualified: bool = False,
+    damping: int = 3,
+    report: dict[str, Any] | None = None,
 ) -> np.ndarray:
-    """Biases that bring populations to declared activity targets under a set of drives.
+    """Search for biases near declared population activity targets under a set of drives.
 
     ``targets`` maps a population (a name in the connectome, or neuron indices) to the mean
     activation it should have, averaged over its members and over ``drives`` (rows of
@@ -1135,53 +1362,190 @@ def calibrate_bias(
     ``per_neuron`` (a readout's cells are read one by one, so each is centred). Each bias is
     found by bisection within ``span``, every population in turn, ``rounds`` times, so that
     populations that feed each other settle jointly; a target no bias in the span reaches
-    leaves the bias at the span's end, and the caller reads the returned means. Returns the
+    leaves the bias at the span's end, and the caller checks the returned means. Returns the
     bias array, the brain's own plus the calibration; the brain itself is unchanged.
+
+    Finite bisection is the default. With ``qualified=True``, every midpoint and
+    the final cold state must satisfy the original equations within ``steps``
+    sweeps, using up to ``damping`` numerical halvings. A refused solve raises
+    ``RuntimeError`` before its activity can steer the search. ``report`` retains
+    every attempted solve, including refusals, its work and final target gaps.
+    Numerical qualification does not guarantee that the targets are reached.
 
     This is the operating point a connectome does not carry: the wiring says who talks to
     whom, not how excitable each cell is. A threshold cannot tame a runaway loop (the fly's
     antennal lobe stayed ignited at a bias of -6: that needs a gain, ``Brain(log_gain=...)``
-    selected by protocol), but it puts a readout in the range where a nudge has a slope.
+    selected by protocol). A qualified responsive candidate can put a readout in
+    the range where a nudge has a slope; inspect its final means and target gaps.
     """
-    if rounds < 1 or iterations < 1:
-        raise ValueError("rounds and iterations must be positive")
+    for name, value, minimum in (
+        ("rounds", rounds, 1), ("iterations", iterations, 1),
+        ("steps", steps, 0), ("damping", damping, 0),
+    ):
+        if (isinstance(value, (bool, np.bool_))
+                or not isinstance(value, (int, np.integer)) or value < minimum):
+            raise ValueError(f"{name} must be an integer >= {minimum}")
+    if not isinstance(per_neuron, (bool, np.bool_)) or not isinstance(qualified, (bool, np.bool_)):
+        raise ValueError("per_neuron and qualified must be boolean")
+    def finite_scalar(value: Any) -> bool:
+        scalar = np.asarray(value)
+        return scalar.ndim == 0 and scalar.dtype.kind in "iuf" and bool(np.isfinite(scalar))
+
+    if tolerance is None:
+        if qualified:
+            raise ValueError("qualified bias calibration requires a finite tolerance")
+    elif not finite_scalar(tolerance) or tolerance < 0:
+        raise ValueError("tolerance must be finite and nonnegative")
+    bounds = np.asarray(span, dtype=float)
+    if bounds.shape != (2,) or not np.isfinite(bounds).all() or bounds[0] >= bounds[1]:
+        raise ValueError("span must contain two finite increasing bounds")
+    if report is not None and not isinstance(report, dict):
+        raise ValueError("report must be a dictionary or None")
     drives = np.atleast_2d(np.asarray(drives, dtype=float))
     n = brain.connectome.n
-    groups: list[tuple[np.ndarray, float]] = []
-    for who, target in targets.items():
-        idx = (
-            np.asarray(brain.connectome.populations[who], dtype=np.int64)
-            if isinstance(who, str)
-            else np.asarray(list(who), dtype=np.int64)
+    if (drives.ndim != 2 or drives.shape[0] == 0 or drives.shape[1] != n
+            or not np.isfinite(drives).all()):
+        raise ValueError(
+            "bias calibration needs a nonempty finite drive with one column per neuron"
         )
-        if idx.size == 0:
-            raise ValueError(f"empty population {who!r}")
+    if not isinstance(targets, Mapping):
+        raise ValueError("targets must map populations to activity levels")
+    groups: list[tuple[np.ndarray, float]] = []
+    descriptions: list[dict[str, Any]] = []
+    for who, target in targets.items():
+        if isinstance(who, str):
+            if who not in brain.connectome.populations:
+                raise ValueError(f"unknown population {who!r}")
+            idx = np.asarray(brain.connectome.populations[who], dtype=np.int64)
+        else:
+            try:
+                values = np.asarray(list(who))
+            except TypeError as exc:
+                raise ValueError("population indices must be a sequence of integers") from exc
+            if values.ndim != 1 or values.dtype.kind not in "iu":
+                raise ValueError("population indices must be a sequence of integers")
+            idx = values.astype(np.int64)
+        if idx.size == 0 or np.unique(idx).size != idx.size:
+            raise ValueError(f"population {who!r} must contain distinct nonempty indices")
         if (idx < 0).any() or (idx >= n).any():
             raise ValueError(f"population {who!r} lies outside the connectome")
-        if not 0.0 <= target <= 1.0:
+        if not finite_scalar(target) or not 0.0 <= target <= 1.0:
             raise ValueError("targets are activations in [0, 1]")
-        if per_neuron:
-            groups.extend((np.array([i]), float(target)) for i in idx)
+        members = [np.array([i]) for i in idx] if per_neuron else [idx]
+        for member in members:
+            groups.append((member, float(target)))
+            descriptions.append({
+                "population": who if isinstance(who, str) else None,
+                "indices": member.tolist(), "target": float(target),
+            })
+    receipt: dict[str, Any] = report if report is not None else {}
+    receipt.clear()
+    receipt.update({
+        "qualification_required": bool(qualified), "completed": False,
+        "per_neuron": bool(per_neuron), "rounds": int(rounds), "iterations": int(iterations),
+        "steps": int(steps), "tolerance": tolerance, "damping": int(damping),
+        "span": bounds.tolist(),
+        "targets": descriptions, "solves": [], "final_means": [], "target_gaps": [],
+        "attempted_solves": 0, "admitted_solves": 0,
+        "attempted_trials": 0, "admitted_trials": 0, "attempted_presentations": 0,
+        "total_steps": 0, "total_residual_checks": 0, "total_stagnation_checks": 0,
+        "total_activation_checks": 0, "total_row_activation_checks": 0,
+        "total_row_sweeps": 0, "total_row_residual_checks": 0,
+    })
+    # Reading resident parameters directly keeps the source graph's lazy host
+    # fields untouched, including when the first qualified trial refuses.
+    efficacy = (brain._torch.host_scale() if brain._efficacy is None and brain._torch is not None
+                else brain.efficacy)
+    bias = np.array(
+        brain._torch.host_bias()
+        if brain._bias is None and brain._torch is not None else brain.bias,
+        dtype=float,
+    )
+
+    def candidate(b: np.ndarray) -> Brain:
+        return Brain(
+            brain.connectome, brain.neuron_model, backend=brain.backend,
+            efficacy=efficacy, log_gain=brain.log_gain, bias=b,
+            device=str(brain._torch.device) if brain._torch is not None else None,
+            dense_limit=brain.dense_limit, layout=brain.layout, precision=brain.precision,
+        )
+
+    def solve(b: np.ndarray, *, kind: str, round_index: int, group: int | None) -> BrainState:
+        trial = candidate(b)
+        if qualified:
+            assert tolerance is not None
+            phase = trial.equilibrate(drives, budget=steps, tolerance=tolerance, damping=damping)
         else:
-            groups.append((idx, float(target)))
-    bias = np.array(brain.bias, dtype=float)
+            state = trial.settle_batch(drives, steps=steps, tolerance=tolerance)
+            if report is None:
+                return state
+            phase = Equilibrium(
+                state, trial.residual(drives, state), state.steps,
+                tolerance if tolerance is not None else 0.0, residual_checks=1,
+            )
+        state = phase.state
+        finite = all(np.isfinite(value).all() for value in (
+            state.v, state.activation, state.adaptation, phase.residual,
+        ))
+        rounding = 8 * np.finfo(
+            np.float32 if trial._mlx is not None or (trial._torch is not None
+                and trial._torch.dtype == trial._torch.torch.float32) else np.float64
+        ).eps
+        consistent = bool(finite and np.allclose(
+            state.activation, trial.neuron_model.activation(state.v),
+            rtol=rounding, atol=rounding,
+        ))
+        passed = bool(consistent and np.all(phase.qualified))
+        admitted = bool(consistent and (passed or not qualified))
+        rows = len(drives)
+        counts = {
+            "steps": phase.steps, "residual_checks": phase.residual_checks,
+            "stagnation_checks": phase.stagnation_checks, "activation_checks": int(finite),
+            "row_activation_checks": rows * int(finite), "row_sweeps": rows * phase.steps,
+            "row_residual_checks": rows * phase.residual_checks,
+        }
+        receipt["solves"].append({
+            "kind": kind, "round": round_index, "group": group,
+            "trial_bias": float(b[groups[group][0][0]]) if group is not None else None,
+            "mean_output": (float(state.activation[:, groups[group][0]].mean())
+                            if admitted and group is not None else None),
+            "admitted": admitted, "qualified": passed, "finite": bool(finite),
+            "activation_consistent": consistent, "damping_halvings": phase.damping_halvings,
+            "residual": [float(x) if np.isfinite(x) else None for x in phase.residual],
+            **counts,
+        })
+        receipt["attempted_solves"] += 1
+        receipt["admitted_solves"] += int(admitted)
+        receipt["attempted_trials"] += int(kind == "midpoint")
+        receipt["admitted_trials"] += int(kind == "midpoint" and admitted)
+        receipt["attempted_presentations"] += rows
+        for name, value in counts.items():
+            receipt[f"total_{name}"] += value
+        if qualified and not admitted:
+            raise RuntimeError(f"unqualified bias calibration {kind}; original graph unchanged")
+        return state
 
-    def mean_of(b: np.ndarray, idx: np.ndarray) -> float:
-        state = brain.with_parameters(bias=b).settle_batch(drives, steps=steps, tolerance=tolerance)
-        return float(state.activation[:, idx].mean())
-
-    for _ in range(rounds):
-        for idx, target in groups:
-            lo, hi = span
+    for round_index in range(rounds):
+        for group, (idx, target) in enumerate(groups):
+            lo, hi = bounds
             for _ in range(iterations):
-                mid = 0.5 * (lo + hi)
+                mid = 0.5 * lo + 0.5 * hi
                 trial = bias.copy()
                 trial[idx] = mid
-                if mean_of(trial, idx) < target:
+                state = solve(trial, kind="midpoint", round_index=round_index, group=group)
+                if float(state.activation[:, idx].mean()) < target:
                     lo = mid
                 else:
                     hi = mid
-            bias[idx] = 0.5 * (lo + hi)
+            bias[idx] = 0.5 * lo + 0.5 * hi
+    if qualified or report is not None:
+        final = solve(bias, kind="final", round_index=rounds, group=None)
+        receipt["final_means"] = [float(final.activation[:, idx].mean()) for idx, _ in groups]
+        receipt["target_gaps"] = [
+            abs(mean - target)
+            for mean, (_, target) in zip(receipt["final_means"], groups, strict=True)
+        ]
+    receipt["completed"] = True
     return bias
 
 

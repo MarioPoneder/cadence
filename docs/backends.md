@@ -15,7 +15,8 @@ python -m pip install "cadence-net[fast]==0.70.0"
 
 Replace `[fast]` with `[accel]` for PyTorch or `[apple]` for MLX. From a checkout,
 use `python -m pip install -e ".[fast]"`. An installed accelerator library is
-not enough to select it: pass `backend="torch"` or `backend="mlx"` to `NeuralGraph`.
+not enough to select it: pass `backend="torch"` or `backend="mlx"` to
+`Brain.compose` or the lower-level `NeuralGraph`.
 
 ```python
 import cadence as cd
@@ -36,9 +37,16 @@ For a blocked connectome, transport uses dense blocks between neuron ranges; unc
 ranges can reuse their products. Each step then applies the neuron update, nudge,
 adaptation, mask, and stopping check. The device backends keep the settled state on the
 device (`state.device`) so that a phase that continues from it starts there, and the
-learning rule's contrast is read on the device (`NeuralGraph.contrast_on_device`). For blocked
-PyTorch learners, contrast, momentum, RMS normalization and parameter updates remain on
-the device. Scalar step reports synchronize. Reading parameters or optimizer history,
+learning rule's contrast is read on the device (`NeuralGraph.contrast_on_device`). With
+resident phase states on blocked PyTorch graphs, `Learner` updates, contrast,
+momentum and RMS normalization remain on the device. `ActorCritic` uses its
+device update path when the required blocked
+PyTorch phase states are resident and its own `momentum` and `normalize` are
+both zero; its critic and dopamine calculations still use host arrays.
+With either adaptive setting enabled, actor contrasts and traces
+are read on the host and its optimizer runs in NumPy. The learner's adaptive
+settings and the actor's adaptive settings are separate configurations.
+Scalar step reports synchronize. Reading parameters or optimizer history,
 saving a checkpoint, or entering a host-only path materializes the required arrays.
 Public optimizer attributes remain mutable NumPy arrays; edits made through them are
 picked up by the next update. History uses float32 on MPS and float64 on torch CPU/CUDA.
@@ -137,7 +145,9 @@ if "mlx" in cd.available_backends():
     cd.NeuralGraph(connectome, neuron_model, backend="mlx")                         # Apple silicon through MLX
 ```
 
-A learner built on a device brain learns there; `Learner.load(path, backend="cpu")`
+Settling runs on the chosen device. Blocked PyTorch `Learner` updates use the
+device optimizer; sparse contrasts, MLX optimization and the adaptive actor
+path described above use host arrays. `Learner.load(path, backend="cpu")`
 brings a checkpoint back to the receipt backend, whatever backend it learned on.
 
 ## Precision matters

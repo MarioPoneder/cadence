@@ -6,8 +6,12 @@ together, in order. Read [Cadence for machine-learning people](orientation.md) f
 if the words are new, and the [quickstarts](quickstart.md) for the shortest form of
 each brain.
 
+These guides use the [development checkout](../README.md#development-checkout),
+including [unreleased gain-calibration changes](../CHANGELOG.md#unreleased).
+From the library repository root:
+
 ```bash
-python -m pip install cadence-net==0.70.0
+python -m pip install -e .
 ```
 
 ## A record patch on a stream
@@ -254,11 +258,20 @@ compete. [Write a cortex](cortex.md) has the catalogue of regions, projections a
 
 ### 3. Calibrate, learn, evaluate
 
-`calibrate` picks the gain that puts the free motor activity in its responsive range.
-Each `step` settles a free phase and two nudged phases and moves the synapses once.
+`calibrate` picks the sampled gain whose mean free motor activity is closest to
+0.5; it may still leave the readout unresponsive. Its default search is centered
+on the current gain, and an explicit `grid` fixes the candidates and their order.
+Inspect `learner.last_calibration` for the residuals and all attempted work.
+Qualified learning also requires each calibration candidate to meet the full
+equations before it can be selected. Choose the gain on training inputs before
+scoring held-out data ([calibration contract](learning.md#calibrating-the-operating-point)).
+This example declares a small-gain grid for its densely connected motor region;
+the widest operating-point search does not necessarily select the best learner.
+Each `step` runs a free phase and two nudged phases and moves the synapses once;
+the configuration in this example uses finite teaching.
 
 ```python
-learner.calibrate(drive(x_train[:32]))
+learner.calibrate(drive(x_train[:32]), grid=[0.02 * 1.3**k for k in range(16)])
 before = learner.accuracy(drive(x_test), y_test)
 for epoch in range(3):
     order = rng.permutation(len(x_train))

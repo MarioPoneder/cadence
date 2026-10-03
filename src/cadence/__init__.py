@@ -29,6 +29,7 @@ from .instruments import dishabituation, orienting
 from .learning import (
     Learner,
     LearnerConfig,
+    LearningPhaseError,
     calibrate_bias,
     embedded,
     layered,
@@ -147,6 +148,7 @@ __all__ = [
     "NeuronModel",
     "Learner",
     "LearnerConfig",
+    "LearningPhaseError",
     "Nudge",
     "Protocol",
     "Receipt",

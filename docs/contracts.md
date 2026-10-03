@@ -1,5 +1,9 @@
 # Numerical and learning contracts
 
+This page describes the [development checkout](../README.md#development-checkout),
+including [unreleased changes](../CHANGELOG.md#unreleased) to qualified teaching,
+fit scores, work reports and feedback rollback.
+
 Cadence exposes several implementations of state, repair and learning. Choose
 an API by its equations, stopping rule and update contract. Sharing the word
 "patch" does not make their solvers or learning guarantees interchangeable.
@@ -9,7 +13,7 @@ an API by its equations, stopping rule and update contract. Sharing the word
 | API | How it computes | How it learns | Qualification |
 | --- | --- | --- | --- |
 | `NeuralGraph`, `Learner` | Rate neurons exchange activity over a directed graph. | Free/nudged local contrasts; optional reward traces. | `NeuralGraph.equilibrate` checks the full fixed-point equations. `settle` alone may run a fixed budget or stop on activity movement. Directed wiring does not inherit a reciprocal energy gradient theorem. |
-| `Brain` | One recurrent neural graph, optionally extended by reciprocal state-reading observers, with held trace/record input. | The underlying finite contrast/reward learner plus explicit trace and synaptic-memory updates. | `act`, `predict` and `accuracy` require the complete equation residual through `NeuralGraph.equilibrate`; exhaustion refuses an answer. This does not qualify every nudged eligibility or training phase. |
+| `Brain` | One recurrent neural graph, optionally extended by reciprocal state-reading observers, with held trace/record input. | The underlying contrast/reward learner plus explicit trace and synaptic-memory updates. | `act`, `predict` and `accuracy` require the complete equation residual; exhaustion refuses an answer. Opt-in `learning.qualified=True` also gates supervised free/nudged phases. Reward eligibility retains its finite-phase contract. |
 | `PatchNet` | The reciprocal graph core with persistent free activity and explicit evidence ports. | Free and two nudged phases of the same network; commits only qualified phases. | All required phases must pass the equation residual. The gradient interpretation also needs compatible effective weights, a smooth stable branch and the small-nudge limit. |
 | `TemporalPatchNet` | A causal free path and jointly repaired teaching paths over a finite time window. | Centered contrasts of parameter derivatives. | Whole-path residual and branch checks; the dense hidden-width solves have a different cost from sparse graph transport. |
 | `RecordPatchNet` | A gated causal context scan with local record reads. | `observe` uses an adjoint backward scan; record writes use a local delta rule. | The causal path solves its declared free equations. `detune` separately checks quadratic continuous-output teaching phases; this is not the default training path or a categorical-port guarantee. |
@@ -40,8 +44,8 @@ source identity must remain attached to the action that was actually executed.
 
 `Brain` uses `learning.free_steps` as the free-answer repair budget and
 `learning.tolerance` for the full potential/adaptation equation residual
-(defaults 1024 and `3e-3`). The live model and finite teaching phases retain
-`dt=1.0` and 12 nudged steps. For a qualified free answer, roughly half the sweep
+(defaults 1024 and `3e-3`). Default finite teaching uses
+`dt=1.0` and 12 nudged steps. With that configuration, roughly half the free-answer sweep
 budget is reserved for a fallback with half the integration step if the first
 finite phase does not qualify. Both phases share the one requested budget, and
 the final residual is recomputed against the original model. The equations,
@@ -50,8 +54,37 @@ independent of System 2. Cached activity must qualify again. Refused `act`
 calls issue no action and preserve activity, memory, random state and pending
 feedback. A `step` call may first learn an actual outcome and then refuse its
 next action; that real learning remains, so retry `act` without resubmitting
-the reward. Its finite nudged phases and `fit` training scores retain their
-own contract. Independent `predict`/`accuracy` do not read live memory.
+the reward. Reward eligibility retains its finite nudged-phase contract and
+separate `reward.eligibility_steps` budget (the Brain default is 12).
+Independent `predict`/`accuracy` and `fit` epoch scores use qualified answers
+without reading working trace or associative memory. `fit` teaching follows
+the configured finite or qualified contract; a refused score does not undo
+accepted lessons.
+
+For supervised graph learning, `LearnerConfig(qualified=True, damping=3)`
+requires the free and each required nudged phase to meet that phase's full
+equation residual before the local contrast changes any parameter. The finite
+configuration remains the default comparison. Numerical damping tries
+successively halved integration steps within one declared budget per phase,
+then checks the original equations. `LearningPhaseError` retains the failed
+and completed phase diagnostics and attempted work; parameters, optimizer
+history and update counts stay unchanged. `report` counts all phase sweeps,
+including the opposite nudge, and residual transports separately. Stalled
+damping attempts may yield unused sweeps to later halvings after two repeated
+complete-state comparisons at backend rounding precision. The final attempt
+retains its budget and every answer still needs the original residual. Reports
+count these comparisons and attempted/accepted row presentations separately.
+After `Brain.step`, `Brain.last_learning` preserves teaching diagnostics as `demonstration_*`
+fields, including refused work alongside any earlier accepted reward. Direct
+`contrast`/`update` and the `ActorCritic` eligibility path retain their own
+contracts. Qualification does not establish a smooth stable branch, an exact
+gradient at finite nudge, or acquired free behavior.
+
+A refused `Brain.learn` feedback solve restores hippocampal records, terminal
+working-trace resets and actor state, preserving the executed action awaiting
+its outcome. Retry that same feedback after adjusting the solve. Once feedback
+is accepted, it stays learned even if a later `act` or teacher lesson refuses;
+do not submit that reward again.
 
 An adjoint is reverse-mode differentiation even when written explicitly in
 NumPy without an autograd tape. Equivalence with an equilibrium contrast must

@@ -49,13 +49,28 @@ mathematics accurately. A record scan is not a joint graph-equilibrium certifica
 `NeuralGraph.equilibrate`, including cached activity and optional observers. Refused
 `act` calls preserve live state, memory, randomness and pending feedback. If
 `step` learns a real outcome before its next action refuses, that learning stays:
-retry `act`, not the reward. Finite nudged eligibility and teaching phases retain
-their own contracts.
+retry `act`, not the reward. Finite nudged eligibility and default teaching phases
+retain their own contracts. Qualified supervised learning is explicit through
+`LearnerConfig.qualified`: all attempted free and teaching states must meet the
+original equations before an update. Refusal preserves parameters and optimizer
+history. Reward eligibility has its own `ActorCriticConfig.eligibility_steps`;
+the Brain default is 12, even when teaching requests longer phases.
 
 Qualified free solves may use numerical damping within their one declared budget,
 then check the undamped model's residual. This does not change the live model or
 finite teaching law, and it is not System 2. A numerical qualification does not
 prove correctness about the world, reliable recall or a cognitive advantage.
+
+`predict` and `accuracy` omit working and associative memory; `act` reads them.
+Test graph plasticity, working traces and consolidated records separately, then
+test their composition. Current teacher labels update the graph; the reward loop
+writes the actually executed action's observed outcome. Clearing transient state
+does not erase durable knowledge. Retention tests must use the same acquired
+brain after competing experience and charge any rehearsal.
+
+An unsuccessful reward bootstrap must preserve pending feedback and restore all
+memory changes from that attempt. An accepted outcome remains learned if the
+following action refuses. Keep those two retry cases distinct in tests and guides.
 
 Memory and imagination are implemented capabilities to preserve. Test actual
 acquisition, free recall, interference, private-state isolation and saved
