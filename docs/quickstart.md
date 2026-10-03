@@ -8,13 +8,13 @@ in that same graph.
 
 The [world-model guide](world-model.md) explains the intended lifecycle:
 bootstrap a useful interpretation, use it, repair witnessed failures and continue
-the same brain. This quickstart exercises the implemented policy/memory loop;
+the same brain. This quickstart exercises equilibrium action and memory;
 it does not yet integrate learned environmental transitions.
 
-Python 3.11+ and NumPy are required:
+Python 3.11+ and NumPy are required. Install Cadence 0.71.2:
 
 ```bash
-python -m pip install cadence-net==0.71.1
+python -m pip install cadence-net==0.71.2
 ```
 
 ## Observe, act and learn
@@ -45,6 +45,31 @@ This short example exercises a feedback update, not a learned policy benchmark.
 Memory and learned associations can affect later choices; capacity is finite
 and memories can interfere. [Continuous interaction](continuous.md) covers
 teaching, episodes and memory timing.
+
+## Inspect the work of answering
+
+```python
+report = brain.last_settlement
+assert report is not None and report["qualified"]
+assert report["max_residual"] <= report["tolerance"]
+print("free-answer sweeps:", report["steps"], "residual:", report["max_residual"])
+```
+
+The read-only report records the latest free-answer solve, including a refused
+attempt. It also counts residual checks and numerical damping. It excludes
+reward eligibility, teaching, feedback and memory work. Compare these counters
+with actual task outcomes; small residual means internal consistency, not a
+correct action, predictable environment or low physical energy.
+
+The [continuing example](../examples/continuing_brain.py) measures these signals
+through bootstrap, unchanged conditions, disruption and correction. It supplies
+a corrective teacher only after an executed mistake, repeating the failed cue
+so that the teacher labels the current observation. It still consumes every
+real reward exactly once. This is an explicit teaching policy in the example;
+`step` does not automatically suppress successful-outcome learning.
+
+For narrower existing mechanisms, see [centered dopamine and selective activity](reward.md#centered-dopamine-and-selective-activity).
+Reducing an update does not necessarily reduce the work spent computing it.
 
 ## Imagine privately and resume
 

@@ -19,7 +19,12 @@ reading addresses a table that takes an outcome in one write and reads it back a
 the same reading, so a fact is kept without a gradient. A night of sleep moves what
 the store holds into the slow weights.
 
-![How it learns: settle free, tilt the energy both ways, every synapse reads its two ends](assets/learning-cycle.svg)
+![Idealized equilibrium contrast under a symmetric energy model](assets/learning-cycle.svg)
+
+This diagram illustrates a stable energy branch under the
+[stated symmetry and convergence assumptions](learning.md#5-why-the-contrast-is-a-gradient).
+Default finite teaching phases need not reach minima; arbitrary directed or
+adaptive graphs need not have this energy.
 
 The reference implementations use NumPy; some models also have accelerated
 implementations. Explicit adjoints are reverse-mode differentiation, and

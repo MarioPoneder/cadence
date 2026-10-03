@@ -57,6 +57,14 @@ through bootstrap, unchanged conditions and changed conditions, then checks a
 saved pending action's continuation. It reports actual task outcomes without
 assuming that settlement guarantees recovery.
 
+The example supplies a corrective label only after an executed mistake and
+repeats that cue for the next action. Thus its teacher labels the **current**
+observation while reward still describes the previous action. Successes still
+reach reward learning and associative memory. This is an application teaching
+policy, not automatic suppression of all successful-outcome updates. See
+[centered dopamine and Life](reward.md#centered-dopamine-and-selective-activity)
+for the narrower selective mechanisms already available.
+
 ## Qualification and refusal
 
 Every `Brain` action and independent prediction must satisfy the full
@@ -72,6 +80,30 @@ action refuses, that learning remains. Retry `act` after adjusting the solve;
 do not submit that outcome twice. `tolerance=None` cannot disable action
 qualification. See [contracts](contracts.md) for the separate finite
 free/nudged learning and eligibility rules.
+
+Inspect the latest free-answer attempt without changing the action return type:
+
+```python
+answer_work = brain.last_settlement
+assert answer_work is not None
+assert answer_work["qualified"]
+assert answer_work["steps"] <= answer_work["budget"]
+assert answer_work["max_residual"] <= answer_work["tolerance"]
+```
+
+`last_settlement` is a read-only snapshot with per-row residuals and admission,
+sweeps, residual checks, damping halvings and stagnation comparisons. A refused
+answer leaves its report available after the exception. It describes the last
+completed free-answer solve: validation errors and failures before that solve
+do not replace it. `operation` distinguishes `act` from independent `predict`;
+`step` delegates to `act`. `reset` and loading a checkpoint clear this diagnostic.
+
+This is not a total cost report. It excludes feedback, eligibility, teaching and
+memory work; `last_learning` reports learning separately. Optional
+[settlement recording](api.md#record-every-settling-step) captures the other
+solver calls at additional cost. The continuing example records those sweeps
+too. No numerical counter substitutes for measured task success or hardware
+energy, and a surprise need not increase settling work.
 
 Teaching diagnostics, eligibility duration and feedback rollback have
 separate contracts:

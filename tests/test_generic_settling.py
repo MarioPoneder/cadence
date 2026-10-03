@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -69,6 +70,10 @@ def test_default_repairs_frozen_learned_boundary_that_cycles_without_damping(bac
 
     # Use the actual Brain admission path, preserving its original tolerance.
     repaired = agent._qualified(drive, state)
+    report = agent.last_settlement
+    assert report["qualified"] and report["damping_halvings"] == 1
+    assert 512 < report["steps"] <= report["budget"] == 1024
+    np.testing.assert_array_equal(report["residual"], brain.residual(drive, repaired))
     assert brain.residual(drive, repaired).max() <= agent.learner.config.tolerance
     # Damping changes the numerical path, not the unmasked fixed-point equation.
     assert undamped.residual(drive, repaired).max() <= agent.learner.config.tolerance
@@ -110,3 +115,11 @@ def test_fallback_respects_zero_and_odd_total_budgets(monkeypatch, budget):
     else:
         assert len(calls) == 2 and calls[1][:2] == (0.5, budget // 2)
     assert agent.brain.neuron_model.dt == 1.0
+    calls.clear()
+    agent.learner.config = replace(agent.learner.config, free_steps=budget, tolerance=1e-14)
+    with pytest.raises(RuntimeError, match="no action issued"):
+        agent._qualified(drive, state)
+    report = agent.last_settlement
+    assert not report["qualified"]
+    assert report["steps"] == sum(taken for _, _, taken in calls) == report["budget"] == budget
+    assert report["damping_halvings"] == (0 if budget < 2 else 1)

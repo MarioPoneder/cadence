@@ -18,7 +18,8 @@
 ``step`` runs one ongoing perceive/feedback/act loop; demonstrations and rewards are
 signals in that loop, without a train/eval mode. The lower-level ``fit``, ``act``
 and ``learn`` operations expose individual mechanisms for controlled experiments.
-This composition does not include a learned world model, hierarchical goals or language.
+The learned equilibrium is its world model in operation; this composition does
+not integrate a learned environmental transition predictor, hierarchical goals or language.
 Its connectome comes from a ``Genome``, so ``evolve`` can select its region sizes/densities, and a
 designed region can replace any of them.
 """
@@ -27,6 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
@@ -321,11 +323,33 @@ class Brain:
         self._moment: tuple[np.ndarray, np.ndarray] | None = None
         self._prepared: np.ndarray | None = None  # the observations ``learn`` settled
         self.last_learning: dict[str, float] = {}
+        self._last_settlement: Mapping[str, Any] | None = None
 
     @property
     def brain(self) -> NeuralGraph:
         """The current learned dynamics; learning can replace this NeuralGraph instance."""
         return self.learner.brain
+
+    @property
+    def last_settlement(self) -> Mapping[str, Any] | None:
+        """Immutable diagnostics for the latest completed free-answer solve, including refusal.
+
+        ``operation`` is ``act`` or ``predict``; ``step`` uses ``act``, and
+        ``accuracy``/``fit`` scores expose their last ``predict`` batch.
+        ``qualified`` covers the whole batch; ``row_qualified`` and ``residual``
+        are tuples in observation order. ``steps`` counts all free-solve sweeps,
+        including damping, within ``budget``. ``residual_checks`` counts extra
+        equation transports; ``stagnation_checks`` counts complete-state
+        comparisons. ``damping_halvings`` reports the final numerical halving.
+
+        The scope is ``free_answer``: reward eligibility, feedback, teaching,
+        imagination and memory work are excluded. These counts are neither
+        total computation nor energy. Use ``record_settlements`` to inspect
+        actual trajectories, including the separate finite eligibility phases.
+        Invalid calls before a solve retain the previous report. Construction,
+        ``reset`` and ``load`` start with None; diagnostics are not checkpointed.
+        """
+        return self._last_settlement
 
     # -- construction
 
@@ -609,13 +633,31 @@ class Brain:
             damping_halvings=1,
         )
 
-    def _qualified(self, drive: np.ndarray, state: BrainState | None = None) -> BrainState:
+    def _qualified(
+        self, drive: np.ndarray, state: BrainState | None = None, *, operation: str = "answer"
+    ) -> BrainState:
         """Check the complete current graph before publishing an answer."""
         cfg = self.learner.config
         if cfg.tolerance is None:
             raise ValueError("Brain answers require a finite residual tolerance")
         phase = self._equilibrate(drive, state, budget=cfg.free_steps, tolerance=cfg.tolerance)
-        if not np.all(phase.qualified):
+        rows = tuple(bool(value) for value in phase.qualified)
+        residual = tuple(float(value) for value in phase.residual)
+        self._last_settlement = MappingProxyType({
+            "operation": operation,
+            "scope": "free_answer",
+            "qualified": all(rows),
+            "row_qualified": rows,
+            "residual": residual,
+            "max_residual": max(residual),
+            "steps": int(phase.steps),
+            "budget": int(cfg.free_steps),
+            "tolerance": float(phase.tolerance),
+            "residual_checks": int(phase.residual_checks),
+            "damping_halvings": int(phase.damping_halvings),
+            "stagnation_checks": int(phase.stagnation_checks),
+        })
+        if not all(rows):
             raise RuntimeError(
                 f"brain did not settle within {cfg.free_steps} steps: "
                 f"residual={float(np.max(phase.residual)):.6g}, tolerance={cfg.tolerance:g}; "
@@ -625,7 +667,7 @@ class Brain:
 
     def predict(self, observations: Any) -> np.ndarray:
         """Qualified independent observations, without reading or changing live memory."""
-        state = self._qualified(self.stimulus(observations, memory=False))
+        state = self._qualified(self.stimulus(observations, memory=False), operation="predict")
         return np.asarray(np.argmax(state.activation[:, self.motor_index], axis=1))
 
     def accuracy(self, observations: Any, labels: Any) -> float:
@@ -797,7 +839,7 @@ class Brain:
         if current is not None and len(np.atleast_2d(current.v)) != len(x):
             raise ValueError("action batch must match the live streams; reset for new streams")
         drive = self.stimulus(x)
-        free = self._qualified(drive, current)
+        free = self._qualified(drive, current, operation="act")
         self.basal_ganglia._free = free
         self.basal_ganglia._free_brain = self.brain
         self.basal_ganglia._drive = drive.copy()
@@ -886,6 +928,7 @@ class Brain:
         self._moment = None
         self._prepared = None
         self.last_learning = {}
+        self._last_settlement = None
 
     def parameters(self) -> int:
         """Actor/critic and consolidated weights; per-stream transient storage is additional."""

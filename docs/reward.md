@@ -42,8 +42,9 @@ explicit choices:
   not predict mean discounted return in reward units.
 - `critic_signal="td"` uses the raw prediction error for the critic, independently
   of actor modulation. Use this when a calibrated return prediction is required.
-  It can require retuning the critic rate and reward scale. The default is
-  `"modulated"`.
+  It can require retuning the critic rate and reward scale. The default
+  `critic_signal="auto"` selects `"td"` when dopamine centering is enabled,
+  otherwise `"modulated"`.
 
 The critic's step can be divided by its trace's energy (`critic_normalize`). Reports
 include the absolute raw `td_error`, the absolute modulated `delta`, and signed
@@ -53,6 +54,26 @@ the last observation for a truncated row.
 The adaptive local step uses `momentum` and `normalize` to keep a running mean and RMS
 of each synapse's own steps, with corrections for its short history. Each synapse reads its
 own optimizer state; this does not guarantee stable learning for every task or setting.
+
+## Centered dopamine and selective activity
+
+With `ActorCriticConfig.dopamine_center > 0`, the actor maintains per-stream
+running error statistics. `dopamine_floor` sets a band around the running
+center in which its modulation is zero; `dopamine_floor` alone has no effect
+when centering is disabled. This can reduce actor updates for familiar outcomes.
+It is not an external correctness test or a universal failure gate. Existing
+momentum can still move parameters; the default centered critic uses raw TD
+error, and eligibility phases and associative writes still run. Zero modulation
+does not mean zero computation. Choose these settings against measured behavior
+and work; they do not change the obligation to supply each actual outcome once.
+
+[Life](api.md#life-cadencelife) provides a different opt-in mechanism: a governor
+selects habit, imagination or learning for a `BeliefPatch`/`Steered` composition
+using recorded prior surprise. The application supplies the cheap habit.
+This is a separate sequential composition, not a governor automatically wired
+into `Brain.compose` or a joint neural-equilibrium certificate.
+
+## A custom reward learner
 
 For custom wiring, build an actor on a declared output population:
 

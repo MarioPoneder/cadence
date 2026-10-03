@@ -7,7 +7,7 @@
   </defs>
   <rect x="0" y="0" width="900" height="440" rx="18" fill="url(#panel)"/>
   <text x="32" y="40" fill="#e8ecf2" font-size="20" font-weight="700">How it learns: equilibrium, tilt, equilibrium, contrast</text>
-  <text x="32" y="62" fill="#9fb3c8" font-size="13">the net rests in a minimum of its energy; a nudge on the outputs tilts it both ways; every synapse reads where its two ends came to rest</text>
+  <text x="32" y="62" fill="#9fb3c8" font-size="13">idealized stable energy branch: symmetric weights, fixed inputs, no adaptation, converged phases</text>
 
   <!-- panel 1: free settlement -->
   <g transform="translate(32,90)">
@@ -67,5 +67,5 @@
     <path d="M 736 342 C 736 372, 163 372, 163 344"/>
   </g>
   <text x="450" y="378" fill="#9fb3c8" font-size="12" text-anchor="middle">next batch: the same settlement that answers is the one that learns</text>
-  <text x="32" y="418" fill="#9fb3c8" font-size="12.5">No backward pass, nothing stored, nothing transposed. The goal enters through the nudge and nowhere else.</text>
+  <text x="32" y="418" fill="#9fb3c8" font-size="12.5">Local contrasts retain phase states and optimizer history; no backward differentiation through settling.</text>
 </svg>

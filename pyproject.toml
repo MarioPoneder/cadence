@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cadence-net"
-version = "0.71.1"
+version = "0.71.2"
 description = "Research toward general intelligence through local repair, equilibrium detuning and self-reflection."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -34,7 +34,7 @@ dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.5", "mypy>=1.10", "torch>=2.2", "n
 [project.urls]
 Homepage = "https://github.com/muellerberndt/cadence"
 Paper = "https://philpapers.org/rec/MUECAP-2"
-Documentation = "https://github.com/muellerberndt/cadence/blob/main/docs/index.md"
+Documentation = "https://github.com/muellerberndt/cadence/blob/main/docs/README.md"
 Examples = "https://github.com/muellerberndt/cadence-demos"
 Issues = "https://github.com/muellerberndt/cadence/issues"
 
@@ -42,7 +42,7 @@ Issues = "https://github.com/muellerberndt/cadence/issues"
 packages = ["src/cadence"]
 
 [tool.hatch.build.targets.sdist]
-only-include = ["src", "tests", "docs", "examples", "benchmarks", "README.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE", "LICENSES", "pyproject.toml"]
+only-include = ["src", "tests", "docs", "examples", "benchmarks", "README.md", "AGENTS.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE", "LICENSES", "pyproject.toml"]
 exclude = ["**/.lake/**", "*.olean", "*.ilean", "*.olean.private", "*.olean.server"]
 
 [tool.pytest.ini_options]

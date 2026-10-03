@@ -6,6 +6,13 @@ patch exposes local state, ports, records and readback; learning repairs its
 relationships. Scaling this structure is an empirical requirement, not a
 consequence of naming it a brain or reaching an equilibrium.
 
+The goal is a continuing equilibrium brain that is more capable, more scalable
+and more efficient than a transformer at matched information, task and declared
+resources. Test the [same acquired brain](world-model.md) through bootstrap,
+routine use, disturbance, repair, retained skills and saved continuation.
+Independent-row classifiers remain component controls. Low routine work is a
+target to measure alongside task quality and recovery, not a default guarantee.
+
 ## Separate the causes of improvement
 
 | Variable | Controlled comparison |
@@ -29,12 +36,18 @@ or expanded action vocabulary is a changed interface, not data scaling.
 
 ## Count the full work
 
-Report attempted and committed updates, phase failures, parameter replays,
-block-chain attempts, solver tolerances, persistent state and transient work.
+Charge sensing, validation, memory reads and writes, free and teaching phases,
+reward eligibility, replay, imagination and refused attempts. Report attempted
+and committed updates, phase failures, block-chain attempts, solver tolerances,
+persistent state and transient work. Separate bootstrap, routine and recovery
+costs while also reporting their total over the declared lifetime.
 Keep every scheduled seed in the report, including unattempted or time-capped
 cells. Compare equal checkpoints; never substitute an early result for a
 missing late checkpoint or compare unmatched averages as a paired effect.
 Wall-clock limits depend on host contention, so include operation counts too.
+A low equation residual measures internal consistency; neither that residual
+nor model energy measures joules. Hardware energy claims require their own
+measurement and must include the work of the complete compared systems.
 
 The NumPy temporal implementation has dense hidden-width messages. For batch
 size N, path length T and hidden width H, one detuned chain factorization costs
