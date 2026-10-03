@@ -5,11 +5,9 @@ and optional observers. [NeuralGraph](#neuralgraph-cadence) is the lower-level
 graph API. The [quickstart](quickstart.md) runs the main interaction loop;
 sections below describe specialist operations. Pass optional arguments by keyword.
 
-This reference describes the local development checkout, including
-[unreleased APIs](../CHANGELOG.md#unreleased). Use the
-[source installation](../README.md#development-checkout) for those additions.
-The [0.70.0 reference](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/api.md)
-matches the published `cadence-net==0.70.0` package.
+This reference describes the published `cadence-net==0.71.0` package.
+Use the [quickstart](quickstart.md) to install it, or the
+[source installation](../README.md#development-checkout) to work from a checkout.
 
 The temporal patch: [TemporalPatchNet](#temporalpatchnet-cadencetemporal),
 [TemporalPlan](#temporalplan-cadenceplanning), [TemporalMemory](#temporalmemory-cadencetemporal_memory),
@@ -694,7 +692,7 @@ that recursive benefit or automatic reflective behavior has been learned.
   default. Constructor `options` can select the documented learning, reward, memory
   and backend settings. This state feedback is distinct from exact error readback
   in `cadence.experimental.equilibrium`.
-  The unreleased `lateral` option is the finite signed weight between each pair
+  The `lateral` option is the finite signed weight between each pair
   of distinct motor neurons; zero removes those connections while preserving
   reciprocal association/motor feedback. The default remains -0.5. More actions
   add more incoming lateral connections, so compare their observed operating
@@ -923,7 +921,7 @@ that recursive benefit or automatic reflective behavior has been learned.
     parameters, optimizer history and update counts remain unchanged.
   - `calibrate(drive, *, level=0.5, grid=None) -> float`: choose the tested global
     synaptic gain whose mean free output activity is closest to `level`. Inputs
-    must be a finite, nonempty drive batch. The unreleased default grid tries the
+    must be a finite, nonempty drive batch. The default grid tries the
     current gain first, then its multiples `2**k` for `k=-8, …, 8` excluding zero,
     retaining representable positive candidates. Explicit grids retain their
     supplied values and order; all entries must be positive and finite.
@@ -947,7 +945,7 @@ that recursive benefit or automatic reflective behavior has been learned.
   range can leave an endpoint bias, and coupled populations can miss their targets.
   The original graph is unchanged; inspect the final means before installing
   the returned array through `with_parameters(bias=...)`.
-  The unreleased `qualified=True` option requires every midpoint and the final
+  The `qualified=True` option requires every midpoint and the final
   candidate to meet the full original equations for every row, using each solve's
   `steps` budget, `tolerance` and bounded `damping`. Refusal raises `RuntimeError`
   without changing the original graph. This option does not inherit

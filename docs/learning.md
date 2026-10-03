@@ -184,9 +184,7 @@ again. `learning_neuron_model` provides responsive defaults, but cannot guarante
 uniqueness, or accurate credit for every connectome. The leak keeps a small response
 below rest; it does not remove saturation or make the piecewise activation globally smooth.
 
-Qualified teaching is unreleased and requires the
-[development checkout](../README.md#development-checkout).
-Select `qualified=True` to require it. The same local
+Select `qualified=True` to require qualified teaching. The same local
 contrast then runs only after the free and required nudged phases meet the full
 potential and adaptation residual. `damping` permits a bounded number of
 integration-step halvings within each phase's existing sweep budget; every
@@ -305,13 +303,11 @@ heuristic: the sampled gains may never reach that level, and reaching it does no
 establish useful credit, acquisition or retention. Use training or separate
 calibration inputs, then freeze the chosen gain before final evaluation.
 
-In the [development checkout](../README.md#development-checkout), the default
-grid tries the current gain first, followed by its multiples `2**k` for
+The default grid tries the current gain first, followed by its multiples `2**k` for
 `k=-8, …, 8` excluding zero. It spans from `gain / 256` to `gain * 256`
 where those candidates are representable; exact ties keep the current gain.
 An explicit positive, finite `grid` keeps its supplied values and order without
-additional candidates. This wider default and the diagnostics below are
-[unreleased](../CHANGELOG.md#unreleased).
+additional candidates.
 
 Every candidate starts from rest with the same input batch and `free_steps`
 budget. With `qualified=True`, calibration uses `tolerance` and bounded
@@ -337,7 +333,7 @@ Neither this helper nor the finite `preflight` diagnostics inherit a learner's
 qualification setting. An empty preflight warning list is not an equilibrium
 certificate.
 
-The unreleased `calibrate_bias(..., qualified=True, damping=3, report=...)`
+`calibrate_bias(..., qualified=True, damping=3, report=...)`
 requires each midpoint and the final candidate to meet the original equations
 for every input row. Every solve has its own `steps` budget; the report retains
 all attempted work, final observed means and target gaps. A refused solve
@@ -393,8 +389,8 @@ its own configuration for a continuing brain:
 
 Passing `learning=LearnerConfig(...)` uses that configuration; it does not merge
 its defaults with the implicit `Brain.compose` settings. Both contexts use
-finite teaching by default. The unreleased `qualified` and `damping` options
-below require the development checkout. Rates and temperature can be selected
+finite teaching by default. The `qualified` and `damping` options below
+select full-equation teaching and its numerical strategy. Rates and temperature can be selected
 on development data and frozen before confirmation; recommendations are not
 constructor defaults. `eta_bias` stays independent when `eta` changes.
 

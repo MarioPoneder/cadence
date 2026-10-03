@@ -9,7 +9,7 @@ in that same graph.
 Python 3.11+ and NumPy are required:
 
 ```bash
-python -m pip install cadence-net==0.70.0
+python -m pip install cadence-net==0.71.0
 ```
 
 ## Observe, act and learn

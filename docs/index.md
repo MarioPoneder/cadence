@@ -21,19 +21,10 @@ mechanisms, and the [README](../README.md#why-cadence) lists what this gives an
 embodied system.
 
 Python 3.11+ and NumPy are required.
-These guides describe the development checkout, including
-[unreleased changes](../CHANGELOG.md#unreleased). Install that local source from
-its repository root to use every API shown here:
+These guides describe Cadence 0.71.0. Install the published package:
 
 ```sh
-python -m pip install -e .
-```
-
-For the published package and its
-[released guides](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md):
-
-```sh
-python -m pip install cadence-net==0.70.0
+python -m pip install cadence-net==0.71.0
 ```
 
 ## Start here

@@ -1,8 +1,6 @@
 # Numerical and learning contracts
 
-This page describes the [development checkout](../README.md#development-checkout),
-including [unreleased changes](../CHANGELOG.md#unreleased) to qualified teaching,
-fit scores, work reports and feedback rollback.
+This page describes Cadence 0.71.0 numerical, learning and feedback contracts.
 
 Cadence exposes several implementations of state, repair and learning. Choose
 an API by its equations, stopping rule and update contract. Sharing the word

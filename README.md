@@ -4,7 +4,7 @@
 
 # Cadence
 
-[Website](https://floatingpragma.io/cadence/) · [Development documentation](docs/index.md) · [Application demos](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/)
+[Website](https://floatingpragma.io/cadence/) · [Documentation](docs/index.md) · [Application demos](https://github.com/muellerberndt/cadence-demos) · [Paper](https://philpapers.org/rec/MUECAP-2) · [PyPI](https://pypi.org/project/cadence-net/)
 
 [![CI](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/muellerberndt/cadence/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/muellerberndt/cadence/blob/main/LICENSE)
@@ -27,10 +27,9 @@ A settled answer can still be wrong about the world, so capability is measured
 through free behavior.
 Cadence is alpha research software, not a claim of human-level intelligence.
 
-These pages describe the local development checkout. Features listed under
-[Unreleased](CHANGELOG.md#unreleased), including opt-in qualified teaching and
-its work reports, require the [source installation](#development-checkout).
-The basic quickstart below also works with the published `0.70.0` package.
+These pages describe Cadence 0.71.0, including opt-in qualified teaching,
+calibration and work reports. Install the published package for the
+examples below, or use the [source installation](#development-checkout).
 
 ## How a Cadence brain differs from a feed-forward network
 
@@ -111,10 +110,10 @@ Python 3.11+ and NumPy are required.
 Install the published release for this basic example:
 
 ```sh
-python -m pip install cadence-net==0.70.0
+python -m pip install cadence-net==0.71.0
 ```
 
-Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.70.0/docs/index.md)
+Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.71.0/docs/index.md)
 describes the APIs included in that package.
 
 ```python
@@ -138,7 +137,7 @@ row attached to the same life. There is no training/inference mode switch.
 [Continuous interaction](https://github.com/muellerberndt/cadence/blob/main/docs/continuous.md)
 covers teaching, resets and saved continuation.
 The [continuing brain example](examples/continuing_brain.py) combines actual
-rewards, current teacher labels and a checkpoint awaiting feedback on `0.70.0`.
+rewards, current teacher labels and a checkpoint awaiting feedback on `0.71.0`.
 
 The constructor includes a working trace and fast/persistent associative memory.
 The trace carries recent activity; learned graph parameters and consolidated
@@ -160,15 +159,13 @@ For learned environmental consequences and action planning, use the separate
 
 <a id="development-checkout"></a>
 
-For unreleased qualified teaching and bias calibration, configurable graph
-damping and motor `lateral` wiring, detailed work reports and reward eligibility
-budgets, install from this development checkout's repository root:
+To work from source, install from the library repository root:
 
 ```sh
 python -m pip install -e .
 ```
 
-This uses the local source; `cadence-net==0.70.0` does not include those additions.
+This installs the local source as an editable package.
 
 ## Add optional System 2
 

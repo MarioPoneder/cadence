@@ -1,4 +1,4 @@
-"""A small continuing System 1 brain, using the published 0.70 API.
+"""A small continuing System 1 brain, using the published Cadence API.
 
 Run after installing cadence-net: python examples/continuing_brain.py
 Or from this checkout: PYTHONPATH=src python examples/continuing_brain.py
@@ -7,7 +7,7 @@ Two sensory cues have observed action labels. The independent environment
 rewards the action actually executed; it never rewards an imagined answer.
 Brain.compose supplies local state, reciprocal regions, readback, working
 trace and consolidating memory. Optional observers can extend the same graph.
-Teaching uses the finite rule; this example does not require unreleased APIs.
+Teaching uses the default finite rule; qualified teaching is an explicit choice.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 # Advanced population experiments
 
-These examples run on the `0.70.0` checkout with Python 3.11 or later. First
+These examples run on the `0.71.0` checkout with Python 3.11 or later. First
 acquire a small relation with two coupled populations, then use a learned body
 model to choose actions. Neither needs an optional dependency. The
 [quickstart](../../docs/equilibrium/QUICKSTART.md) covers installation;

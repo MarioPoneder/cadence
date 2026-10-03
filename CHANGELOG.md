@@ -2,39 +2,65 @@
 
 ## Unreleased
 
-- Add opt-in qualified graph learning. Free and nudged phases must meet the
-  full equation tolerance before a contrast changes parameters; refused lessons
-  preserve parameters and optimizer history and report attempted work.
-- Allow bounded numerical damping across several integration steps, checking
-  the original equations and counting every sweep and residual check. The
-  finite teaching configuration remains available as the comparison.
-- Make gain calibration honor qualified learning: reject unqualified candidates
-  and preserve the graph and optimizer if none pass. Search a bounded grid
-  around the current gain by default, retain explicit grids exactly, and expose
-  all candidate solve work through `Learner.last_calibration`.
-- Expose motor lateral wiring through `Brain.compose(lateral=...)`, retaining
-  the default per-pair weight of -0.5. Add opt-in full-equation qualification
-  and work reports to `calibrate_bias`, including the final candidate's observed
-  means and target gaps. Calibration remains an operating-point heuristic.
-- Detect stalled free solves so bounded damping can try a smaller numerical
-  step sooner, while every answer still meets the original full equations.
-- Keep reward eligibility duration explicit through
-  `ActorCriticConfig.eligibility_steps`; the Brain default stays at up to 12 finite
-  nudged steps independently of supervised teaching budgets.
-- Restore memories and pending feedback when reward bootstrap qualification
-  fails, allowing the actual outcome to be retried once.
-- Expose supervised phase and presentation costs through `Brain.last_learning`
-  under `demonstration_` keys, including refused teaching attempts.
-- Score `Brain.fit` epochs through qualified public predictions; a refused
-  score preserves the teaching updates already accepted in that epoch.
-- Clarify finite and qualified teaching, memory-free graph predictions,
-  memory-aware actions and separate retention tests for traces, graph
-  plasticity and consolidated associations.
-- Add a runnable `Brain.compose` example with actual feedback, demonstrations,
-  free recall and saved pending-feedback continuation. Restore the recorded
-  0.61.0 release and 0.62.0 development history.
-- Distinguish released and development APIs, standalone and composed defaults,
-  device learning paths, current application demos and archived examples.
+## 0.71.0 — 2026-10-03
+
+- Add opt-in qualified graph learning through `LearnerConfig.qualified`. The
+  free, positive and required negative teaching phases must satisfy the original
+  full equations before one local update. `LearningPhaseError` retains phase
+  states and attempted work; refusal preserves parameters and optimizer history.
+- Extend `NeuralGraph.equilibrate` with bounded numerical step halvings. Repeated
+  complete-state checkpoints can move an unqualified attempt to a smaller step
+  sooner, while every accepted state still meets the original residual and all
+  attempts share the declared sweep budget.
+- Report all teaching phases, original residuals, residual transports,
+  stagnation comparisons and attempted/accepted row presentations. Preserve
+  accepted and refused demonstration costs in `Brain.last_learning`.
+- Make gain calibration honor qualified learning and reject invalid states.
+  Its default grid spans the current gain's representable powers-of-two multiples
+  from 1/256 to 256, trying the current gain first. Explicit grids retain their
+  supplied order. `Learner.last_calibration` records every attempted candidate;
+  an all-refused search preserves the graph and optimizer.
+- Add opt-in qualification and reports to `calibrate_bias`, checking every
+  midpoint and the final candidate before returning biases. Report observed means,
+  target gaps and all solve work. Finite calibration remains available; a
+  qualified operating point does not guarantee a requested target or acquisition.
+- Expose motor competition through `Brain.compose(lateral=...)`, retaining the
+  default per-pair weight of -0.5. Zero removes those lateral connections while
+  preserving reciprocal processing/motor feedback.
+- Separate reward eligibility duration with `ActorCriticConfig.eligibility_steps`.
+  The Brain default stays at 12 finite nudged steps independently of supervised
+  teaching budgets; standalone `None` retains learner-budget inheritance.
+- Restore associative memories, separator state and terminal working traces when
+  reward bootstrap qualification fails, preserving the actual outcome for retry.
+  Accepted real feedback remains learned if a subsequent lesson or action refuses.
+- Score `Brain.fit` epochs through qualified, memory-free public predictions.
+  A refused score preserves lessons already accepted in that epoch.
+- Add a runnable `Brain.compose` example and NumPy-only CI coverage for actual
+  feedback, demonstrations, free recall and saved pending-feedback continuation.
+- Add repository acquisition and retention instruments with source-frozen
+  protocols, independent residual/contrast checks, charged rehearsal, preserved
+  refusal/case censuses and saved continuation. Separate graph acquisition,
+  working traces and consolidated associative storage.
+- Clarify conditional gradient assumptions, independent learning-rate
+  hyperparameters, standalone versus composed defaults, calibration limits and
+  device execution. The adaptive `ActorCritic` optimizer uses host arrays;
+  supported blocked PyTorch `Learner` updates remain on the device. Document
+  the independent `eta_bias=0.02` and `temperature=0.2` defaults accurately.
+- Add numerical and behavioral regressions for phase refusal, bounded damping,
+  calibration admission, motor wiring, memory rollback and saved continuation
+  across supported backends. Gradient checks retain their symmetry, smooth-branch,
+  nudge-limit and loss-scaling hypotheses.
+- Distinguish current application demos from archived research examples. Restore
+  the recorded 0.61.0 release and 0.62.0 development history without inventing
+  releases for unpublished version numbers.
+- Update consumer guidance for explicit qualified protocols, calibration and
+  refused-lesson retry. Correct Atari settings and pooled processing-time labels;
+  retain historical finite-probe measurements and their source identity.
+
+Finite supervised teaching remains the default. System 1 memory, plasticity,
+private imagination and action remain available; optional System 2 continues
+to join the same neural graph. Numerical qualification alone does not establish
+general acquisition, lifelong retention or an efficiency advantage.
 
 ## 0.70.0 — 2026-10-02
 

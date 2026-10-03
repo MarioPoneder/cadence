@@ -47,7 +47,7 @@ use a separate instance. Its `predict` and `accuracy` ignore both the working
 trace and associative memory; greedy `act` reads both and advances the trace.
 Lower-level `act`/`learn` separates action and feedback timing.
 The [continuing brain example](../examples/continuing_brain.py) runs this loop
-and checks a saved pending action's continuation with the published `0.70.0` API.
+and checks a saved pending action's continuation with the published `0.71.0` API.
 
 ## Qualification and refusal
 
@@ -65,12 +65,12 @@ do not submit that outcome twice. `tolerance=None` cannot disable action
 qualification. See [contracts](contracts.md) for the separate finite
 free/nudged learning and eligibility rules.
 
-The following teaching diagnostics, eligibility option and feedback rollback
-describe the [unreleased development checkout](../README.md#development-checkout).
+Teaching diagnostics, eligibility duration and feedback rollback have
+separate contracts:
 `LearnerConfig(qualified=True, ...)` requires full-equation qualification
 of every supervised free and teaching phase before changing parameters.
 `LearningPhaseError` reports an attempted lesson that could not qualify.
-Qualified development solves use configurable damping; stagnation detection can
+Qualified solves use configurable damping; stagnation detection can
 admit a smaller numerical step sooner within the same budget and original
 equation check. The default finite configuration keeps its half-step fallback.
 Accepted and refused teaching diagnostics appear in `brain.last_learning` with

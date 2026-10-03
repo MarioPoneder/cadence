@@ -42,13 +42,12 @@ readback under its own equations.
 
 ## Operating point and motor competition
 
-The development checkout exposes `Brain.compose(..., lateral=-0.5)`. This is
+`Brain.compose(..., lateral=-0.5)` configures motor competition. This is
 the signed weight between each distinct pair of motor neurons; zero removes
 those lateral connections while keeping reciprocal processing/motor feedback.
 The default stays at -0.5. A larger action vocabulary adds more inhibitory
 inputs per motor neuron, so inspect free activity and its full residual on the
-actual task before selecting a different value. This option is
-[unreleased](../CHANGELOG.md#unreleased).
+actual task before selecting a different value.
 
 Global gain changes synaptic drive throughout the graph; population bias
 changes selected neurons' operating points. Integration steps and numerical
@@ -80,7 +79,7 @@ labels the current observation instead. Keep batch-row identities fixed until
 `reset()`. [Continuous interaction](continuous.md) covers episodes, teaching,
 private imagination and retries. The
 [continuing brain example](../examples/continuing_brain.py) shows the complete
-reward, teacher and checkpoint loop using the published `0.70.0` API.
+reward, teacher and checkpoint loop using the published `0.71.0` API.
 Independent [Records](memory.md#records) can
 store declared observation/action/outcome fields; their reads and writes have
 an explicit record rule rather than a neural-settlement certificate.
@@ -92,8 +91,7 @@ equations before returning answers, including observer state. The defaults allow
 1024 free steps at residual tolerance `3e-3`. A difficult free solve may use
 half-step numerical damping within that same total budget; its final residual
 is checked against the original model. Default teaching uses finite nudged phases.
-The following qualified-teaching option is unreleased and requires
-the [development checkout](../README.md#development-checkout):
+Select qualified teaching explicitly:
 
 ```python
 from cadence import LearnerConfig
@@ -114,7 +112,7 @@ equations before a supervised update. `LearningPhaseError` retains the attempted
 phases and their cost report; a refusal preserves parameters and optimizer
 history. `last_learning` records accepted and refused teaching diagnostics under
 `demonstration_` keys, including attempted presentations and row work.
-These qualified development solves use configurable damping: a stalled attempt
+These qualified solves use configurable damping: a stalled attempt
 can move to a smaller numerical step sooner, within the same total budget and
 without relaxing the original equation check.
 Qualified teaching does not change the reward eligibility contract: the

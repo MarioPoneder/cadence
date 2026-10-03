@@ -6,7 +6,7 @@ number can be wrong.
 
 ## Install and run
 
-**`pip install cadence-net==0.70.0` and then `import cadence`.** The distribution is `cadence-net`;
+**`pip install cadence-net==0.71.0` and then `import cadence`.** The distribution is `cadence-net`;
 the import is `cadence`. Python 3.11 or newer and NumPy are the only requirements.
 
 **Do I need a GPU?** No. Everything runs on NumPy float64. `[fast]` adds Numba and SciPy
@@ -39,7 +39,7 @@ an observed zero must differ from no observation ([temporal learning](temporal.m
 **Accuracy stays at chance.** Inspect free output activity and its equation residual.
 `learner.calibrate(training_drive)` can choose a more responsive global gain,
 but cannot guarantee that its sampled candidates reach the target activity.
-The [unreleased calibration report](learning.md#calibrating-the-operating-point)
+The [calibration report](learning.md#calibrating-the-operating-point)
 exposes candidate residuals and refusals, and qualified learning excludes
 unqualified candidates. Check that a nudge on the outputs can reach the hidden
 neurons: the projection into the output region must be reciprocal
