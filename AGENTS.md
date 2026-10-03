@@ -100,6 +100,14 @@ behavior it serves. When changing selected learner or actor settings, use
 its own defaults and replaces more than the fields named in the call. Consult
 the defaults table in [the composition guide](docs/brain.md).
 
+`resting_bias` is an optional initialization setting, not evidence of improved
+acquisition or retention. Keep its default and the working-trace defaults as
+controls. Select alternatives with matched tasks and continuation tests;
+responsiveness under random drives or one tiny teaching assay cannot establish
+generally better defaults. The [recall instrument](benchmarks/recall/README.md)
+and [acquisition microscope](benchmarks/acquisition/README.md) have distinct
+protocols. Preserve their measured settings, failed attempts and source identity.
+
 `step` receives a current observation and the preceding executed action's actual
 outcome. `teacher` labels the current observation. Preserve stream identity,
 event order and pending feedback. `imagine` evaluates supplied observations

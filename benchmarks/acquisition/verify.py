@@ -56,6 +56,13 @@ def verify(folder, *, allow_source_drift=False):
         if sha256(case / "final.npz") != receipt["final_sha256"]:
             raise ValueError("final checkpoint hash differs")
         brain = Brain.load(case / "initial.npz")
+        if "effective_recipes" in protocol:
+            recipe = case.name.rsplit("-", 1)[0]
+            effective = protocol["effective_recipes"].get(recipe, {})
+            if effective.get("learning") != brain.learner.config.to_dict():
+                raise ValueError("effective recipe differs from initial learner configuration")
+        if receipt["learner_config"] != brain.learner.config.to_dict():
+            raise ValueError("receipt learner configuration differs from initial checkpoint")
         count = len(receipt["labels"])
         positions = {2: [0, 9], 4: [0, 9, 17, 22], 24: list(range(24))}[count]
         inputs, labels = full_inputs[positions], full_labels[positions]

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cadence-net"
-version = "0.71.2"
+version = "0.72.0"
 description = "Research toward general intelligence through local repair, equilibrium detuning and self-reflection."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -47,7 +47,7 @@ exclude = ["**/.lake/**", "*.olean", "*.ilean", "*.olean.private", "*.olean.serv
 
 [tool.pytest.ini_options]
 addopts = "-ra --import-mode=importlib"
-testpaths = ["tests"]
+testpaths = ["tests", "benchmarks/acquisition/test_protocol.py"]
 
 [tool.ruff]
 line-length = 100

@@ -149,7 +149,8 @@ def phase_file(path, phases):
     return sha256(path)
 
 
-def make_brain(recipe, seed, args):
+def recipe_configuration(recipe, args):
+    """Resolve effective genes before numerical work, including fixed overrides."""
     cfg = LearnerConfig(
         beta=0.1,
         eta=0.5,
@@ -178,26 +179,50 @@ def make_brain(recipe, seed, args):
         if getattr(args, "gene", "canonical") == "fixed-lateral-local-rms":
             cfg = replace(cfg, eta=0.005, normalize=0.99)
         if getattr(args, "gene", "canonical") in ("lateral0-local-rms", "lateral0-resting"):
-            # The candidate that acquired real speech on 0.71: no motor lateral inhibition,
-            # per-synapse RMS steps at the --rate; the nudged budget comes from --nudged-steps.
-            # "lateral0-resting" adds the resting-bias initialization gene (issue 106).
+            # Transfer the no-lateral/local-RMS choices from the keyword control;
+            # this school has different inputs, architecture, rates and data.
             cfg = replace(cfg, eta=args.rate, normalize=0.99, normalize_floor=1e-4)
     gene = getattr(args, "gene", "canonical") if recipe == "qualified" else "canonical"
-    lateral = 0.0 if gene in ("lateral0-local-rms", "lateral0-resting") else -0.5
-    options = {"resting_bias": 0.5} if gene == "lateral0-resting" else {}
+    return {
+        "gene": gene,
+        "learning": cfg.to_dict(),
+        "lateral": 0.0 if gene in ("lateral0-local-rms", "lateral0-resting") else -0.5,
+        "resting_bias": 0.5 if gene == "lateral0-resting" else 0.0,
+        "sensory_bias": 0.6 if gene == "fixed-lateral-local-rms" else 0.0,
+        "freeze_motor_lateral": gene == "fixed-lateral-local-rms",
+    }
+
+
+def make_brain(recipe, seed, args):
+    effective = recipe_configuration(recipe, args)
+    cfg = LearnerConfig(**effective["learning"])
+    options = {"resting_bias": effective["resting_bias"]} if effective["resting_bias"] else {}
     brain = Brain.compose(
         inputs=650, actions=36, modules=(32, 16), observers=(), seed=seed, learning=cfg,
-        lateral=lateral, **options,
+        lateral=effective["lateral"], **options,
     )
-    if recipe == "qualified" and getattr(args, "gene", "canonical") == "fixed-lateral-local-rms":
+    if effective["freeze_motor_lateral"]:
         graph = brain.brain
         bias = graph.bias.copy()
-        bias[brain.sensory_index] = 0.6
+        bias[brain.sensory_index] = effective["sensory_bias"]
         brain.learner.brain = graph.with_parameters(bias=bias)
         motor_pre = np.isin(graph.connectome.pre, brain.motor_index)
         motor_post = np.isin(graph.connectome.post, brain.motor_index)
         brain.learner.plastic_synapses = ~(motor_pre & motor_post)
     return brain
+
+
+def library_identity():
+    """The imported source version may differ from installed wheel metadata."""
+    try:
+        installed = importlib.metadata.version("cadence-net")
+    except importlib.metadata.PackageNotFoundError:
+        installed = None
+    return {
+        "cadence_version": cadence.__version__,
+        "installed_distribution_version": installed,
+        "cadence_module": str(Path(cadence.__file__).resolve()),
+    }
 
 
 def free_recall(brain, inputs, labels, *, folder=None, name="recall"):
@@ -509,7 +534,10 @@ def main():
     parser.add_argument("--nudged-steps", type=int, default=12)
     parser.add_argument("--damping", type=int, default=3)
     parser.add_argument("--nudge", choices=("cross_entropy", "quadratic"), default="cross_entropy")
-    parser.add_argument("--rate", type=float, default=0.5)
+    parser.add_argument(
+        "--rate", type=float, default=0.5,
+        help="qualified synaptic rate; fixed-lateral-local-rms always uses 0.005",
+    )
     parser.add_argument("--tolerance", type=float, default=0.003)
     parser.add_argument(
         "--gene",
@@ -557,18 +585,26 @@ def main():
         "harness_sha256": sha256(__file__),
         "extractor_sha256": sha256(Path(__file__).with_name("extract.py")),
         "library_sources": sources(),
-        "cadence_version": importlib.metadata.version("cadence-net"),
+        **library_identity(),
         "numpy_version": np.__version__,
         "python": platform.python_version(),
         "dtype": "float64 CPU",
         "recipes": list(recipes),
+        "effective_recipes": {recipe: recipe_configuration(recipe, args) for recipe in recipes},
         "seed": args.seed,
         "two_positions": [0, 9],
         "four_positions": [0, 9, 17, 22],
         "expansion_gate": (
             "perfect qualified free recall on two, then four; each stage has a fresh founder"
         ),
-        "school_gate": "at least18/24 with zero refusals",
+        "school_gate": (
+            "at least18/24 with zero recall refusals, positive accepted exposure and "
+            "improvement over the founder; no refused lesson or qualification violation"
+        ),
+        "refusal_policy": (
+            "A refused teaching phase applies no update, charges its attempted work, "
+            "and terminates the stage. No skip, retry or budget increase within this run."
+        ),
         "confirmation_rule": (
             "Independent TRAIN18/development19 are read once after the screen. "
             "Heldout14 is sealed; five fresh-seed confirmation remains a separate frozen campaign."
@@ -582,8 +618,9 @@ def main():
             "admission and saved-continuation replay charged; no calibration/search or cloud"
         ),
         "outcomes": (
-            "pass, screen_failed, prerequisite_failed, refused_learning, update_limit, "
-            "time_limit, output_limit, failed"
+            "screen_passed_confirmation_pending, screen_failed, prerequisite_failed, "
+            "perfect_recall, refused_learning, qualification_violation, update_limit, "
+            "time_limit, output_limit, time_or_output_limit, failed"
         ),
     }
     protocol["arguments"] = {

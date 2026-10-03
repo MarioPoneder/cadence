@@ -55,14 +55,21 @@ The default stays at -0.5. A larger action vocabulary adds more inhibitory
 inputs per motor neuron, so inspect free activity and its full residual on the
 actual task before selecting a different value.
 
-`Brain.compose(..., resting_bias=0.5)` starts every processing region (the
-modules, the association region and any observers) at that bias instead of
-zero; sensory, working-memory and motor populations keep zero. Under a
-sign-symmetric random projection about half of the zero-bias neurons sit at or
-below rest and carry little contrast; the resting bias puts them in their
-responsive range before the first lesson. It is a plastic bias like any other
-and learning moves it from there. The default remains zero, so the choice is a
-selectable gene with the zero-bias brain as its control.
+`Brain.compose(..., resting_bias=0.5)` initializes the modules, association region
+and any observers with that bias. Sensory, working-memory and motor biases start
+at zero. The value must be a finite nonnegative real scalar; booleans and arrays
+are rejected. The default remains zero. This is a selectable operating-point
+candidate: it can reduce silence under some random drives, but positive bias
+does not guarantee responsive activity, acquisition, retention or convergence.
+Compare those outcomes against the zero-bias control before selecting it.
+
+All these biases remain plastic. `brain.resting_bias` records the initialization
+choice; `brain.brain.bias` holds the current learned values. Checkpoints preserve
+both, and loading restores the learned vector without reapplying initialization.
+For custom connectomes, named populations outside the `sensory`, `visual`,
+`prefrontal` and `motor` families are eligible. A neuron in any excluded family
+keeps zero initial bias even if another population aliases it. Image builders
+therefore leave the entire visual region at zero, including its processing cells.
 
 Global gain changes synaptic drive throughout the graph; population bias
 changes selected neurons' operating points. Integration steps and numerical

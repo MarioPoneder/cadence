@@ -65,6 +65,34 @@ policy, not automatic suppression of all successful-outcome updates. See
 [centered dopamine and Life](reward.md#centered-dopamine-and-selective-activity)
 for the narrower selective mechanisms already available.
 
+## A supervised-only stream
+
+`step(teacher=...)` still issues a reward-eligible action. On the next `step`,
+omitting `reward` supplies zero on that transition; the actor and critic can
+update as well as the teacher. It does not mean "teach without reward learning,"
+and it need not preserve the effect of an earlier lesson.
+
+For a stream that has demonstrations but no reward protocol, start a separate
+continuing brain and use the lower-level learner with memory-bearing drives:
+
+```python
+supervised = Brain.compose(4, 2, modules=(16, 8), seed=7)
+supervised.act(observation, greedy=True)  # Read and advance context, without reward eligibility.
+_, lesson_work = supervised.learner.step(
+    supervised.stimulus(following), np.array([1])
+)
+answer = supervised.act(following, greedy=True)
+assert answer.shape == (1,)
+```
+
+The label belongs to `following`, whose drive includes the carried context.
+Keep the returned teaching report alongside `last_settlement` when counting
+work. Direct learner calls do not populate `Brain.last_learning`; they retain
+the learner's configured finite or qualified contract. Greedy actions advance
+the working trace without reward learning or associative outcome writes. Do
+not use a greedy action to discard an outstanding real outcome from an existing
+reward-driven life; finish that outcome first.
+
 ## Qualification and refusal
 
 Every `Brain` action and independent prediction must satisfy the full
