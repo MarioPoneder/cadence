@@ -56,6 +56,16 @@ and query old and new responses without teachers. Rehearsal can protect recall
 and must be counted as additional teaching or record writes. Finite storage and
 successful bounded recall do not establish general lifelong retention.
 
+Working-trace amplitude and decay are task-dependent settings. A stronger trace
+can interfere with acquiring a new relation as well as retain earlier context;
+neither a smaller amplitude nor a different decay is a generally validated fix.
+The [vanished-cue instrument](../benchmarks/recall/README.md) measures a continuing
+brain against checkpoint-matched trace interventions and an explicitly trained
+history comparator. Its software checks validate the instrument, not a measured
+recall horizon or a replacement for the composition defaults. For demonstrations
+without a reward protocol, use the
+[supervised-only stream](continuous.md#a-supervised-only-stream).
+
 ## One correction
 
 For a unit key `k`, value `v`, and matrix `M`:

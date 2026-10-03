@@ -2,7 +2,24 @@
 
 ## Unreleased
 
-## 0.71.2 — 2026-10-03
+## 0.72.0 — 2026-10-03
+
+- Add optional `resting_bias` to `Brain` and `Brain.compose`, with finite scalar
+  validation, protected sensory/visual, working-memory and motor boundaries,
+  and saved initialization metadata separate from learned biases. The default
+  remains zero; responsiveness is not an acquisition or retention guarantee.
+- Add the vanished-cue recall chamber (`benchmarks/recall/vanished_cue.py`, issue 84): a
+  continuing brain's free recall of a cue across blank or distracting delays, against
+  erased and shuffled trace controls and a separately trained history comparator.
+  Freeze paired episodes, fork complete probe checkpoints, charge attempted
+  teaching and action solves, and retain refusal and source records.
+- Add the `lateral0-local-rms` and `lateral0-resting` candidate genes to the
+  acquisition microscope, with explicit effective settings and unchanged
+  first-refusal stopping rules.
+- Correct acquisition evidence descriptions for effective rates, nudged budgets
+  and accepted versus attempted updates. Document supervised-only continuing
+  interaction separately from zero-reward transitions. Broader acquisition and
+  recall acceptance remains open; no memory or learning default is changed.
 
 - Expose immutable `Brain.last_settlement` diagnostics for successful and refused
   action/prediction solves: per-row residuals, qualification, sweeps, checks and

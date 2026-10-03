@@ -99,6 +99,58 @@ def test_candidate_arguments_cannot_silently_change_finite_baseline():
     )
 
 
+@pytest.mark.parametrize(
+    "gene", ["fixed-lateral-local-rms", "lateral0-local-rms", "lateral0-resting"]
+)
+def test_effective_genes_match_actual_wiring_bias_and_learning_without_changing_control(gene):
+    args = SimpleNamespace(
+        rate=0.02, free_steps=17, nudged_steps=19, nudge="cross_entropy", damping=2, gene=gene,
+    )
+    candidate = run.make_brain("qualified", 0, args)
+    effective = run.recipe_configuration("qualified", args)
+    assert candidate.learner.config.to_dict() == effective["learning"]
+    assert candidate.learner.config.normalize == 0.99
+    graph = candidate.brain
+    motor_edges = np.isin(graph.connectome.pre, candidate.motor_index) & np.isin(
+        graph.connectome.post, candidate.motor_index
+    )
+    if gene == "fixed-lateral-local-rms":
+        assert candidate.learner.config.eta == 0.005
+        assert candidate.learner.config.normalize_floor == 0.001
+        assert np.any(motor_edges) and not candidate.learner.plastic_synapses[motor_edges].any()
+        np.testing.assert_array_equal(graph.bias[candidate.sensory_index], 0.6)
+        # A different requested rate is explicitly not a different fixed-gene experiment.
+        args.rate = 0.05
+        assert run.recipe_configuration("qualified", args) == effective
+    else:
+        assert candidate.learner.config.eta == args.rate
+        assert candidate.learner.config.normalize_floor == 1e-4
+        assert not motor_edges.any()
+        np.testing.assert_array_equal(graph.bias[candidate.sensory_index], 0.0)
+    np.testing.assert_array_equal(graph.bias[candidate.motor_index], 0.0)
+    for name in ("module_0", "association"):
+        np.testing.assert_array_equal(
+            graph.bias[np.asarray(graph.connectome.populations[name])],
+            0.5 if gene == "lateral0-resting" else 0,
+        )
+    finite = run.make_brain("finite", 0, args)
+    control = run.make_brain("finite", 0, SimpleNamespace())
+    assert run.recipe_configuration("finite", args) == run.recipe_configuration(
+        "finite", SimpleNamespace()
+    )
+    np.testing.assert_array_equal(finite.brain.bias, control.brain.bias)
+    np.testing.assert_array_equal(finite.connectome.pre, control.connectome.pre)
+    np.testing.assert_array_equal(finite.connectome.post, control.connectome.post)
+
+
+def test_source_version_is_not_replaced_by_unrelated_installed_metadata(monkeypatch):
+    monkeypatch.setattr(run.importlib.metadata, "version", lambda package: "0.0.0-unrelated")
+    identity = run.library_identity()
+    assert identity["cadence_version"] == run.cadence.__version__
+    assert identity["installed_distribution_version"] == "0.0.0-unrelated"
+    assert identity["cadence_module"] == str(Path(run.cadence.__file__).resolve())
+
+
 def test_corrupted_source_receipt_refuses_extraction_before_writing(tmp_path):
     witness = tmp_path / "witness.json"
     verification = tmp_path / "verification.json"
@@ -123,7 +175,7 @@ def refused_artifact(tmp_path_factory):
             "--recipe",
             "qualified",
             "--updates",
-            "1",
+            "3",
             "--check-every",
             "1",
             "--free-steps",
@@ -148,6 +200,23 @@ def test_refused_artifact_replays_with_zero_accepted_exposure(refused_artifact):
     assert result["cases"][0]["refused"] == 1
 
 
+def test_refusal_is_terminal_and_work_is_charged_without_mutating_the_founder(refused_artifact):
+    protocol = json.loads((refused_artifact / "protocol.json").read_text())
+    receipt = json.loads((refused_artifact / "qualified-2/receipt.json").read_text())
+    assert protocol["arguments"]["updates"] == 3
+    assert "terminates the stage" in protocol["refusal_policy"]
+    assert protocol["effective_recipes"]["qualified"]["learning"] == receipt["learner_config"]
+    assert receipt["status"] == "refused_learning" and receipt["attempted_updates"] == 1
+    assert receipt["accepted_updates"] == receipt["accepted_row_exposures"] == 0
+    assert receipt["work"]["refused_learning_calls"] == 1
+    assert receipt["work"]["phase_row_sweeps"] > 0
+    with np.load(refused_artifact / "qualified-2/initial.npz", allow_pickle=False) as before:
+        with np.load(refused_artifact / "qualified-2/final.npz", allow_pickle=False) as after:
+            assert set(before.files) == set(after.files)
+            for name in before.files:
+                np.testing.assert_array_equal(before[name], after[name], err_msg=name)
+
+
 @pytest.mark.parametrize(
     "mutation,reason",
     [
@@ -160,6 +229,8 @@ def test_refused_artifact_replays_with_zero_accepted_exposure(refused_artifact):
         ("protocol_hash", "summary protocol hash"),
         ("work", "work accounting"),
         ("missing_work", "mandatory work field"),
+        ("effective_rate", "effective recipe differs"),
+        ("receipt_rate", "receipt learner configuration differs"),
     ],
 )
 def test_verifier_rejects_false_green_mutations(refused_artifact, tmp_path, mutation, reason):
@@ -185,6 +256,13 @@ def test_verifier_rejects_false_green_mutations(refused_artifact, tmp_path, muta
         summary["outcomes"][0]["stages"][0]["correct"] += 1
     elif mutation == "protocol_hash":
         summary["protocol_sha256"] = "false"
+    elif mutation == "effective_rate":
+        protocol = json.loads((folder / "protocol.json").read_text())
+        protocol["effective_recipes"]["qualified"]["learning"]["eta"] *= 0.5
+        extract.write_json(folder / "protocol.json", protocol)
+        summary["protocol_sha256"] = extract.sha256(folder / "protocol.json")
+    elif mutation == "receipt_rate":
+        receipt["learner_config"]["eta"] *= 0.5
     if mutation == "removed_case":
         shutil.rmtree(case)
     else:

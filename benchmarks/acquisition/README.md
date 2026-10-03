@@ -1,10 +1,13 @@
 # Acquisition and retention microscope
 
-This bounded CPU protocol teaches a System 1 brain actual sensory/action rows
-from the recorded no-damage Castlevania movie. The brain consists of bounded
-observer-like regions with local state, sensory/action ports, readback, records
-and plastic repair. Every issued answer requires the original full equations at
-residual tolerance `0.003`; a teaching target is never an answer clamp.
+This bounded CPU protocol tests graph acquisition on actual sensory/action rows
+from the recorded no-damage Castlevania movie. Its System 1 composition has
+bounded observer-like regions, local neural state, sensory/action indices,
+reciprocal constraints and local plastic repair; phase readbacks and checkpoints
+retain the evidence. These independent-row controls omit working and associative
+memory reads. They do not test a continuing world-model lifecycle. Every issued
+answer requires the original full equations at tolerance `0.003` or the explicitly
+selected stricter tolerance; a teaching target is never an answer clamp.
 
 From the library checkout:
 
@@ -26,11 +29,41 @@ float64, without calibration or an auxiliary classifier.
 
 The explicit candidate `--gene fixed-lateral-local-rms` starts sensory biases at
 `0.6`, freezes the existing motor-to-motor lateral synapses, and uses synaptic
-rate `0.005` with local RMS normalization `0.99`. Other synapses, every bias,
+rate `0.005` with local RMS normalization `0.99` and floor `0.001`.
+This gene overrides `--rate`: changing that argument does not create a rate
+comparison for this gene. Other synapses, every bias,
 reciprocal tying and the System 1 mechanisms remain present. This candidate does
 not change the default library. Use `--tolerance 1e-6 --free-steps 4096
 --nudged-steps 4096` to check it with the original `dt=1` model and bounded
 numerical damping.
+
+`--gene lateral0-local-rms` removes motor lateral inhibition
+(`Brain.compose(lateral=0.0)`), uses local RMS normalization `0.99` with floor
+`1e-4`, and takes its synaptic rate from `--rate`. It transfers those two choices
+from the Transcribe keyword control; this school has different inputs,
+architecture, rates and data. `--gene lateral0-resting` additionally initializes
+processing-region bias to `0.5`, with sensory, working-memory and motor biases
+still zero. Neither gene changes library defaults. The effective configuration
+of every recipe is frozen in `protocol.json`, alongside requested arguments.
+
+The [2026-10-03 source-era runs](https://github.com/muellerberndt/cadence/issues/110#issuecomment-5967884860)
+did not pass the 24-row screen. Their retained receipts distinguish these cases:
+
+| Gene | Effective synaptic rate | Nudged budget | Recorded outcome |
+| --- | --- | --- | --- |
+| `fixed-lateral-local-rms`, seed 0 | `0.005` | `512` | 15/24 qualified free recalls after 47 accepted updates; attempted update 48 refused its nudged phase at residual `0.00739573` and ended the stage. |
+| `fixed-lateral-local-rms`, seeds 0--2 | `0.005` | `128` | 6, 8 and 8 of 24 at the terminal refused teaching attempt. |
+| `lateral0-local-rms`, seed 0 | `0.02`, `0.05` | `512` | Four-row stage ended at 2/4 and 3/4 after the 128-update cap. |
+| `lateral0-resting`, seed 0 | `0.02`, `0.05` | `2048` | Four-row stage ended at 3/4 for both rates after the 128-update cap. |
+
+The fixed-gene runs named for requested rates `0.02` and `0.05` used the same
+effective `0.005` recipe. Their recall counts at attempts 8, 16, 24, 32, 40 and
+48 were 2, 5, 9, 10, 12 and 15; the final query followed the refused attempt,
+which applied no update. Zero free-recall refusals does not mean zero teaching
+refusals. Earlier `lateral0-local-rms` seed runs used a source-era fixed rate
+`0.003`; the current gene's rate follows `--rate`. Reproduce each historical
+result with its archived harness and source, not its directory name or the
+current gene name alone.
 
 `protocol.json` freezes arguments, fixture/runtime/source hashes, gates and
 resource model before numerical work. The microscope reproduces the finite
@@ -39,9 +72,18 @@ edge scatter, reads one/two further undamped steps, and checks contrast
 arithmetic with independent array products. It records the 24-row diagnostic
 without teaching it. Training starts with two selected relations, then four,
 then 24; each stage starts from a fresh identical founder. Expansion requires
-perfect qualified free recall on the preceding stage. The 24-row screen requires
-at least `18/24` correct and zero refusals. A screen is acquisition evidence on
-selection rows.
+perfect qualified free recall on the preceding stage. Each gate also requires
+accepted learning exposure and improvement over that stage's founder. The
+24-row screen requires at least `18/24` correct, zero free-recall refusals and
+no refused teaching attempt or qualification violation. A screen is acquisition
+evidence on selection rows.
+
+Refused teaching is terminal in this protocol. It applies no update, retains
+the failed phases and charges the work already attempted. Skipping or retrying
+would require a separately frozen schedule and comparison; an identical retry
+without any state or budget change is not new evidence. The existing CLI already
+allows up to `4096` sweeps per phase, declared before the run. Increasing a budget
+creates a new experiment; it does not revise the earlier 512-sweep result.
 
 Every attempted training phase has raw potential, activation and adaptation
 arrays, original-equation residuals, motor readback and work reports. Initial and
@@ -80,7 +122,10 @@ only the small panels, not the parent corpus. Provenance records the original
 selection and source boundary; new results retain their own source identity.
 
 Runs retain source bytes under `source/library/cadence`, plus the harness and
-fixture. Replay an artifact using its archived source:
+fixture. New protocols record the imported source's version and path separately
+from installed distribution metadata, which can name a different wheel when
+`PYTHONPATH` selects a checkout. Source hashes identify the executed code.
+Replay an artifact using its archived source:
 
 ```sh
 PYTHONPATH=/absolute/run/source/library .venv/bin/python \

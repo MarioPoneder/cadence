@@ -77,6 +77,20 @@ def _reward() -> ActorCriticConfig:
     return ActorCriticConfig(gamma=0.9, lam=0.8, eta=1.0, eta_critic=0.3, eligibility_steps=12)
 
 
+def _validate_resting_bias(value: Any) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value, (int, float, np.integer, np.floating)
+    ):
+        raise ValueError("resting_bias must be a finite nonnegative real scalar")
+    try:
+        bias = float(value)
+    except OverflowError as exc:
+        raise ValueError("resting_bias must be a finite nonnegative real scalar") from exc
+    if not np.isfinite(bias) or bias < 0:
+        raise ValueError("resting_bias must be a finite nonnegative real scalar")
+    return bias
+
+
 def _load_memory(metadata: Any, data: Mapping[str, Any], neurons: int) -> FastSynapses | None:
     """Validate and restore a detached memory before constructing the resumed composition."""
     prefix = "episodic/"
@@ -283,11 +297,13 @@ class Brain:
         working_memory_amplitude: float = 3.0,
         learning: LearnerConfig | None = None,
         reward: ActorCriticConfig | None = None,
+        resting_bias: float = 0.0,
         seed: int = 0,
         backend: Backend = "cpu",
         device: str | None = None,
     ) -> None:
         populations = connectome.populations
+        resting_bias = _validate_resting_bias(resting_bias)
         for name in ("association", "motor"):
             if name not in populations:
                 raise ValueError(f"a generic brain needs a population named {name!r}")
@@ -298,9 +314,24 @@ class Brain:
         self.sensory_index = np.asarray(populations[sensory], dtype=np.int64)
         self.motor_index = np.asarray(populations["motor"], dtype=np.int64)
         self.association_index = np.asarray(populations["association"], dtype=np.int64)
+        bias = None
+        if resting_bias:
+            # Select named processing populations; boundary exclusions take precedence
+            # over overlapping aliases in custom connectomes. This is only an initial
+            # operating-point candidate: learning may subsequently change every bias.
+            bias = np.zeros(connectome.n)
+            selected = np.zeros(connectome.n, dtype=bool)
+            excluded = np.zeros(connectome.n, dtype=bool)
+            for name, members in populations.items():
+                head = name.split("/", 1)[0]
+                boundary = head in ("sensory", "visual", "prefrontal", "motor")
+                target = excluded if boundary else selected
+                target[np.asarray(members, dtype=np.int64)] = True
+            bias[selected & ~excluded] = resting_bias
         brain = NeuralGraph(
-            connectome, learning_neuron_model(dt=1.0), backend=backend, device=device
+            connectome, learning_neuron_model(dt=1.0), backend=backend, device=device, bias=bias
         )
+        self.resting_bias = resting_bias
         self.learner = Learner(brain, list(self.motor_index), learning or _learning())
         self.basal_ganglia = ActorCritic(
             self.learner, list(self.association_index), reward or _reward(), seed=seed
@@ -460,7 +491,9 @@ class Brain:
         This reuses the existing trace, synaptic memory and learning mechanisms.
         Observer wiring is an experiment, not evidence of learned self-reflection.
         Inputs are fixed external drives; their neural representations can vary.
-        ``options`` configures the existing constructor's learning and memory.
+        ``options`` configures the existing constructor's learning and memory;
+        ``resting_bias`` initializes processing-region biases to a selected nonnegative
+        value; it does not guarantee responsive activity or successful acquisition.
         Use ``genome``/``Genome`` for custom ports, sparsity and named wiring.
         """
 
@@ -952,6 +985,7 @@ class Brain:
         data = _learner_data(self.learner)
         metadata: dict[str, Any] = {
             "format": "cadence-generic/2",
+            "resting_bias": _validate_resting_bias(self.resting_bias),
             "reward": agent.config.to_dict(),
             "rng": self.rng.bit_generator.state,
             "actor_rng": agent.rng.bit_generator.state,
@@ -1032,6 +1066,7 @@ class Brain:
                 raise ValueError("unsupported Brain checkpoint format")
             if "hippocampus" not in meta:
                 raise ValueError("missing hippocampus metadata")
+            resting_bias = _validate_resting_bias(meta.get("resting_bias", 0.0))
             learner = Learner.load(path, backend=backend, device=device, precision=precision)
             try:
                 _validate_life_state(meta, data, learner)
@@ -1042,6 +1077,8 @@ class Brain:
                 learner.brain.connectome, episodic=False, reward=ActorCriticConfig(**meta["reward"])
             )
             result.learner = learner
+            # Initialization provenance is separate from the saved, possibly learned bias.
+            result.resting_bias = resting_bias
             agent = result.basal_ganglia
             agent.learner = learner
             for name in _REWARD_ARRAYS:
