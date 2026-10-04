@@ -3,8 +3,10 @@
 This bounded instrument compares the same continuing `Brain.compose` nursery on
 CPU with Numba, CUDA float64, and CUDA float32. It is separate from the population
 solver measurements in issue #64. It measures neither Doom nor speech. The
-sequence integration in #121 is pending; the Fable application run is deferred
-pending access to `cadence-transcribe` and its separate training authorization.
+sequence integration in #121 is pending. Application access is now available;
+the supplementary keyword compatibility checks are recorded in `RESULTS.md`.
+The Fable sequence campaign still requires the measured integration and the
+training hold's dependency checks in #121; keyword throughput cannot replace it.
 
 The [RTX 4000 Ada results](RESULTS.md) include the exact source revisions,
 before/after runtimes, latency tails, memory, quality and failed development work.

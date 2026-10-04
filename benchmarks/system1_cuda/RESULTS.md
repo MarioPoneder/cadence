@@ -11,7 +11,7 @@ CPU with Numba remains faster than CUDA on this small continuing nursery. CUDA t
 - Hardware: NVIDIA RTX 4000 Ada Generation Laptop GPU, 12,282 MiB; Windows; driver 595.95; PyTorch 2.11.0+cu128 / CUDA 12.8; Python 3.13.2; NumPy 2.5.3; Numba 0.68.0; one host thread; TF32 disabled.
 - CUDA float64 and float32 state execution were asserted on device 0. Parameters/optimizer retain the existing float64 contract. MPS was unavailable on this host.
 - [Frozen protocol](protocol.json), [reproduction and accounting](README.md), and [compressed complete scalar record](results/rtx4000-ada-2026-10-04.json.gz). The record includes source/harness hashes, every raw timing, quality reports, profiles, confirmations and failed development checks. Binary state comparisons and raw trace hashes are retained; full local traces/checkpoints can be regenerated with the collector.
-- This is the System 1 neural graph. Issue #64’s population-solver measurements are separate. Integrated sequence work awaits #121; the Fable/audio benchmark remains deferred pending `cadence-transcribe` access and authorization. No audio throughput, sequence capability or teacher-free speech-inference claim is made.
+- This is the System 1 neural graph. Issue #64’s population-solver measurements are separate. Application access is now available, with supplementary compatibility checks below. The integrated Fable sequence benchmark still awaits the measured mechanism and dependency checks in [#121](https://github.com/muellerberndt/cadence/issues/121). No sequence capability or teacher-free speech-inference claim is made.
 
 ## Behavior before speed
 
@@ -101,7 +101,7 @@ The actual-device tests independently check projected neuron equations, signed/z
 
 The compressed record preserves failed development fixtures and their eventual fixes. Some early collector failures did not record complete wall/VRAM costs; these unknowns remain explicit and are excluded from speed claims. The primary campaign cost 789.4 process-seconds; confirmation added 153.2 seconds. Neither campaign had a failed job.
 
-MPS hardware qualification, integrated sequence timing, and the Fable audio/teacher-alignment/replay/inference-versus-update campaign are outstanding boundaries. The latter remains deferred as requested; this PR does not close that appended acceptance item or infer it from the nursery.
+Matched-workload MPS performance, integrated sequence timing, and the Fable audio/teacher-alignment/replay/inference-versus-update campaign are outstanding boundaries. The sequence item is blocked by the missing measured #121 integration and its explicit training hold, rather than repository access. This PR does not close that appended acceptance item or infer it from the nursery.
 
 ### Repository and installed-package checks
 
@@ -109,3 +109,54 @@ MPS hardware qualification, integrated sequence timing, and the Fable audio/teac
 - The final complete CPU reference run (CUDA explicitly masked with `CUDA_VISIBLE_DEVICES=-1`) reports 2871 cases, 0 failures, 0 errors, 180 skipped/expected-failure cases. This supplements the hardware run; its CUDA skips do not count as GPU qualification.
 - Lint passes for source, tests, the collector and the two corrected examples. New Python files pass formatting. `mypy --platform linux` passes all 54 modules. Native Windows mypy has the same five `timing.py` platform-attribute errors as main; repository-wide format checking flags the same 69 existing files on both revisions. Those baseline findings remain explicit.
 - The installed wheel passes the required 20 documentation pages and all three examples in a fresh NumPy-only environment. The independently installed source archive passes the quickstart and all three examples. Both pass `pip check`; optional backends are absent, and every installed implementation source matches the tested source after LF normalization. Artifact hashes and outcomes are in the compressed record.
+
+### Checks after application access became available
+
+The original compressed campaign record is unchanged. These later checks use
+`cadence-transcribe` revision `e6bd446bf6812f1d486c007a398eabc24451f530` and the
+same numerical sources as the campaign. Its complete existing suite passes all
+40 tests on each of the pinned 0.71.1 release, baseline `5cd3b3d`, and PR
+`3d2c81a`. These are compatibility results, not acquisition measurements.
+Latest main `20ddde7` adds documentation only and has been integrated.
+
+An additional fixed regression uses the application's eight WAV fixtures,
+one untrained founder, modules `(16, 8)`, 1,960 sensory values, 36 labels,
+explicit lateral weight -0.5, fixed zero/unit feature statistics, and one thread.
+Each of CPU, CUDA float64 and CUDA float32 runs both revisions in fresh
+processes, first querying all eight clips to warm up, then querying them again.
+Preprocessing, solving, ranking, synchronization and refused work are timed.
+Backend selection is explicit in the harness; application defaults are unchanged.
+
+| Backend | Eight timed queries, before → after (s) | Whole process, before → after (s) |
+| --- | --- | --- |
+| CPU | 0.0417 → 0.0389 | 2.82 → 2.78 |
+| CUDA float64 | 17.64 → 10.79 | 37.66 → 28.35 |
+| CUDA float32 | 10.31 → 7.74 | 29.34 → 21.20 |
+
+Every revision/backend has the same work counts and qualification outcomes:
+six clips qualify and two refuse per pass, with zero of eight correct top-one
+answers from these untrained brains. The maximum before/after activation
+difference is 4.44e-16. These one-pair diagnostic timings include unsuccessful
+work; they are not a speech speedup or audio-seconds/second qualification.
+CPU is faster for this small batch-one control.
+
+All six runs also preserve exact same-backend parameters and learning reports
+after save/reload and one fixed synthetic lesson, then preserve the complete
+brain checkpoint after a deliberately refused qualified lesson. Audio fixtures
+are not used for teaching. The synthetic accepted lesson uses the application's
+finite contract, not a qualified-learning certificate. The
+[supplementary receipt](results/consumer-compatibility-2026-10-04.json) records
+source identities, test counts, cold and warm timings, work, allocator peaks
+and hashes of the local private-consumer records. Private application source,
+audio and checkpoints are not copied into this public repository.
+
+The initial macOS CI run also exposed two mistakes in the new tests: comparing
+`mps` to the concrete device `mps:0`, and comparing stored float32 frozen
+parameters to their pre-upload float64 values. Commit `a4d7ba7` checks the actual
+device and exact stored parameters. Runtime equations and tolerances are
+unchanged. Local CPU/CUDA revalidation passes 36 tests, with 12 unavailable-MPS
+skips; the original failed [CI run](https://github.com/muellerberndt/cadence/actions/runs/37175424763)
+remains available. The corrected checks also pass on the hosted macOS MPS
+device in [Python 3.11](https://github.com/muellerberndt/cadence/actions/runs/37176167170/job/111359098830)
+and [Python 3.13](https://github.com/muellerberndt/cadence/actions/runs/37176167170/job/111359098761).
+This adds MPS correctness evidence, not a matched MPS performance measurement.
