@@ -6,6 +6,11 @@ solver measurements in issue #64. It measures neither Doom nor speech. The
 sequence integration in #121 is pending; the Fable application run is deferred
 pending access to `cadence-transcribe` and its separate training authorization.
 
+The [RTX 4000 Ada results](RESULTS.md) include the exact source revisions,
+before/after runtimes, latency tails, memory, quality and failed development work.
+The linked `.json.gz` record is ordinary gzip-compressed JSON, readable with
+Python's standard `gzip` and `json` modules.
+
 ## Frozen protocol
 
 `protocol.json` declares seeds, information, topology, learning configuration,
@@ -55,6 +60,9 @@ hash bindings and fixed-work baseline/candidate/reference state deviations.
 CUDA float32 uses float32 settling and the existing float64 parameter/optimizer
 contract. It checks the original float64 equations for qualification. TF32 is
 disabled. Device and dtype are asserted rather than inferred from a label.
+Because `Brain.compose` has no precision argument, the float32 worker rebuilds
+its graph with `NeuralGraph(precision="float32")` before any learning or live use.
+That setup is included in construction and memory costs on both revisions.
 MPS requires Apple hardware and is an explicit unsupported-host skip here.
 
 ## Cost accounting
