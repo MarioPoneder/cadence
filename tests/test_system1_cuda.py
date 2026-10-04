@@ -9,7 +9,7 @@ import cadence as cd
 
 
 @pytest.fixture(
-    params=[("cpu", "float64"), ("cuda:0", "float64"), ("cuda:0", "float32"), ("mps", "float32")],
+    params=[("cpu", "float64"), ("cuda:0", "float64"), ("cuda:0", "float32"), ("mps:0", "float32")],
     ids=["torch_cpu64", "cuda64", "cuda32", "mps32"],
 )
 def execution(request):
@@ -17,7 +17,7 @@ def execution(request):
     device, precision = request.param
     if device.startswith("cuda") and not torch.cuda.is_available():
         pytest.skip("CUDA hardware unavailable")
-    if device == "mps" and not torch.backends.mps.is_available():
+    if device.startswith("mps") and not torch.backends.mps.is_available():
         pytest.skip("MPS hardware unavailable")
     return device, precision
 
@@ -217,13 +217,17 @@ def test_frozen_parameters_survive_real_device_learning(execution):
     learner.config = replace(learner.config, free_steps=1024, nudged_steps=1024)
     learner.plastic_synapses[::2] = False
     learner.plastic_neurons[::2] = False
-    efficacy, bias = brain.brain.efficacy.copy(), brain.brain.bias.copy()
+    kernel = brain.brain._torch
+    # MPS stores parameters in float32. Freeze their actual device values, not
+    # the pre-upload float64 construction arrays, which can round on upload.
+    efficacy, bias = kernel.scale.clone(), kernel.bias_param.clone()
     _, report = learner.step(brain.stimulus([[0.5, 0.2, 0.1]], memory=False), np.array([1]))
     assert report["accepted"] == report["qualified"] == 1
     assert report["total_steps"] > 0
-    np.testing.assert_array_equal(brain.brain.efficacy[::2], efficacy[::2])
-    np.testing.assert_array_equal(brain.brain.bias[::2], bias[::2])
-    assert np.any(brain.brain.efficacy[1::2] != efficacy[1::2])
+    assert brain.brain._torch is kernel
+    assert kernel.torch.equal(kernel.scale[::2], efficacy[::2])
+    assert kernel.torch.equal(kernel.bias_param[::2], bias[::2])
+    assert not kernel.torch.equal(kernel.scale[1::2], efficacy[1::2])
 
 
 def test_refused_answer_and_lesson_preserve_pending_feedback_and_optimizer(execution, tmp_path):
