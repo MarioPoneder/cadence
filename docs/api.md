@@ -5,8 +5,8 @@ and optional observers. [NeuralGraph](#neuralgraph-cadence) is the lower-level
 graph API. The [quickstart](quickstart.md) runs the main interaction loop;
 sections below describe specialist operations. Pass optional arguments by keyword.
 
-This reference describes Cadence 0.72.1, including `Brain.last_settlement`
-diagnostics. Install it with `python -m pip install cadence-net==0.72.1`.
+This reference describes Cadence 0.73.0, including `Brain.last_settlement`
+diagnostics. Install it with `python -m pip install cadence-net==0.73.0`.
 
 The temporal patch: [TemporalPatchNet](#temporalpatchnet-cadencetemporal),
 [TemporalPlan](#temporalplan-cadenceplanning), [TemporalMemory](#temporalmemory-cadencetemporal_memory),

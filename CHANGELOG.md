@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.73.0 — 2026-10-04
 
 - Resolve the unset motor `lateral` of `Brain.compose`, `build` and `genome` by
   readout width: -0.5 up to 8 actions, 0.0 above

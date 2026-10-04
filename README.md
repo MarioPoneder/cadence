@@ -40,7 +40,7 @@ already supplies continuing action, local learning and memory. Integrated learne
 world prediction and automatic failure-triggered repair with cheap stable
 operation remain development goals. Cadence is alpha research software.
 
-The examples and guides use Cadence 0.72.1, including action diagnostics through
+The examples and guides use Cadence 0.73.0, including action diagnostics through
 `Brain.last_settlement`.
 
 ## How a Cadence brain differs from a feed-forward network
@@ -86,10 +86,10 @@ Python 3.11+ and NumPy are required.
 Install the published release for this basic example:
 
 ```sh
-python -m pip install cadence-net==0.72.1
+python -m pip install cadence-net==0.73.0
 ```
 
-Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.72.1/docs/README.md)
+Its [released documentation](https://github.com/muellerberndt/cadence/blob/v0.73.0/docs/README.md)
 describes the APIs included in that package.
 
 ```python
