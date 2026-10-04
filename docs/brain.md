@@ -155,7 +155,13 @@ assert qualified.last_learning["demonstration_qualified"] == 1.0
 ```
 
 This requires every free and teaching phase to satisfy the original full
-equations before a supervised update. `LearningPhaseError` retains the attempted
+equations before a supervised update. The longer nudged budget is part of the
+opt-in: keeping the composed `nudged_steps=12` while setting `qualified=True`
+refuses every lesson on realistic input, so constructing a qualified
+configuration whose nudged budget is below its free budget warns, and the
+refusal names the mismatch
+([qualified teaching budgets](learning.md#qualified-teaching-budgets)).
+`LearningPhaseError` retains the attempted
 phases and their cost report; a refusal preserves parameters and optimizer
 history. `last_learning` records accepted and refused teaching diagnostics under
 `demonstration_` keys, including attempted presentations and row work.

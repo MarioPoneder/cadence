@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Warn at `LearnerConfig` construction when `qualified=True` and `nudged_steps`
+  is below `free_steps`, including through `dataclasses.replace` on a composed
+  configuration: qualified phases are settle budgets, and the composed finite
+  teaching default of 12 nudged sweeps refuses every realistic lesson
+  ([issue 123](https://github.com/muellerberndt/cadence/issues/123)). A refused
+  nudged or opposite phase under such a configuration names the budget mismatch
+  in its `LearningPhaseError` message and new `hint` attribute. Document the
+  budget semantics in the learning, composition and troubleshooting guides.
+  Finite teaching, the composed defaults, the reward-eligibility contract and
+  refusal transactions are unchanged; deliberately small qualified budgets
+  remain allowed.
+
 ## 0.72.1 — 2026-10-03
 
 - Warn at learner or actor-critic config construction when `normalize > 0` and

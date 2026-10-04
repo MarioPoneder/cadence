@@ -231,6 +231,29 @@ Its `ActorCriticConfig.eligibility_steps` budget is independent of supervised
 nudges; the built-in Brain reward configuration uses 12, while `None` in an
 explicit reward configuration inherits the learner's nudged budget.
 
+### Qualified teaching budgets
+
+`qualified=True` changes what `free_steps` and `nudged_steps` mean. Finite
+teaching reads the contrast after at most `nudged_steps` sweeps, so a small
+nudged budget is a teaching-phase length. Qualified teaching checks every phase
+against the full equations within its budget, so both numbers are settle
+budgets: a nudged phase typically needs about as many sweeps as the free phase
+it starts from, because the nudge moves the equilibrium. A qualified
+configuration whose nudged budget is far below its free budget refuses lessons
+the free budget would settle; at `Brain.compose`'s teaching defaults
+(`free_steps=1024, nudged_steps=12`) it refuses every lesson on realistic
+input, with the data playing no part.
+
+Constructing a `LearnerConfig` with `qualified=True` and
+`nudged_steps < free_steps` therefore warns, including through
+`dataclasses.replace` on a composed configuration, and a refused nudged or
+opposite phase under such a configuration names the budget mismatch in its
+`LearningPhaseError` message and `hint`. Set `nudged_steps` comparable to
+`free_steps` when opting in, as in the
+[`dataclasses.replace` recipe](brain.md#settle-and-check); a deliberately
+small settle budget remains allowed, and the warning can be filtered. The
+finite default and the reward-eligibility contract above are unchanged.
+
 Lesson reports distinguish attempted and accepted row presentations. They count
 every required free/positive/negative sweep, residual transport and complete-state
 stagnation comparison, with row-weighted totals for batches. `Brain.step` keeps
@@ -414,9 +437,9 @@ constructor defaults. `eta_bias` stays independent when `eta` changes.
 | knob | where | what it does | standalone default / selection notes |
 |---|---|---|---|
 | `beta` | `LearnerConfig` | nudge strength; smaller is closer to the gradient, larger a stronger signal | 0.1 |
-| `free_steps`, `nudged_steps` | `LearnerConfig` | the most steps a free and a nudged phase may take before the contrast is read | 100, 50 |
+| `free_steps`, `nudged_steps` | `LearnerConfig` | the most steps a free and a nudged phase may take before the contrast is read | 100, 50; under `qualified=True` both are [settle budgets](#qualified-teaching-budgets): keep them comparable |
 | `tolerance` | `LearnerConfig` | activation-movement stopping for finite phases; full-equation residual when qualified (`None` only for finite phases) | 1e-4 |
-| `qualified`, `damping` | `LearnerConfig` | require full-equation qualification before teaching; allow bounded integration-step halvings within each phase budget | `False`, 3; compare candidates with the finite control |
+| `qualified`, `damping` | `LearnerConfig` | require full-equation qualification before teaching; allow bounded integration-step halvings within each phase budget | `False`, 3; compare candidates with the finite control; qualification needs a [nudged budget comparable to the free one](#qualified-teaching-budgets) |
 | `eta` | `LearnerConfig` | efficacy step; the contrast is divided by `2 beta` | default 0.2; select on development data |
 | `eta_bias` | `LearnerConfig` | bias step | default 0.02; configured independently of `eta` |
 | `temperature` | `LearnerConfig` | softmax temperature of the cross-entropy nudge; also the policy temperature when sampling actions | default 0.2; select any alternative on development data |

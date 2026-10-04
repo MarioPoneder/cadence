@@ -908,7 +908,10 @@ that recursive benefit or automatic reflective behavior has been learned.
   `eta` or `eta_bias` exceeds `0.05`; rates and defaults remain unchanged. The
   threshold is advisory, not a stability bound. See [normalized rates](learning.md#rates-under-normalization).
   `qualified=True` requires each free and nudged phase to meet the full equation
-  residual at `tolerance` before `step` applies an update. Direct `update` remains
+  residual at `tolerance` before `step` applies an update. It makes both step
+  limits settle budgets, so construction also emits `RuntimeWarning` when
+  `qualified=True` and `nudged_steps < free_steps`; budgets remain unchanged.
+  See [qualified teaching budgets](learning.md#qualified-teaching-budgets). Direct `update` remains
   unchecked. `damping` is the maximum number of
   numerical integration-step halvings within each phase's existing sweep budget;
   the original model and its fixed-point equations are preserved. Qualified
@@ -945,7 +948,9 @@ that recursive benefit or automatic reflective behavior has been learned.
     residual checks, damping halvings and stagnation comparisons. `total_row_sweeps`
     and `total_row_residual_checks` multiply each phase's work by its batch size.
     These are computation counters, not a complete hardware-operation estimate.
-    `LearningPhaseError` carries `phase`, `phases` and `report` on refusal;
+    `LearningPhaseError` carries `phase`, `phases`, `report` and `hint` on refusal
+    (`hint` names a known configuration cause, such as a qualified nudged budget
+    below the free budget, and is otherwise `None`);
     parameters, optimizer history and update counts remain unchanged.
   - `calibrate(drive, *, level=0.5, grid=None) -> float`: choose the tested global
     synaptic gain whose mean free output activity is closest to `level`. Inputs
