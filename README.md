@@ -189,6 +189,15 @@ provides exact state-and-error readback under its own numerical contract.
 application demos. [cadence-examples](https://github.com/muellerberndt/cadence-examples)
 preserves research examples and viewer tools with their own declared library pins.
 
+## Related physics project
+
+Cadence shares its basic principle with
+[Observer Patch Holography](https://github.com/FloatingPragma/observer-patch-holography)
+(OPH), a physics project that uses local repair to derive the laws of physics. In
+OPH, observer patches repair disagreements where they overlap until the whole
+network is consistent. In Cadence, neurons settle against what their connections
+predict, and learning changes those connections locally.
+
 [Documentation](https://github.com/muellerberndt/cadence/blob/main/docs/index.md) ·
 [API](https://github.com/muellerberndt/cadence/blob/main/docs/api.md) ·
 [Contributing](https://github.com/muellerberndt/cadence/blob/main/CONTRIBUTING.md) ·
