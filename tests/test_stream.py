@@ -67,8 +67,11 @@ def _carried_state_accuracy(seed: int) -> float:
     v, streams, length = 4, 64, 60
     seq = rng.integers(0, v, (streams, length))
     w, tie = cd.stateful(v, 1, 4, 24, v, seed=seed)
+    # eta_bias stays at this contract's measured 0.02: since issue 126 an unset
+    # bias rate derives eta / 10, which at eta=2.0 would retune this baseline.
     cfg = cd.LearnerConfig(
-        eta=2.0, beta=0.1, temperature=0.1, tolerance=3e-3, nudged_steps=12, free_steps=60
+        eta=2.0, eta_bias=0.02, beta=0.1, temperature=0.1, tolerance=3e-3,
+        nudged_steps=12, free_steps=60,
     )
     learner = cd.Learner(
         cd.NeuralGraph(w, cd.learning_neuron_model(dt=1.0)), w.populations["output"], cfg, tie_groups=tie
