@@ -143,6 +143,17 @@ class LearnerConfig:
                 RuntimeWarning,
                 stacklevel=3,
             )
+        if self.qualified and self.nudged_steps < self.free_steps:
+            warnings.warn(
+                f"LearnerConfig with qualified=True and nudged_steps ({self.nudged_steps}) "
+                f"below free_steps ({self.free_steps}): qualified teaching checks every "
+                "phase against the full equations within its budget, and a nudged budget "
+                "sized for finite teaching refuses lessons the free budget would settle. "
+                "Set nudged_steps comparable to free_steps; "
+                "see docs/learning.md#qualified-teaching-budgets.",
+                RuntimeWarning,
+                stacklevel=3,
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in self.__slots__}
@@ -195,17 +206,22 @@ class LearningPhaseError(RuntimeError):
     equilibria. ``report`` counts attempted presentations, phase sweeps,
     residual evaluations and complete-state stagnation comparisons.
     No parameter update or optimizer-history write has occurred.
+    ``hint`` names a configuration cause when one is known, such as a nudged
+    budget far below the free budget.
     """
 
-    def __init__(self, phase: str, phases: Mapping[str, Equilibrium]) -> None:
+    def __init__(
+        self, phase: str, phases: Mapping[str, Equilibrium], hint: str | None = None
+    ) -> None:
         self.phase = phase
         self.phases = dict(phases)
+        self.hint = hint
         self.report = _phase_report(phases, accepted=False, qualified=True)
         failed = phases[phase]
         super().__init__(
             f"{phase} learning phase did not settle within {failed.steps} steps: "
             f"residual={float(np.max(failed.residual)):.6g}, tolerance={failed.tolerance:g}; "
-            "no learning update applied"
+            "no learning update applied" + (f"; {hint}" if hint else "")
         )
 
 
@@ -403,7 +419,7 @@ class Learner:
             )
             name = "nudged" if sign >= 0 else "opposite"
             if not np.all(phase.qualified):
-                raise LearningPhaseError(name, {name: phase})
+                raise LearningPhaseError(name, {name: phase}, self._nudged_budget_hint())
             return replace(phase.state, steps=phase.steps)
         return self.brain.settle_batch(
             drive,
@@ -411,6 +427,17 @@ class Learner:
             state=free,
             nudge=self.nudge_for(target, sign * cfg.beta, weight),
             tolerance=cfg.tolerance,
+        )
+
+    def _nudged_budget_hint(self) -> str | None:
+        """Name the budget mismatch when a refused nudged phase had less room than the free one."""
+        cfg = self.config
+        if cfg.nudged_steps >= cfg.free_steps:
+            return None
+        return (
+            f"the nudged budget ({cfg.nudged_steps}) is below the free budget "
+            f"({cfg.free_steps}); qualified nudged phases settle to the same tolerance, "
+            "see docs/learning.md#qualified-teaching-budgets"
         )
 
     def _qualified_phase(
@@ -849,7 +876,7 @@ class Learner:
                     self.nudge_for(target, sign * cfg.beta, weight),
                 )
                 if not np.all(phases[name].qualified):
-                    raise LearningPhaseError(name, phases)
+                    raise LearningPhaseError(name, phases, self._nudged_budget_hint())
             nudged = replace(phases["nudged"].state, steps=phases["nudged"].steps)
             opposite = (replace(phases["opposite"].state, steps=phases["opposite"].steps)
                         if "opposite" in phases else None)

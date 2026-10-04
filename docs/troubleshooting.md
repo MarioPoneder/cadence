@@ -51,6 +51,14 @@ neurons: the projection into the output region must be reciprocal
 or lower the gain. Check `brain.residual(drive, state)`: a small movement per step can hide
 a large equation error when neurons saturate ([concepts](concepts.md#settling-and-equilibrium)).
 
+**Qualified teaching refuses every lesson.** Read the `LearningPhaseError`: when the
+failed phase is `nudged` or `opposite` and the message names a budget mismatch, the
+nudged budget is below the free one. Under `qualified=True` both budgets are settle
+budgets, and `Brain.compose`'s finite teaching default `nudged_steps=12` cannot settle
+realistic input to tolerance. Opt in with a nudged budget comparable to the free one
+([qualified teaching budgets](learning.md#qualified-teaching-budgets)); the constructor
+warns about such configurations, including through `dataclasses.replace`.
+
 **Is the answer an equilibrium?** `cd.certificate(brain)` says whether settling is a
 contraction and bounds the remaining distance; when the row mass is above the limit,
 `brain.equilibrate` with a tolerance and `brain.residual` are the checks
