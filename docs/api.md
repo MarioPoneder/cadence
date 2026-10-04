@@ -681,7 +681,7 @@ to positive region widths to add optional System 2 state feedback within the
 same neural-graph settlement. This is an implemented interface, not a claim
 that recursive benefit or automatic reflective behavior has been learned.
 
-- `Brain.compose(inputs, actions, *, modules=(64,), observers=(), lateral=-0.5, seed=0, **options) -> Brain`:
+- `Brain.compose(inputs, actions, *, modules=(64,), observers=(), lateral=None, seed=0, **options) -> Brain`:
   the direct vector-input constructor. Positive `modules` widths form a reciprocal
   processing chain; the final module is the association cortex. Optional positive
   `observers` widths add regions with reciprocal state-reading and returning connections
@@ -693,10 +693,13 @@ that recursive benefit or automatic reflective behavior has been learned.
   in `cadence.experimental.equilibrium`.
   The `lateral` option is the finite signed weight between each pair
   of distinct motor neurons; zero removes those connections while preserving
-  reciprocal association/motor feedback. The default remains -0.5. More actions
-  add more incoming lateral connections, so compare their observed operating
-  points rather than assuming the same activity at every vocabulary size.
-- `Brain.build(inputs, actions, *, hidden=64, density=1.0, lateral=-0.5, working_memory=False, memory_scale=12.0, episodic=True, features=8, field=3, seed=0, **options)`:
+  reciprocal association/motor feedback. Left unset it resolves to -0.5 up to
+  8 actions and 0.0 above: each action adds another inhibitory input per motor
+  neuron, and measured composed brains with -0.5 stop settling undamped from
+  about 12 actions (issue 124). An explicit value is used as given; compare
+  observed operating points rather than assuming the same activity at every
+  vocabulary size.
+- `Brain.build(inputs, actions, *, hidden=64, density=1.0, lateral=None, working_memory=False, memory_scale=12.0, episodic=True, features=8, field=3, seed=0, **options)`:
   develops `Brain.genome(...)` and wraps it. `inputs` is a vector length, or an image
   shape `(height, width)` or `(height, width, channels)` for a `visual_cortex`. `options` go
   to the constructor.
@@ -718,7 +721,7 @@ that recursive benefit or automatic reflective behavior has been learned.
   metadata retain their stored bias vector and use `resting_bias=0.0`.
   The connectome needs populations `sensory` or `visual/input`, `association` and `motor`, and uses
   `prefrontal` for a working memory when present. `learning` defaults to
-  `LearnerConfig(beta=0.1, eta=0.5, temperature=0.2, tolerance=3e-3, free_steps=1024, nudged_steps=12, momentum=0.9)`,
+  `LearnerConfig(beta=0.1, eta=0.5, temperature=0.2, tolerance=3e-3, free_steps=1024, nudged_steps=12, momentum=0.9)` (whose unset `eta_bias` derives `eta / 10` = 0.05),
   `reward` to `ActorCriticConfig(gamma=0.9, lam=0.8, eta=1.0, eta_critic=0.3, eligibility_steps=12)`.
   The live model and finite teaching phases retain `dt=1.0`. Qualified free
   settlement reserves roughly half its sweep budget for a numerical fallback:
@@ -895,7 +898,10 @@ that recursive benefit or automatic reflective behavior has been learned.
 
 ## Learning (`cadence.learning`)
 
-- `LearnerConfig(beta=0.1, eta=0.2, eta_bias=0.02, centered=True, free_steps=100, nudged_steps=50, tolerance=1e-4, nudge="cross_entropy", temperature=0.2, normalize=0.0, normalize_floor=1e-3, momentum=0.0, decay=0.0, scale_cap=8.0, qualified=False, damping=3)`:
+- `LearnerConfig(beta=0.1, eta=0.2, eta_bias=None, centered=True, free_steps=100, nudged_steps=50, tolerance=1e-4, nudge="cross_entropy", temperature=0.2, normalize=0.0, normalize_floor=1e-3, momentum=0.0, decay=0.0, scale_cap=8.0, qualified=False, damping=3)`:
+  `eta_bias` left as `None` derives `eta / 10` at construction; an explicit
+  value is kept, and construction warns when a positive `eta` is below
+  `eta_bias`, where the bias step dominates (issue 126).
   `scale_cap` is the magnitude a plastic synapse's efficacy may not exceed (every update clips
   to it); a smaller cap keeps a readout neuron out of saturation, where a nudge has no slope
   ([the latch](reward.md#traps-with-their-measurements)).
@@ -945,15 +951,20 @@ that recursive benefit or automatic reflective behavior has been learned.
     labels are integer indices within each output group: `(batch,)` for one group,
     `(batch, slots)` for several; `accuracy` averages all row/slot choices;
     Reports include attempted/accepted row presentations, all required phases' steps,
-    residual checks, damping halvings and stagnation comparisons. `total_row_sweeps`
+    residual checks, damping halvings and stagnation comparisons; finite lessons
+    also report `free_budget_exhausted` (1.0 when the free phase used its entire
+    budget under a movement tolerance, with a `RuntimeWarning`). `total_row_sweeps`
     and `total_row_residual_checks` multiply each phase's work by its batch size.
     These are computation counters, not a complete hardware-operation estimate.
     `LearningPhaseError` carries `phase`, `phases`, `report` and `hint` on refusal
     (`hint` names a known configuration cause, such as a qualified nudged budget
     below the free budget, and is otherwise `None`);
     parameters, optimizer history and update counts remain unchanged.
-  - `calibrate(drive, *, level=0.5, grid=None) -> float`: choose the tested global
-    synaptic gain whose mean free output activity is closest to `level`. Inputs
+  - `calibrate(drive, *, level=None, grid=None) -> float`: choose the tested global
+    synaptic gain by its free output operating point. Left unset, the target is
+    the mean over rows and output slots of the highest output activation, at
+    0.5; an explicit `level` targets the mean over every output neuron instead,
+    which on a wide readout pushes all outputs up together (issue 125). Inputs
     must be a finite, nonempty drive batch. The default grid tries the
     current gain first, then its multiples `2**k` for `k=-8, …, 8` excluding zero,
     retaining representable positive candidates. Explicit grids retain their
@@ -964,8 +975,9 @@ that recursive benefit or automatic reflective behavior has been learned.
     candidate, raise `RuntimeError` without changing the graph or optimizer.
     `last_calibration` reports every candidate and total attempted work, including
     refusals: sweeps, residual transports, stagnation comparisons and activation-
-    cache checks, with batch-row totals. Calibration does not update learned efficacy/bias or optimizer
-    history, and does not guarantee reaching `level` or useful acquisition.
+    cache checks, with batch-row totals, each candidate's `mean_output` and
+    `top_output`, and the `target` in use. Calibration does not update learned efficacy/bias or optimizer
+    history, and does not guarantee reaching the target or useful acquisition.
   - `predict(drive)`, `accuracy(drive, labels, batch=256)`,
     `parameters()`, `to_dict()`; attributes `brain`, `reverse` (index of each synapse's
     reverse, or −1), `second_moment` (when normalising).

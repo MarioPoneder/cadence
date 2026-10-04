@@ -75,7 +75,7 @@ _MOMENTS = ("velocity", "velocity_bias", "second_moment", "second_moment_bias")
 class LearnerConfig:
     beta: float = 0.1  # nudge strength
     eta: float = 0.2  # synapse learning rate, divided by beta in the update
-    eta_bias: float = 0.02
+    eta_bias: float | None = None  # bias learning rate; None derives eta / 10 at construction
     centered: bool = True  # contrast +beta against -beta rather than against the free state
     free_steps: int = 100  # most steps the free phase may take
     nudged_steps: int = 50  # most steps a nudged phase may take
@@ -95,15 +95,24 @@ class LearnerConfig:
     damping: int = 3  # candidate numerical strategy: at most this many dt halvings
 
     def __post_init__(self) -> None:
+        if self.eta_bias is None:
+            # The bias rate follows the synapse rate unless chosen: issue 126.
+            if not np.isfinite(self.eta) or self.eta < 0:
+                raise ValueError(
+                    "beta must be finite and positive; learning rates finite and nonnegative"
+                )
+            object.__setattr__(self, "eta_bias", self.eta / 10.0)
+        eta_bias = self.eta_bias
+        assert eta_bias is not None
         if self.nudge not in ("quadratic", "cross_entropy"):
             raise ValueError("nudge must be 'quadratic' or 'cross_entropy'")
         if not np.isfinite(self.scale_cap) or self.scale_cap <= 0:
             raise ValueError("scale_cap must be finite and positive")
         if (
-            not np.isfinite([self.beta, self.eta, self.eta_bias]).all()
+            not np.isfinite([self.beta, self.eta, eta_bias]).all()
             or self.beta <= 0
             or self.eta < 0
-            or self.eta_bias < 0
+            or eta_bias < 0
         ):
             raise ValueError(
                 "beta must be finite and positive; learning rates finite and nonnegative"
@@ -134,12 +143,22 @@ class LearnerConfig:
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 0:
                 raise ValueError(f"{name} must be a nonnegative integer")
-        if self.normalize > 0 and max(self.eta, self.eta_bias) > 0.05:
+        if self.normalize > 0 and max(self.eta, eta_bias) > 0.05:
             warnings.warn(
                 "LearnerConfig with normalize > 0 and eta or eta_bias above 0.05: "
                 "RMS normalization can make parameter steps much larger than raw contrasts "
                 "suggest and may saturate the readout. Consider smaller rates; "
                 "see docs/learning.md#rates-under-normalization.",
+                RuntimeWarning,
+                stacklevel=3,
+            )
+        if self.eta > 0 and eta_bias > self.eta:
+            warnings.warn(
+                f"LearnerConfig with eta_bias ({eta_bias:g}) above eta ({self.eta:g}): "
+                "the bias step dominates the synapse step. The default couples "
+                "eta_bias to eta / 10; when lowering eta through dataclasses.replace, "
+                "set eta_bias too, or pass eta_bias=None to re-derive it. "
+                "See docs/learning.md#7-every-knob.",
                 RuntimeWarning,
                 stacklevel=3,
             )
@@ -805,6 +824,7 @@ class Learner:
     ) -> dict[str, float]:
         self._validate_phases(free, nudged, opposite)
         cfg = self.config
+        assert cfg.eta_bias is not None  # resolved at construction
         minus_state, span = (free, cfg.beta) if opposite is None else (opposite, 2.0 * cfg.beta)
         kernel = self._device_kernel(nudged, minus_state)
         if kernel is not None:  # both phases rest on the torch device: the whole update stays there
@@ -912,21 +932,46 @@ class Learner:
             )
         report = self.update(free, nudged, opposite)
         report.update(_phase_report(phases, accepted=True, qualified=False))
+        # Finite teaching updates from whatever state the budget reached. A free
+        # phase that used its entire budget usually did not reach the movement
+        # stop; the lesson was then learned from a state that may not have
+        # settled. Count it and say so instead of hiding it (issue 127).
+        exhausted = cfg.tolerance is not None and free.steps >= cfg.free_steps > 0
+        report["free_budget_exhausted"] = float(exhausted)
+        if exhausted:
+            warnings.warn(
+                "finite teaching free phase used its entire free_steps budget; the "
+                "lesson may have been learned from a state that did not settle "
+                "(free_residual in the report holds the equation residual). Raise "
+                "free_steps, lower the gain, or opt into qualified=True to refuse "
+                "such lessons; "
+                "see docs/learning.md#finite-free-phases-that-run-out-of-budget.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
         return LearnedState(free, nudged, opposite), report
 
     # -- calibration
 
     def calibrate(
-        self, drive: np.ndarray, *, level: float = 0.5, grid: Sequence[float] | None = None
+        self, drive: np.ndarray, *, level: float | None = None, grid: Sequence[float] | None = None
     ) -> float:
-        """Choose the sampled gain whose mean free output is nearest ``level``.
+        """Choose the sampled gain whose free output operating point is nearest the target.
 
-        The default tries the current gain first, then its powers-of-two multiples
-        from 1/256 to 256. An explicit grid retains its order and first-on-tie rule.
-        Qualified learners admit only fully qualified, finite candidate states;
-        finite learners keep their finite-phase contract. ``last_calibration``
-        retains every candidate and its work, including refusals. No admissible
-        candidate raises ``RuntimeError`` without changing the graph or optimizer.
+        Left unset, the target is competitive: the mean over rows and output
+        slots of the highest output activation, at 0.5 — one choice up, the
+        others wherever the competition puts them. An explicit ``level``
+        instead targets the mean over every output neuron, which on a readout
+        of n choices pushes all n toward that level together and saturates a
+        competitive readout well before the winner is useful (issue 125).
+
+        The default grid tries the current gain first, then its powers-of-two
+        multiples from 1/256 to 256. An explicit grid retains its order and
+        first-on-tie rule. Qualified learners admit only fully qualified, finite
+        candidate states; finite learners keep their finite-phase contract.
+        ``last_calibration`` retains every candidate and its work, including
+        refusals. No admissible candidate raises ``RuntimeError`` without
+        changing the graph or optimizer.
 
         Use training inputs before label-based selection. This bounded operating-
         point heuristic need not reach the target or make every output responsive.
@@ -938,6 +983,9 @@ class Learner:
                 or drive.shape[1] != self.brain.connectome.n
                 or not np.isfinite(drive).all()):
             raise ValueError("calibration needs a nonempty finite drive with one column per neuron")
+        target = "mean" if level is not None else "top"
+        if level is None:
+            level = 0.5
         if np.ndim(level) != 0 or not np.isfinite(level):
             raise ValueError("calibration needs a finite scalar target level")
         if grid is None:
@@ -961,7 +1009,7 @@ class Learner:
         cfg = self.config
         attempts: list[dict[str, Any]] = []
         report: dict[str, Any] = {
-            "qualification_required": cfg.qualified, "level": float(level),
+            "qualification_required": cfg.qualified, "level": float(level), "target": target,
             "selected_gain": None, "candidates": attempts,
             "attempted_candidates": 0, "admitted_candidates": 0,
             "attempted_presentations": 0, "total_steps": 0,
@@ -999,13 +1047,19 @@ class Learner:
             )
             qualified = bool(consistent and np.all(phase.qualified))
             admitted = bool(consistent and (qualified or not cfg.qualified))
-            mean_out = float(state.activation[:, self.output_index].mean()) if admitted else None
-            gap = abs(mean_out - level) if mean_out is not None else None
+            mean_out = top_out = None
+            if admitted:
+                outputs = state.activation[:, self.output_index]
+                mean_out = float(outputs.mean())
+                # One winner per output slot: the competitive operating point.
+                top_out = float(np.maximum.reduceat(outputs, self.slot_offsets, axis=1).mean())
+            metric = top_out if target == "top" else mean_out
+            gap = abs(metric - level) if metric is not None else None
             rows = drive.shape[0]
             attempts.append({
                 "gain": gain, "admitted": admitted, "qualified": qualified,
                 "finite": bool(finite), "activation_consistent": bool(consistent),
-                "mean_output": mean_out, "gap": gap,
+                "mean_output": mean_out, "top_output": top_out, "gap": gap,
                 "residual": [float(x) if np.isfinite(x) else None for x in phase.residual],
                 "steps": phase.steps, "residual_checks": phase.residual_checks,
                 "damping_halvings": phase.damping_halvings,
