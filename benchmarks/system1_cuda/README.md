@@ -57,7 +57,10 @@ commit, LF-normalized SHA-256 of all implementation files, protocol and collecto
 hashes, and checks sources again after execution. All failures and process wall
 times remain in the output; a failed job does not suppress later jobs. The
 verifier independently recomputes quality gates, latency percentiles, throughput,
-hash bindings and fixed-work baseline/candidate/reference state deviations.
+hash bindings and fixed-work baseline/candidate/reference state deviations. It
+also checks the ordered job census, device/dtype, checkpoint-bound effective
+settings, per-row admission diagnostics, live scores and paired actions/work.
+These artifact-consistency checks do not authenticate witnessed experience.
 
 CUDA float32 uses float32 settling and the existing float64 parameter/optimizer
 contract. It checks the original float64 equations for qualification. TF32 is

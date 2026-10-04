@@ -2,6 +2,10 @@
 
 Direct CUDA block accumulation removes intermediate products and separate additions while preserving the existing equations, block order, tolerances and continuation. All 30 frozen campaign jobs passed; the independent verifier passed 686 checks. Four reversed-order confirmation jobs also passed. There were no nursery free-answer refusals, failed solve calls or finite-phase cap warnings.
 
+A subsequent maintainer-style audit tightened the verifier and passed 1,041
+checks on the same retained campaign. The original measurements and receipt
+are preserved; see the audit below for the defects and their regression tests.
+
 CPU with Numba remains faster than CUDA on this small continuing nursery. CUDA timing varies substantially on this Windows laptop: the results support reduced dispatch work and gains in these measured cases, not a general speedup, a real-time deadline or universal accelerator support.
 
 ## Sources and scope
@@ -160,3 +164,31 @@ remains available. The corrected checks also pass on the hosted macOS MPS
 device in [Python 3.11](https://github.com/muellerberndt/cadence/actions/runs/37176167170/job/111359098830)
 and [Python 3.13](https://github.com/muellerberndt/cadence/actions/runs/37176167170/job/111359098761).
 This adds MPS correctness evidence, not a matched MPS performance measurement.
+
+### Maintainer-style audit
+
+Review followed the source-binding feedback on [PR #71](https://github.com/muellerberndt/cadence/pull/71#issuecomment-5924772369),
+the effective-configuration and complete-work checks in [PR #130](https://github.com/muellerberndt/cadence/pull/130),
+and the scoped numerical/behavioral claims of [PR #134](https://github.com/muellerberndt/cadence/pull/134)
+and issues #98, #99 and #110. All 114 implementation, harness and protocol hashes
+reproduce from their declared Git commits after the documented LF normalization.
+
+The audit reproduced a verifier defect: duplicate jobs, incorrect device labels,
+weakened reported tolerance, contradictory admission diagnostics and changed
+actions could still receive `passed: true`. The underlying recorded campaign
+was consistent; the verifier was incomplete. It now checks the ordered census,
+actual execution metadata, effective learner/actor settings against both the
+protocol and acquired checkpoint, per-row residuals and scores, complete latency
+stages and deadline misses, and paired live actions and work. Twelve regression
+tests use a pair from the published receipt and reject deliberate alterations.
+
+Reverification of the retained 30-job campaign passes all 1,041 checks. The
+[audit receipt](results/audit-2026-10-04.json.gz) retains the reproduced failures,
+committed-byte checks, verifier identity and new verification outcomes. No
+runtime, workload, tolerance, raw timing or original receipt was changed during
+this audit. The supplementary private-consumer timings remain local diagnostics;
+their private raw records and producer are not distributed by this PR.
+
+This is bounded hardware evidence. It does not complete matched MPS performance,
+physical allocation-failure/resource-envelope qualification in #99, general
+acquisition/retention in #110, or the pending #121/Fable sequence workload.
