@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Record the measured decline of a normalized composed default
+  ([issue 131](https://github.com/muellerberndt/cadence/issues/131)): at the
+  proposed `eta=0.003, normalize=0.99, momentum=0.9` for both composed
+  learners, supervised acquisition contracts pass but the reward stream fails
+  its re-adaptation contract (0.486 against 0.9 after a contingency change).
+  Composed defaults remain unnormalized; normalized rates stay per-application
+  settings behind the 0.72.1 construction warning. Documentation only; no
+  default or equation changes.
+
 ## 0.73.0 — 2026-10-04
 
 - Resolve the unset motor `lateral` of `Brain.compose`, `build` and `genome` by

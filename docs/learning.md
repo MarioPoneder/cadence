@@ -550,6 +550,17 @@ Both `LearnerConfig` and `ActorCriticConfig` emit `RuntimeWarning` at constructi
 when `normalize > 0` and either `eta` or `eta_bias` exceeds `0.05`. This is a
 conservative diagnostic threshold, not a stability bound: smaller rates can
 also fail. The warning does not change rates, optimizer equations or defaults.
+
+A normalized composed default was proposed from the pilots above and measured
+against the capability suite on 2026-10-04 (issue 131): with
+`eta=0.003, normalize=0.99, momentum=0.9` for both composed learners,
+supervised acquisition contracts still passed, but the reward stream failed to
+re-adapt after a contingency change (0.486 against the 0.9 adaptation
+contract, with the pre-change bootstrap passing) — absolute per-synapse steps
+at that scale cannot overturn an established policy quickly. The composed
+defaults therefore remain unnormalized; normalized rates stay per-application
+settings selected on development data, with the construction warning and this
+section as the guardrails.
 The actor's normalization and critic's separate rate are described in
 [the reward guide](reward.md#rates-under-normalization).
 

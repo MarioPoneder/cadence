@@ -23,6 +23,10 @@ roles, not a literal biological implementation.
 Isolated classifiers and calibration remain useful unit controls. The distinction
 is what capability the application demonstrates, not whether those tests exist.
 
+![A feed-forward network passes activity one way and takes gradients from an
+outside controller; a patch net's neurons hold local state and settle together
+over reciprocal synapses, with no layers, no order and no controller](assets/patchnet.svg)
+
 ## Bootstrap, use, repair, continue
 
 1. **Bootstrap a useful interpretation.** Present real observations, consequences
