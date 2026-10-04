@@ -254,6 +254,20 @@ opposite phase under such a configuration names the budget mismatch in its
 small settle budget remains allowed, and the warning can be filtered. The
 finite default and the reward-eligibility contract above are unchanged.
 
+### Finite free phases that run out of budget
+
+Finite teaching reads the contrast from whatever state its budgets reached: "a
+brain that does not settle refuses to act" holds for answers, not for finite
+lessons. A free phase that uses its entire `free_steps` budget usually never
+reached the movement stop, so the lesson was learned from a state that may not
+have settled; on dense real input this can silently consume a whole run
+(issue 127). `Learner.step` therefore counts it as `free_budget_exhausted` in
+the lesson report (`demonstration_free_budget_exhausted` through `Brain.step`)
+and warns, with the equation residual available as `free_residual` in the same
+report. Phases with `tolerance=None` are declared fixed-length and stay
+silent. The update law is unchanged: raise `free_steps`, lower the gain, or
+opt into `qualified=True` to refuse such lessons instead.
+
 Lesson reports distinguish attempted and accepted row presentations. They count
 every required free/positive/negative sweep, residual transport and complete-state
 stagnation comparison, with row-weighted totals for batches. `Brain.step` keeps
@@ -331,10 +345,17 @@ it, export `learner.brain.dense()` for a page, or put its `to_dict()` in a recei
 
 ### Calibrating the operating point
 
-`learner.calibrate(drive, level=0.5, grid=None)` chooses a global synaptic gain
-whose mean free output activity is closest to `level`. This is an operating-point
-heuristic: the sampled gains may never reach that level, and reaching it does not
-establish useful credit, acquisition or retention. Use training or separate
+`learner.calibrate(drive, level=None, grid=None)` chooses a global synaptic
+gain by its free output operating point. Left unset, the target is
+competitive: the mean over rows and output slots of the highest output
+activation, at 0.5 — one choice up, the others wherever the competition puts
+them. An explicit `level` instead targets the mean over every output neuron.
+On a readout of n choices that mean target pushes all n up together: driving
+36 word outputs to a mean of 0.5 selected gain 12 and later 128 and saturated
+the readout before the winner was useful (issue 125), which is why the mean
+target is no longer the default. Either way this is an operating-point
+heuristic: the sampled gains may never reach the target, and reaching it does
+not establish useful credit, acquisition or retention. Use training or separate
 calibration inputs, then freeze the chosen gain before final evaluation.
 
 The default grid tries the current gain first, followed by its multiples `2**k` for
@@ -423,7 +444,7 @@ its own configuration for a continuing brain:
 | --- | --- | --- |
 | `free_steps`, `nudged_steps` | 100, 50 | 1024, 12 |
 | `tolerance` | `1e-4` | `3e-3` |
-| `eta`, `eta_bias` | 0.2, 0.02 | 0.5, 0.02 |
+| `eta`, `eta_bias` | 0.2, `eta / 10` = 0.02 | 0.5, `eta / 10` = 0.05 |
 | `momentum` | 0 | 0.9 |
 | `temperature` | 0.2 | 0.2 |
 
@@ -432,7 +453,12 @@ its defaults with the implicit `Brain.compose` settings. Both contexts use
 finite teaching by default. The `qualified` and `damping` options below
 select full-equation teaching and its numerical strategy. Rates and temperature can be selected
 on development data and frozen before confirmation; recommendations are not
-constructor defaults. `eta_bias` stays independent when `eta` changes.
+constructor defaults. `eta_bias` left unset derives `eta / 10` at construction;
+once resolved it is an ordinary explicit value, so lowering `eta` through
+`dataclasses.replace` keeps the old bias rate unless `eta_bias` is set too or
+passed as `None` to re-derive it. A bias rate above the synapse rate warns:
+at `eta=0.0015` the former fixed default of 0.02 made the bias step thirteen
+times the synapse step (issue 126).
 
 | knob | where | what it does | standalone default / selection notes |
 |---|---|---|---|
@@ -441,7 +467,7 @@ constructor defaults. `eta_bias` stays independent when `eta` changes.
 | `tolerance` | `LearnerConfig` | activation-movement stopping for finite phases; full-equation residual when qualified (`None` only for finite phases) | 1e-4 |
 | `qualified`, `damping` | `LearnerConfig` | require full-equation qualification before teaching; allow bounded integration-step halvings within each phase budget | `False`, 3; compare candidates with the finite control; qualification needs a [nudged budget comparable to the free one](#qualified-teaching-budgets) |
 | `eta` | `LearnerConfig` | efficacy step; the contrast is divided by `2 beta` | default 0.2; select on development data |
-| `eta_bias` | `LearnerConfig` | bias step | default 0.02; configured independently of `eta` |
+| `eta_bias` | `LearnerConfig` | bias step | unset derives `eta / 10` (0.02 at the standalone `eta`); explicit values are kept, and a bias rate above `eta` warns |
 | `temperature` | `LearnerConfig` | softmax temperature of the cross-entropy nudge; also the policy temperature when sampling actions | default 0.2; select any alternative on development data |
 | `centered` | `LearnerConfig` | contrast `+beta` against `−beta` (two nudged phases) rather than against the free state | `True` |
 | `nudge` | `LearnerConfig` | `"cross_entropy"` or `"quadratic"` (`beta · (target − s)`) | cross-entropy for classes |
@@ -513,7 +539,9 @@ synaptic drive or a promise that every synapse moves.
 The composed teaching default `eta=0.5` and actor default `eta=1.0` use
 `normalize=0`. Enabling RMS normalization can make their updates much larger
 relative to a small raw signal and can saturate outputs. Retune both `eta` and
-`eta_bias`; changing one does not change the other. A starting development sweep
+`eta_bias`; a resolved configuration keeps its bias rate when `eta` changes
+through `dataclasses.replace`, so set `eta_bias` alongside `eta` or pass
+`eta_bias=None` to re-derive `eta / 10`. A starting development sweep
 of `eta=0.001` to `0.003` is motivated by the reported pilots below, but is not a
 universal safe range or a replacement for task measurements. Select the bias
 rate independently and check acquisition, retention and actual update sizes.

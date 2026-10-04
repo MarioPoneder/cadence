@@ -59,6 +59,18 @@ _REWARD_ARRAYS = (
 )
 
 
+# The default motor lateral inhibition, and the widest readout that keeps it.
+# Measured on composed brains (issue 124): up to 8 actions, -0.5 settles in the
+# same 32 sweeps as 0.0; from 12 actions the free solve needs damping and about
+# nine times the sweeps, and the undamped teaching free phase does not settle.
+_LATERAL_DEFAULT = -0.5
+_LATERAL_ACTION_LIMIT = 8
+
+
+def _default_lateral(actions: int) -> float:
+    return _LATERAL_DEFAULT if actions <= _LATERAL_ACTION_LIMIT else 0.0
+
+
 def _learning() -> LearnerConfig:
     # Retain the recovered finite teaching law; numerical damping belongs to
     # qualified free settlement, where it does not change these learning phases.
@@ -391,7 +403,7 @@ class Brain:
         *,
         hidden: int = 64,
         density: float = 1.0,
-        lateral: float = -0.5,
+        lateral: float | None = None,
         working_memory: bool = False,
         memory_scale: float = 12.0,
         features: int = 8,
@@ -399,7 +411,13 @@ class Brain:
         seed: int = 0,
     ) -> Genome:
         """The default layout: ``inputs`` is a vector length or an image shape
-        ``(height, width)`` or ``(height, width, channels)``."""
+        ``(height, width)`` or ``(height, width, channels)``.
+
+        ``lateral`` left unset keeps -0.5 motor inhibition up to 8 actions and
+        removes it for wider readouts, where it stops the free solve from
+        settling; an explicit value is used as given."""
+        if lateral is None:
+            lateral = _default_lateral(actions) if isinstance(actions, (int, np.integer)) else 0.0
         if isinstance(inputs, (int, np.integer)):
             sensory = Region("sensory", inputs)
             forward = Projection("sensory", "association", density=density, reciprocal=False)
@@ -438,7 +456,7 @@ class Brain:
         *,
         hidden: int = 64,
         density: float = 1.0,
-        lateral: float = -0.5,
+        lateral: float | None = None,
         working_memory: bool = False,
         memory_scale: float = 12.0,
         episodic: bool = True,
@@ -470,7 +488,7 @@ class Brain:
         *,
         modules: Sequence[int] = (64,),
         observers: Sequence[int] = (),
-        lateral: float = -0.5,
+        lateral: float | None = None,
         seed: int = 0,
         **options: Any,
     ) -> Brain:
@@ -485,8 +503,12 @@ class Brain:
 
         ``lateral`` is the signed weight between each pair of motor neurons.
         Zero removes those lateral synapses, preserving motor/association feedback.
-        Select alternatives against the default on development tasks; changing
-        inhibition does not itself establish a responsive or useful learner.
+        Left unset, it is -0.5 up to 8 actions and 0.0 above: lateral inhibition
+        sharpens a small competing action menu, while on a wider readout it stops
+        the undamped free solve from settling and slows damped answers about
+        ninefold (issue 124). Select alternatives against the default on
+        development tasks; changing inhibition does not itself establish a
+        responsive or useful learner.
 
         This reuses the existing trace, synaptic memory and learning mechanisms.
         Observer wiring is an experiment, not evidence of learned self-reflection.
@@ -505,6 +527,8 @@ class Brain:
             return int(value)
 
         inputs, actions = size(inputs), size(actions)
+        if lateral is None:
+            lateral = _default_lateral(actions)
         if (
             isinstance(lateral, (bool, np.bool_))
             or not isinstance(lateral, (int, float, np.integer, np.floating))

@@ -84,7 +84,7 @@ def test_calibration_damping_qualifies_the_original_equations_and_counts_work(mo
         cd.learning_neuron_model(dt=1),
     )
     learner = cd.Learner(graph, np.arange(36), cd.LearnerConfig(
-        qualified=True, damping=3, free_steps=256, tolerance=3e-3,
+        qualified=True, damping=3, free_steps=256, nudged_steps=256, tolerance=3e-3,
     ))
     checks, candidates = [], []
     residual, with_gain = cd.NeuralGraph.residual, cd.Learner._with_gain

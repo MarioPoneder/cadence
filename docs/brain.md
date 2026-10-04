@@ -48,12 +48,16 @@ readback under its own equations.
 
 ## Operating point and motor competition
 
-`Brain.compose(..., lateral=-0.5)` configures motor competition. This is
+`Brain.compose(..., lateral=...)` configures motor competition. This is
 the signed weight between each distinct pair of motor neurons; zero removes
 those lateral connections while keeping reciprocal processing/motor feedback.
-The default stays at -0.5. A larger action vocabulary adds more inhibitory
-inputs per motor neuron, so inspect free activity and its full residual on the
-actual task before selecting a different value.
+Left unset, the default is -0.5 up to 8 actions and 0.0 above. Each additional
+action adds another inhibitory input per motor neuron: measured on composed
+brains, -0.5 settles a small action menu in the same few dozen sweeps as 0.0,
+while from about 12 actions the undamped free solve stops settling at all and
+damped answers take about nine times the sweeps (issue 124). Inspect free
+activity and its full residual on the actual task before selecting a
+different value.
 
 `Brain.compose(..., resting_bias=0.5)` initializes the modules, association region
 and any observers with that bias. Sensory, working-memory and motor biases start
@@ -121,10 +125,14 @@ configuration; it does not merge just the named fields. The defaults differ:
 | Setting | `Brain.compose` without `learning` | Fresh `LearnerConfig()` |
 | --- | --- | --- |
 | `eta` | `0.5` | `0.2` |
+| `eta_bias` | `0.05` (`eta / 10`) | `0.02` (`eta / 10`) |
 | `momentum` | `0.9` | `0.0` |
 | `free_steps` | `1024` | `100` |
 | `nudged_steps` | `12` | `50` |
 | `tolerance` | `3e-3` | `1e-4` |
+
+`eta_bias` left unset derives `eta / 10` at construction; an explicit value is
+kept, and a configuration whose bias rate exceeds its synapse rate warns.
 
 These defaults use `normalize=0`. Enabling RMS normalization changes the scale
 of proposed efficacy and bias increments; retune `eta` and `eta_bias`
@@ -243,7 +251,8 @@ assert network.connectome.n == connectome.n
 The lower-level `motor_cortex`, `cortex` and `layered` factories default to
 `lateral=0.0`; the custom example above therefore has no motor competition.
 Pass the intended value explicitly when comparing it with `Brain.compose`,
-whose default is `lateral=-0.5`.
+which left unset keeps `lateral=-0.5` up to 8 actions and drops to `0.0`
+above ([operating point and motor competition](#operating-point-and-motor-competition)).
 `Brain.build` offers the image/vector builder, and
 `Brain(connectome, ...)` accepts the named populations required by its
 interaction loop. These are advanced construction options for specific wiring

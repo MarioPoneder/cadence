@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- Resolve the unset motor `lateral` of `Brain.compose`, `build` and `genome` by
+  readout width: -0.5 up to 8 actions, 0.0 above
+  ([issue 124](https://github.com/muellerberndt/cadence/issues/124)). Measured on
+  composed brains, -0.5 settles a small action menu in the same few dozen sweeps
+  as 0.0, while from 12 actions the undamped free solve stops settling and damped
+  answers take about nine times the sweeps. An explicit `lateral` is used as
+  given, and small-menu brains are unchanged.
+- Calibrate to the competitive operating point by default
+  ([issue 125](https://github.com/muellerberndt/cadence/issues/125)):
+  `Learner.calibrate` left without `level` now places the mean top output per
+  row and slot near 0.5 instead of the whole readout's mean, which on a 36-way
+  readout had selected saturating gains (12, then 128). An explicit `level`
+  keeps the mean target; reports carry `target`, `mean_output` and `top_output`
+  per candidate. Single-output calibration selects as before.
+- Derive an unset `LearnerConfig.eta_bias` as `eta / 10` at construction
+  ([issue 126](https://github.com/muellerberndt/cadence/issues/126)); the
+  standalone default stays 0.02 and the composed default becomes 0.05. An
+  explicit value is kept, a resolved value rides through `dataclasses.replace`
+  unless re-derived with `eta_bias=None`, and a bias rate above a positive
+  synapse rate warns, since the bias step then dominates.
+- Count and warn when a finite teaching free phase uses its entire `free_steps`
+  budget under a movement tolerance
+  ([issue 127](https://github.com/muellerberndt/cadence/issues/127)): the lesson
+  was learned from a state that may not have settled. `Learner.step` reports
+  `free_budget_exhausted` (`demonstration_free_budget_exhausted` through
+  `Brain.step`); phases with `tolerance=None` remain declared fixed-length and
+  silent. The finite update law is unchanged.
 - Warn at `LearnerConfig` construction when `qualified=True` and `nudged_steps`
   is below `free_steps`, including through `dataclasses.replace` on a composed
   configuration: qualified phases are settle budgets, and the composed finite

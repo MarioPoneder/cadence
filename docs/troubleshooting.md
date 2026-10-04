@@ -37,7 +37,11 @@ an observed zero must differ from no observation ([temporal learning](temporal.m
 ## The settling brain
 
 **Accuracy stays at chance.** Inspect free output activity and its equation residual.
-`learner.calibrate(training_drive)` can choose a more responsive global gain,
+Check `free_budget_exhausted` in the lesson report first: finite teaching that
+runs out of free sweeps learns from states that never settled, and warns.
+`learner.calibrate(training_drive)` can choose a more responsive global gain —
+by default it places the top output of each row near 0.5 rather than pushing
+the whole readout's mean there —
 but cannot guarantee that its sampled candidates reach the target activity.
 The [calibration report](learning.md#calibrating-the-operating-point)
 exposes candidate residuals and refusals, and qualified learning excludes

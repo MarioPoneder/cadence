@@ -20,10 +20,14 @@ def test_either_large_normalized_rate_warns_at_the_call_site(
     with pytest.warns(RuntimeWarning, match=rf"{config_type.__name__}.*eta or eta_bias") as caught:
         line = inspect.currentframe().f_lineno + 1
         config = config_type(normalize=0.99, momentum=momentum, **rates)
-    assert len(caught) == 1
-    assert Path(caught[0].filename).resolve() == Path(__file__).resolve()
-    assert caught[0].lineno == line
+    normalized = [w for w in caught if "eta or eta_bias above" in str(w.message)]
+    assert len(normalized) == 1
+    assert Path(normalized[0].filename).resolve() == Path(__file__).resolve()
+    assert normalized[0].lineno == line
     assert config.eta == rates["eta"] and config.eta_bias == rates["eta_bias"]
+    # A bias rate above the synapse rate is the issue-126 pathology; it warns too.
+    dominating = [w for w in caught if "bias step dominates" in str(w.message)]
+    assert len(dominating) == (1 if rate_name == "eta_bias" and config_type is cd.LearnerConfig else 0)
 
 
 @pytest.mark.parametrize("config_type", [cd.LearnerConfig, cd.ActorCriticConfig])
